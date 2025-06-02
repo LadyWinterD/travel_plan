@@ -20,6 +20,7 @@ const ItineraryPage: React.FC = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [timeWarning, setTimeWarning] = useState<string | null>(null);
   
   // Calculate trip dates based on start and end dates
   const getTripDates = () => {
@@ -36,36 +37,35 @@ const ItineraryPage: React.FC = () => {
     return dates;
   };
 
-  // Distribute activities optimally across days
-  const distributeActivities = (activities: Activity[], numDays: number) => {
-    const MAX_DAY_DURATION = 360; // 6 hours in minutes
-    const distributedDays: Activity[][] = Array(numDays).fill(null).map(() => []);
+  // Check if total duration exceeds recommended daily limit
+  const checkDayDuration = (activities: Activity[]) => {
+    const MAX_RECOMMENDED_DURATION = 360; // 6 hours in minutes
+    const totalDuration = activities.reduce((sum, act) => sum + act.duration, 0);
     
-    // Sort activities by duration (descending) to place longer activities first
-    const sortedActivities = [...activities].sort((a, b) => b.duration - a.duration);
-    
-    // Keep track of total duration for each day
-    const dayDurations = Array(numDays).fill(0);
-    
-    // First pass: distribute longer activities
-    sortedActivities.forEach(activity => {
-      // Find the day with the least total duration that can accommodate this activity
-      const targetDayIndex = dayDurations.reduce((bestDay, duration, currentDay) => {
-        if (duration + activity.duration <= MAX_DAY_DURATION && 
-            (dayDurations[bestDay] > duration || dayDurations[bestDay] + activity.duration > MAX_DAY_DURATION)) {
-          return currentDay;
-        }
-        return bestDay;
-      }, 0);
-      
-      // If the activity fits in the target day, add it
-      if (dayDurations[targetDayIndex] + activity.duration <= MAX_DAY_DURATION) {
-        distributedDays[targetDayIndex].push(activity);
-        dayDurations[targetDayIndex] += activity.duration;
-      }
+    if (totalDuration > MAX_RECOMMENDED_DURATION) {
+      return `Warning: Selected activities total ${Math.round(totalDuration / 60)} hours, which exceeds the recommended 6 hours per day. Consider spreading activities across more days if possible.`;
+    }
+    return null;
+  };
+
+  // Schedule activities for a single day
+  const scheduleActivities = (activities: Activity[], startDate: Date) => {
+    let currentTime = new Date(startDate);
+    currentTime.setHours(9, 0, 0, 0); // Start at 9:00 AM
+
+    return activities.map(activity => {
+      const startTime = currentTime.toTimeString().slice(0, 5);
+      currentTime.setMinutes(currentTime.getMinutes() + activity.duration);
+      const endTime = currentTime.toTimeString().slice(0, 5);
+      currentTime.setMinutes(currentTime.getMinutes() + 30); // 30-minute break
+
+      return {
+        activityId: activity.id,
+        startTime,
+        endTime,
+        activity,
+      };
     });
-    
-    return distributedDays;
   };
   
   // Generate optimized itinerary
@@ -77,54 +77,38 @@ const ItineraryPage: React.FC = () => {
     
     setIsGenerating(true);
     setErrorMessage(null);
+    setTimeWarning(null);
     
     try {
       const tripDates = getTripDates();
       const newItinerary: TripDay[] = [];
       let dateIndex = 0;
       
-      // For each destination, allocate days and activities
+      // For each destination, create daily schedules
       destinations.forEach(destination => {
         const destActivities = selectedActivities[destination.id] || [];
         
         // Skip if no activities selected for this destination
         if (destActivities.length === 0) return;
         
-        // Distribute activities across the destination's days
-        const distributedActivities = distributeActivities(destActivities, destination.days);
+        // Check total duration and set warning if needed
+        const warning = checkDayDuration(destActivities);
+        if (warning) {
+          setTimeWarning(warning);
+        }
         
-        // Create itinerary days with distributed activities
+        // Create schedule for each day
         for (let day = 0; day < destination.days; day++) {
           if (dateIndex >= tripDates.length) break;
           
           const currentDate = tripDates[dateIndex];
           const dateStr = currentDate.toISOString().split('T')[0];
-          const dayActivities = distributedActivities[day];
           
-          // Get/generate weather data for this day and destination
+          // Get weather data
           const weather = getMockWeather(destination.id, dateStr);
           
-          // Schedule activities for the day
-          let currentTime = new Date(currentDate);
-          currentTime.setHours(9, 0, 0, 0); // Start at 9:00 AM
-          
-          const scheduledActivities: ScheduledActivity[] = dayActivities.map(activity => {
-            const startTime = currentTime.toTimeString().slice(0, 5);
-            
-            // Add activity duration
-            currentTime.setMinutes(currentTime.getMinutes() + activity.duration);
-            
-            // Add 30 min break between activities
-            const endTime = currentTime.toTimeString().slice(0, 5);
-            currentTime.setMinutes(currentTime.getMinutes() + 30);
-            
-            return {
-              activityId: activity.id,
-              startTime,
-              endTime,
-              activity,
-            };
-          });
+          // Schedule all activities for this day
+          const scheduledActivities = scheduleActivities(destActivities, currentDate);
           
           newItinerary.push({
             id: uuidv4(),
@@ -147,7 +131,7 @@ const ItineraryPage: React.FC = () => {
     }
   };
   
-  // Generate itinerary on first load if none exists
+  // Generate itinerary when destinations or activities change
   useEffect(() => {
     if (destinations.length > 0 && startDate && endDate) {
       generateItinerary();
@@ -185,6 +169,13 @@ const ItineraryPage: React.FC = () => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 flex items-start">
           <AlertTriangle size={20} className="mr-2 mt-0.5 flex-shrink-0" />
           <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {timeWarning && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6 flex items-start">
+          <AlertTriangle size={20} className="mr-2 mt-0.5 flex-shrink-0" />
+          <span>{timeWarning}</span>
         </div>
       )}
       
