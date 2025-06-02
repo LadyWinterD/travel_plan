@@ -20,7 +20,7 @@ const ItineraryPage: React.FC = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [timeWarning, setTimeWarning] = useState<string | null>(null);
+  const [cityWarnings, setCityWarnings] = useState<Record<string, string>>({});
   
   // Calculate trip dates based on start and end dates
   const getTripDates = () => {
@@ -37,13 +37,13 @@ const ItineraryPage: React.FC = () => {
     return dates;
   };
 
-  // Check if total duration exceeds recommended daily limit
-  const checkDayDuration = (activities: Activity[]) => {
+  // Check if total duration exceeds recommended daily limit for a city
+  const checkCityDuration = (activities: Activity[], cityName: string) => {
     const MAX_RECOMMENDED_DURATION = 360; // 6 hours in minutes
     const totalDuration = activities.reduce((sum, act) => sum + act.duration, 0);
     
     if (totalDuration > MAX_RECOMMENDED_DURATION) {
-      return `Warning: Selected activities total ${Math.round(totalDuration / 60)} hours, which exceeds the recommended 6 hours per day. Consider spreading activities across more days if possible.`;
+      return `${cityName}: Selected activities total ${Math.round(totalDuration / 60)} hours, which exceeds the recommended 6 hours per day.`;
     }
     return null;
   };
@@ -77,12 +77,13 @@ const ItineraryPage: React.FC = () => {
     
     setIsGenerating(true);
     setErrorMessage(null);
-    setTimeWarning(null);
+    setCityWarnings({});
     
     try {
       const tripDates = getTripDates();
       const newItinerary: TripDay[] = [];
       let dateIndex = 0;
+      const warnings: Record<string, string> = {};
       
       // For each destination, create daily schedules
       destinations.forEach(destination => {
@@ -92,9 +93,9 @@ const ItineraryPage: React.FC = () => {
         if (destActivities.length === 0) return;
         
         // Check total duration and set warning if needed
-        const warning = checkDayDuration(destActivities);
+        const warning = checkCityDuration(destActivities, destination.name);
         if (warning) {
-          setTimeWarning(warning);
+          warnings[destination.id] = warning;
         }
         
         // Create schedule for each day
@@ -122,6 +123,7 @@ const ItineraryPage: React.FC = () => {
         }
       });
       
+      setCityWarnings(warnings);
       updateItinerary(newItinerary);
     } catch (error) {
       console.error('Error generating itinerary:', error);
@@ -172,10 +174,15 @@ const ItineraryPage: React.FC = () => {
         </div>
       )}
 
-      {timeWarning && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6 flex items-start">
-          <AlertTriangle size={20} className="mr-2 mt-0.5 flex-shrink-0" />
-          <span>{timeWarning}</span>
+      {Object.entries(cityWarnings).length > 0 && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+          <div className="font-semibold mb-2">Time Allocation Warnings:</div>
+          {Object.values(cityWarnings).map((warning, index) => (
+            <div key={index} className="flex items-start mb-2 last:mb-0">
+              <AlertTriangle size={16} className="mr-2 mt-1 flex-shrink-0" />
+              <span>{warning}</span>
+            </div>
+          ))}
         </div>
       )}
       
