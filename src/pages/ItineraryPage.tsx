@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripHorizontal } from 'lucide-react';
-import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
+import { TripDay, ScheduledActivity, WeatherData } from '../types';
 import { getMockWeather } from '../utils/mockData';
 import { v4 as uuidv4 } from 'uuid';
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -21,7 +23,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 // Sortable Activity Component
 const SortableActivity = ({ scheduled, index }: { scheduled: ScheduledActivity; index: number }) => {
@@ -31,18 +33,22 @@ const SortableActivity = ({ scheduled, index }: { scheduled: ScheduledActivity; 
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: `${scheduled.activityId}-${index}` });
+    isDragging,
+  } = useSortable({ id: scheduled.activityId });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0 bg-white"
+      className={`flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0 bg-white ${
+        isDragging ? 'shadow-lg' : ''
+      }`}
     >
       <div className="sm:w-32 flex-shrink-0 mb-2 sm:mb-0">
         <div className="text-gray-600 font-medium">
@@ -94,31 +100,63 @@ const ItineraryPage: React.FC = () => {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
   // Handle drag end
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    setActiveId(null);
 
-    const [activeId, activeIndex] = active.id.toString().split('-');
-    const [overId, overIndex] = over.id.toString().split('-');
-    const dayIndex = parseInt(activeIndex.split(':')[0]);
+    if (!over || active.id === over.id) return;
 
-    if (activeId !== overId) {
+    const oldIndex = dailyItinerary.findIndex(day => 
+      day.activities.some(activity => activity.activityId === active.id)
+    );
+    const newIndex = dailyItinerary.findIndex(day => 
+      day.activities.some(activity => activity.activityId === over.id)
+    );
+
+    if (oldIndex !== -1 && newIndex !== -1) {
       const newItinerary = [...dailyItinerary];
-      const activities = [...newItinerary[dayIndex].activities];
-      const oldIndex = parseInt(activeIndex.split(':')[1]);
-      const newIndex = parseInt(overIndex.split(':')[1]);
+      const oldDayActivities = [...newItinerary[oldIndex].activities];
+      const newDayActivities = [...newItinerary[newIndex].activities];
 
-      newItinerary[dayIndex].activities = arrayMove(activities, oldIndex, newIndex);
+      const oldActivityIndex = oldDayActivities.findIndex(a => a.activityId === active.id);
+      const newActivityIndex = newDayActivities.findIndex(a => a.activityId === over.id);
+
+      if (oldIndex === newIndex) {
+        // Same day, just reorder
+        newItinerary[oldIndex].activities = arrayMove(
+          oldDayActivities,
+          oldActivityIndex,
+          newActivityIndex
+        );
+      } else {
+        // Different days, move activity
+        const [movedActivity] = oldDayActivities.splice(oldActivityIndex, 1);
+        newDayActivities.splice(newActivityIndex, 0, movedActivity);
+        
+        newItinerary[oldIndex].activities = oldDayActivities;
+        newItinerary[newIndex].activities = newDayActivities;
+      }
+
       updateItinerary(newItinerary);
     }
   };
@@ -233,12 +271,6 @@ const ItineraryPage: React.FC = () => {
     return <Sun className="text-yellow-500" />;
   };
 
-  // Group activities by destination
-  const activitiesByDestination = destinations.map(destination => ({
-    destination,
-    activities: selectedActivities[destination.id] || [],
-  }));
-
   if (destinations.length === 0) {
     return null; // Redirect handled by useEffect
   }
@@ -253,30 +285,6 @@ const ItineraryPage: React.FC = () => {
           <span>{errorMessage}</span>
         </div>
       )}
-
-      {/* Selected Activities by Destination */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Selected Activities</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {activitiesByDestination.map(({ destination, activities }) => (
-            <div key={destination.id} className="bg-white rounded-lg shadow-md p-4">
-              <h3 className="font-semibold text-lg mb-3">{destination.name}</h3>
-              {activities.length > 0 ? (
-                <ul className="space-y-2">
-                  {activities.map((activity) => (
-                    <li key={activity.id} className="flex items-center text-sm">
-                      <Clock size={14} className="mr-2 text-gray-500" />
-                      {activity.name}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 text-sm">No activities selected</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Itinerary Controls */}
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-center bg-white rounded-lg shadow-md p-4">
@@ -320,10 +328,12 @@ const ItineraryPage: React.FC = () => {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          modifiers={[restrictToVerticalAxis]}
         >
           <div className="space-y-6">
-            {dailyItinerary.map((day, dayIndex) => (
+            {dailyItinerary.map((day) => (
               <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                 {/* Day Header */}
                 <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white p-4">
@@ -353,13 +363,13 @@ const ItineraryPage: React.FC = () => {
                 <div className="p-4">
                   {day.activities.length > 0 ? (
                     <SortableContext
-                      items={day.activities.map((a, i) => `${a.activityId}-${dayIndex}:${i}`)}
+                      items={day.activities.map(a => a.activityId)}
                       strategy={verticalListSortingStrategy}
                     >
                       <div className="space-y-4">
                         {day.activities.map((scheduled, index) => (
                           <SortableActivity
-                            key={`${scheduled.activityId}-${dayIndex}:${index}`}
+                            key={scheduled.activityId}
                             scheduled={scheduled}
                             index={index}
                           />
