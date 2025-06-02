@@ -20,7 +20,6 @@ const ItineraryPage: React.FC = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [cityWarnings, setCityWarnings] = useState<Record<string, string>>({});
   
   // Calculate trip dates based on start and end dates
   const getTripDates = () => {
@@ -37,15 +36,9 @@ const ItineraryPage: React.FC = () => {
     return dates;
   };
 
-  // Check if total duration exceeds recommended daily limit for a city
-  const checkCityDuration = (activities: Activity[], cityName: string) => {
-    const MAX_RECOMMENDED_DURATION = 360; // 6 hours in minutes
-    const totalDuration = activities.reduce((sum, act) => sum + act.duration, 0);
-    
-    if (totalDuration > MAX_RECOMMENDED_DURATION) {
-      return `${cityName}: Selected activities total ${Math.round(totalDuration / 60)} hours, which exceeds the recommended 6 hours per day.`;
-    }
-    return null;
+  // Calculate total duration for a set of activities
+  const calculateTotalDuration = (activities: Activity[]) => {
+    return activities.reduce((sum, act) => sum + act.duration, 0);
   };
 
   // Schedule activities for a single day
@@ -77,13 +70,11 @@ const ItineraryPage: React.FC = () => {
     
     setIsGenerating(true);
     setErrorMessage(null);
-    setCityWarnings({});
     
     try {
       const tripDates = getTripDates();
       const newItinerary: TripDay[] = [];
       let dateIndex = 0;
-      const warnings: Record<string, string> = {};
       
       // For each destination, create daily schedules
       destinations.forEach(destination => {
@@ -91,12 +82,6 @@ const ItineraryPage: React.FC = () => {
         
         // Skip if no activities selected for this destination
         if (destActivities.length === 0) return;
-        
-        // Check total duration and set warning if needed
-        const warning = checkCityDuration(destActivities, destination.name);
-        if (warning) {
-          warnings[destination.id] = warning;
-        }
         
         // Create schedule for each day
         for (let day = 0; day < destination.days; day++) {
@@ -123,7 +108,6 @@ const ItineraryPage: React.FC = () => {
         }
       });
       
-      setCityWarnings(warnings);
       updateItinerary(newItinerary);
     } catch (error) {
       console.error('Error generating itinerary:', error);
@@ -173,18 +157,6 @@ const ItineraryPage: React.FC = () => {
           <span>{errorMessage}</span>
         </div>
       )}
-
-      {Object.entries(cityWarnings).length > 0 && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-          <div className="font-semibold mb-2">Time Allocation Warnings:</div>
-          {Object.values(cityWarnings).map((warning, index) => (
-            <div key={index} className="flex items-start mb-2 last:mb-0">
-              <AlertTriangle size={16} className="mr-2 mt-1 flex-shrink-0" />
-              <span>{warning}</span>
-            </div>
-          ))}
-        </div>
-      )}
       
       {/* Itinerary Controls */}
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-center bg-white rounded-lg shadow-md p-4">
@@ -226,71 +198,86 @@ const ItineraryPage: React.FC = () => {
       {/* Itinerary Display */}
       {dailyItinerary.length > 0 ? (
         <div className="space-y-6">
-          {dailyItinerary.map((day) => (
-            <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              {/* Day Header */}
-              <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white p-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <div>
-                    <h3 className="text-lg font-semibold">
-                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                    </h3>
-                    <p className="text-white/90">{getDestinationName(day.destinationId)}</p>
+          {dailyItinerary.map((day) => {
+            const dayActivities = selectedActivities[day.destinationId] || [];
+            const totalDuration = calculateTotalDuration(dayActivities);
+            const showWarning = totalDuration > 360; // More than 6 hours
+
+            return (
+              <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                {/* Day Header */}
+                <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white p-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                      </h3>
+                      <p className="text-white/90">{getDestinationName(day.destinationId)}</p>
+                    </div>
+                    
+                    {day.weatherData && (
+                      <div className="mt-2 sm:mt-0 flex items-center bg-white/20 rounded-full px-3 py-1">
+                        {getWeatherIcon(day.weatherData)}
+                        <span className="ml-1">{day.weatherData.temperature}°C</span>
+                        <span className="ml-1 text-sm">{day.weatherData.condition}</span>
+                      </div>
+                    )}
                   </div>
-                  
-                  {day.weatherData && (
-                    <div className="mt-2 sm:mt-0 flex items-center bg-white/20 rounded-full px-3 py-1">
-                      {getWeatherIcon(day.weatherData)}
-                      <span className="ml-1">{day.weatherData.temperature}°C</span>
-                      <span className="ml-1 text-sm">{day.weatherData.condition}</span>
+                </div>
+                
+                {/* Day Activities */}
+                <div className="p-4">
+                  {showWarning && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start">
+                      <AlertTriangle size={16} className="text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-yellow-700">
+                        Total activities time ({Math.round(totalDuration / 60)} hours) exceeds the recommended 6 hours per day
+                      </p>
                     </div>
                   )}
-                </div>
-              </div>
-              
-              {/* Day Activities */}
-              <div className="p-4">
-                {day.activities.length > 0 ? (
-                  <div className="space-y-4">
-                    {day.activities.map((scheduled, index) => (
-                      <div 
-                        key={`${scheduled.activityId}-${index}`}
-                        className="flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
-                      >
-                        <div className="sm:w-32 flex-shrink-0 mb-2 sm:mb-0">
-                          <div className="text-gray-600 font-medium">
-                            {scheduled.startTime} - {scheduled.endTime}
+
+                  {day.activities.length > 0 ? (
+                    <div className="space-y-4">
+                      {day.activities.map((scheduled, index) => (
+                        <div 
+                          key={`${scheduled.activityId}-${index}`}
+                          className="flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+                        >
+                          <div className="sm:w-32 flex-shrink-0 mb-2 sm:mb-0">
+                            <div className="text-gray-600 font-medium">
+                              {scheduled.startTime} - {scheduled.endTime}
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="flex-grow">
-                          <div className="flex items-start">
-                            <div 
-                              className="w-12 h-12 rounded-md bg-center bg-cover flex-shrink-0 mr-3"
-                              style={{ backgroundImage: `url(${scheduled.activity.image})` }}
-                            ></div>
-                            
-                            <div>
-                              <h4 className="font-medium">{scheduled.activity.name}</h4>
-                              <div className="flex items-center text-sm text-gray-600 mt-1">
-                                <Clock size={14} className="mr-1" />
-                                {Math.floor(scheduled.activity.duration / 60)} hr {scheduled.activity.duration % 60 > 0 ? `${scheduled.activity.duration % 60} min` : ''}
+                          
+                          <div className="flex-grow">
+                            <div className="flex items-start">
+                              <div 
+                                className="w-12 h-12 rounded-md bg-center bg-cover flex-shrink-0 mr-3"
+                                style={{ backgroundImage: `url(${scheduled.activity.image})` }}
+                              ></div>
+                              
+                              <div>
+                                <h4 className="font-medium">{scheduled.activity.name}</h4>
+                                <div className="flex items-center text-sm text-gray-600 mt-1">
+                                  <Clock size={14} className="mr-1" />
+                                  {Math.floor(scheduled.activity.duration / 60)} hr {scheduled.activity.duration % 60 > 0 ? `${scheduled.activity.duration % 60} min` : ''}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-gray-500">
-                    <Info size={24} className="mx-auto mb-2" />
-                    <p>No activities scheduled for this day</p>
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <Info size={24} className="mx-auto mb-2" />
+                      <p>No activities scheduled for this day</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
