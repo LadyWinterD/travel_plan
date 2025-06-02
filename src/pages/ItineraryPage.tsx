@@ -41,8 +41,38 @@ const ItineraryPage: React.FC = () => {
     return activities.reduce((sum, act) => sum + act.duration, 0);
   };
 
+  // Distribute activities across days
+  const distributeActivities = (activities: Activity[], numDays: number): Activity[][] => {
+    const MAX_MINUTES_PER_DAY = 360; // 6 hours
+    const days: Activity[][] = Array(numDays).fill(null).map(() => []);
+    let currentDayIndex = 0;
+    let currentDayDuration = 0;
+    
+    // Sort activities by duration (descending) to optimize distribution
+    const sortedActivities = [...activities].sort((a, b) => b.duration - a.duration);
+    
+    sortedActivities.forEach(activity => {
+      // If we're on the last day, add remaining activities regardless of duration
+      if (currentDayIndex === numDays - 1) {
+        days[currentDayIndex].push(activity);
+        return;
+      }
+      
+      // If adding this activity would exceed 6 hours and we have more days available
+      if (currentDayDuration + activity.duration > MAX_MINUTES_PER_DAY && currentDayIndex < numDays - 1) {
+        currentDayIndex++;
+        currentDayDuration = 0;
+      }
+      
+      days[currentDayIndex].push(activity);
+      currentDayDuration += activity.duration;
+    });
+    
+    return days;
+  };
+
   // Schedule activities for a single day
-  const scheduleActivities = (activities: Activity[], startDate: Date) => {
+  const scheduleActivities = (activities: Activity[], startDate: Date): ScheduledActivity[] => {
     let currentTime = new Date(startDate);
     currentTime.setHours(9, 0, 0, 0); // Start at 9:00 AM
 
@@ -76,12 +106,15 @@ const ItineraryPage: React.FC = () => {
       const newItinerary: TripDay[] = [];
       let dateIndex = 0;
       
-      // For each destination, create daily schedules
+      // For each destination, distribute and schedule activities
       destinations.forEach(destination => {
         const destActivities = selectedActivities[destination.id] || [];
         
         // Skip if no activities selected for this destination
         if (destActivities.length === 0) return;
+        
+        // Distribute activities across available days
+        const distributedActivities = distributeActivities(destActivities, destination.days);
         
         // Create schedule for each day
         for (let day = 0; day < destination.days; day++) {
@@ -89,12 +122,13 @@ const ItineraryPage: React.FC = () => {
           
           const currentDate = tripDates[dateIndex];
           const dateStr = currentDate.toISOString().split('T')[0];
+          const dayActivities = distributedActivities[day] || [];
           
           // Get weather data
           const weather = getMockWeather(destination.id, dateStr);
           
-          // Schedule all activities for this day
-          const scheduledActivities = scheduleActivities(destActivities, currentDate);
+          // Schedule activities for this day
+          const scheduledActivities = scheduleActivities(dayActivities, currentDate);
           
           newItinerary.push({
             id: uuidv4(),
@@ -199,8 +233,7 @@ const ItineraryPage: React.FC = () => {
       {dailyItinerary.length > 0 ? (
         <div className="space-y-6">
           {dailyItinerary.map((day) => {
-            const dayActivities = selectedActivities[day.destinationId] || [];
-            const totalDuration = calculateTotalDuration(dayActivities);
+            const totalDuration = calculateTotalDuration(day.activities.map(a => a.activity));
             const showWarning = totalDuration > 360; // More than 6 hours
 
             return (
