@@ -25,7 +25,6 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
-// Sortable Activity Component
 const SortableActivity = ({ scheduled, index }: { scheduled: ScheduledActivity; index: number }) => {
   const {
     attributes,
@@ -102,7 +101,6 @@ const ItineraryPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -114,12 +112,10 @@ const ItineraryPage: React.FC = () => {
     })
   );
 
-  // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
 
-  // Handle drag end
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -142,14 +138,12 @@ const ItineraryPage: React.FC = () => {
       const newActivityIndex = newDayActivities.findIndex(a => a.activityId === over.id);
 
       if (oldIndex === newIndex) {
-        // Same day, just reorder
         newItinerary[oldIndex].activities = arrayMove(
           oldDayActivities,
           oldActivityIndex,
           newActivityIndex
         );
       } else {
-        // Different days, move activity
         const [movedActivity] = oldDayActivities.splice(oldActivityIndex, 1);
         newDayActivities.splice(newActivityIndex, 0, movedActivity);
         
@@ -161,7 +155,6 @@ const ItineraryPage: React.FC = () => {
     }
   };
 
-  // Calculate trip dates based on start and end dates
   const getTripDates = () => {
     if (!startDate || !endDate) return [];
 
@@ -176,7 +169,6 @@ const ItineraryPage: React.FC = () => {
     return dates;
   };
 
-  // Generate optimized itinerary
   const generateItinerary = () => {
     if (!startDate || !endDate || destinations.length === 0) {
       setErrorMessage('Please set trip dates and destinations first');
@@ -191,35 +183,40 @@ const ItineraryPage: React.FC = () => {
       let dateIndex = 0;
       const newItinerary: TripDay[] = [];
 
-      // For each destination, allocate days and activities
       destinations.forEach(destination => {
         const destActivities = selectedActivities[destination.id] || [];
 
-        // Skip if no activities selected for this destination
         if (destActivities.length === 0) return;
 
-        // Allocate days for this destination
+        const activitiesPerDay = Math.ceil(destActivities.length / destination.days);
+
         for (let day = 0; day < destination.days; day++) {
           if (dateIndex >= tripDates.length) break;
 
           const currentDate = tripDates[dateIndex];
           const dateStr = currentDate.toISOString().split('T')[0];
 
-          // Get/generate weather data for this day and destination
+          const dayStartIndex = day * activitiesPerDay;
+          const dayEndIndex = Math.min((day + 1) * activitiesPerDay, destActivities.length);
+          const dayActivities = destActivities.slice(dayStartIndex, dayEndIndex);
+
           const weather = getMockWeather(destination.id, dateStr);
 
-          // Schedule activities
-          const scheduledActivities = destActivities.map((activity, index) => {
-            const startTime = new Date(currentDate);
-            startTime.setHours(9 + Math.floor(index * 2.5), (index * 2.5 % 1) * 60, 0, 0);
+          let currentTime = new Date(currentDate);
+          currentTime.setHours(9, 0, 0, 0);
+
+          const scheduledActivities = dayActivities.map(activity => {
+            const startTime = currentTime.toTimeString().slice(0, 5);
             
-            const endTime = new Date(startTime);
-            endTime.setMinutes(startTime.getMinutes() + activity.duration);
+            currentTime.setMinutes(currentTime.getMinutes() + activity.duration);
+            const endTime = currentTime.toTimeString().slice(0, 5);
+            
+            currentTime.setMinutes(currentTime.getMinutes() + 30);
 
             return {
               activityId: activity.id,
-              startTime: startTime.toTimeString().slice(0, 5),
-              endTime: endTime.toTimeString().slice(0, 5),
+              startTime,
+              endTime,
               activity,
             };
           });
@@ -245,26 +242,22 @@ const ItineraryPage: React.FC = () => {
     }
   };
 
-  // Generate itinerary on first load if none exists
   useEffect(() => {
     if (dailyItinerary.length === 0 && destinations.length > 0 && startDate && endDate) {
       generateItinerary();
     }
   }, []);
 
-  // If no destinations are available, redirect to destinations page
   useEffect(() => {
     if (destinations.length === 0) {
       navigate('/destinations');
     }
   }, [destinations, navigate]);
 
-  // Get destination name by ID
   const getDestinationName = (id: string) => {
     return destinations.find(d => d.id === id)?.name || 'Unknown';
   };
 
-  // Get weather icon based on condition
   const getWeatherIcon = (weather: WeatherData) => {
     if (weather.isRainy) return <CloudRain className="text-blue-500" />;
     if (weather.condition.includes('Cloudy')) return <Cloud className="text-gray-500" />;
@@ -272,7 +265,7 @@ const ItineraryPage: React.FC = () => {
   };
 
   if (destinations.length === 0) {
-    return null; // Redirect handled by useEffect
+    return null;
   }
 
   return (
@@ -286,7 +279,6 @@ const ItineraryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Itinerary Controls */}
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-center bg-white rounded-lg shadow-md p-4">
         <div className="mb-4 sm:mb-0">
           <h2 className="text-xl font-semibold flex items-center">
@@ -323,7 +315,6 @@ const ItineraryPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Itinerary Display */}
       {dailyItinerary.length > 0 ? (
         <DndContext
           sensors={sensors}
@@ -335,7 +326,6 @@ const ItineraryPage: React.FC = () => {
           <div className="space-y-6">
             {dailyItinerary.map((day) => (
               <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {/* Day Header */}
                 <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white p-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <div>
@@ -359,7 +349,6 @@ const ItineraryPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Day Activities */}
                 <div className="p-4">
                   {day.activities.length > 0 ? (
                     <SortableContext
@@ -409,7 +398,6 @@ const ItineraryPage: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation Buttons */}
       <div className="mt-8 flex justify-between">
         <button
           onClick={() => navigate('/activities')}
@@ -420,7 +408,6 @@ const ItineraryPage: React.FC = () => {
 
         <button
           onClick={() => {
-            // Export itinerary as JSON
             const dataStr =
               'data:text/json;charset=utf-8,' +
               encodeURIComponent(JSON.stringify(dailyItinerary, null, 2));
