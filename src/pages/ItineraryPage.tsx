@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X } from 'lucide-react';
+import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { getMockWeather } from '../utils/mockData';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,9 +34,10 @@ interface SortableActivityProps {
   activity: ScheduledActivity;
   onDelete: () => void;
   isDragging?: boolean;
+  location?: string;
 }
 
-const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, isDragging }) => {
+const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, isDragging, location }) => {
   const {
     attributes,
     listeners,
@@ -78,9 +79,17 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
       
       <div className="flex-grow">
         <h4 className="font-medium">{activity.activity.name}</h4>
-        <div className="flex items-center text-sm text-gray-600 mt-1">
-          <Clock size={14} className="mr-1" />
-          {Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center text-sm text-gray-600 mt-1">
+            <Clock size={14} className="mr-1" />
+            {Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}
+          </div>
+          {location && (
+            <div className="flex items-center text-sm text-gray-600 mt-1">
+              <MapPin size={14} className="mr-1" />
+              {location}
+            </div>
+          )}
         </div>
       </div>
       
@@ -104,9 +113,9 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
   );
 };
 
-const DragOverlayContent: React.FC<{ activity: ScheduledActivity }> = ({ activity }) => (
+const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: string }> = ({ activity, location }) => (
   <div className="bg-white rounded-lg shadow-lg border-2 border-teal-500">
-    <SortableActivity activity={activity} onDelete={() => {}} isDragging />
+    <SortableActivity activity={activity} onDelete={() => {}} isDragging location={location} />
   </div>
 );
 
@@ -122,9 +131,10 @@ const formatDate = (dateString: string) => {
 
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { dailyItinerary, updateItinerary } = useAppContext();
+  const { dailyItinerary, updateItinerary, destinations } = useAppContext();
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
+  const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -136,6 +146,11 @@ const ItineraryPage: React.FC = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const getLocationForDay = (destinationId: string) => {
+    const destination = destinations.find(d => d.id === destinationId);
+    return destination ? `${destination.name}, ${destination.country}` : undefined;
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -149,6 +164,7 @@ const ItineraryPage: React.FC = () => {
       const activity = draggedDay.activities.find(a => a.activityId === active.id);
       if (activity) {
         setDraggedActivity(activity);
+        setDraggedLocation(getLocationForDay(draggedDay.destinationId));
       }
     }
   };
@@ -186,6 +202,7 @@ const ItineraryPage: React.FC = () => {
 
     setActiveId(null);
     setDraggedActivity(null);
+    setDraggedLocation(undefined);
   };
 
   const handleDeleteActivity = (date: string, activityId: string) => {
@@ -223,34 +240,49 @@ const ItineraryPage: React.FC = () => {
             }}
           >
             <div className="space-y-6">
-              {dailyItinerary.map((day, index) => (
-                <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="mb-6">
-                    <h3 className="text-xl font-semibold">Day {index + 1}</h3>
-                    <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
-                  </div>
-                  
-                  <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
-                    <div>
-                      {day.activities.map((activity) => (
-                        <SortableActivity
-                          key={activity.activityId}
-                          activity={activity}
-                          onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
-                          isDragging={activity.activityId === activeId}
-                        />
-                      ))}
+              {dailyItinerary.map((day, index) => {
+                const location = getLocationForDay(day.destinationId);
+                return (
+                  <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="mb-6">
+                      <h3 className="text-xl font-semibold">Day {index + 1}</h3>
+                      <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+                      {location && (
+                        <div className="flex items-center text-sm text-gray-600 mt-1">
+                          <MapPin size={14} className="mr-1" />
+                          {location}
+                        </div>
+                      )}
                     </div>
-                  </SortableContext>
-                </div>
-              ))}
+                    
+                    <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
+                      <div>
+                        {day.activities.map((activity) => (
+                          <SortableActivity
+                            key={activity.activityId}
+                            activity={activity}
+                            onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                            isDragging={activity.activityId === activeId}
+                            location={location}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </div>
+                );
+              })}
             </div>
             
             <DragOverlay dropAnimation={{
               duration: 200,
               easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
             }}>
-              {draggedActivity ? <DragOverlayContent activity={draggedActivity} /> : null}
+              {draggedActivity ? (
+                <DragOverlayContent 
+                  activity={draggedActivity} 
+                  location={draggedLocation}
+                />
+              ) : null}
             </DragOverlay>
           </DndContext>
         ) : (
