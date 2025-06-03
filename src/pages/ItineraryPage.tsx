@@ -194,50 +194,66 @@ const ItineraryPage: React.FC = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over || !draggedActivity) return;
+    if (!over || !draggedActivity) {
+      setActiveId(null);
+      setDraggedActivity(null);
+      setDraggedLocation(undefined);
+      setActiveDroppableId(null);
+      return;
+    }
 
-    const sourceDay = dailyItinerary.find(day => 
+    const newItinerary = [...dailyItinerary];
+    
+    // Find source and target days
+    const sourceDay = newItinerary.find(day => 
       day.activities.some(a => a.activityId === active.id)
     );
     
-    const targetDay = dailyItinerary.find(day => 
+    const targetDay = newItinerary.find(day => 
       day.id === over.id || day.activities.some(a => a.activityId === over.id)
     );
 
-    if (sourceDay && targetDay && sourceDay.destinationId === targetDay.destinationId) {
-      const newItinerary = [...dailyItinerary];
-      
-      // Remove from source day
-      const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
-      newItinerary[sourceDayIndex] = {
-        ...sourceDay,
-        activities: sourceDay.activities.filter(a => a.activityId !== active.id)
-      };
-
-      // Add to target day
-      const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
-      const targetActivities = [...targetDay.activities];
-      
-      // Find the insertion index
-      const overIndex = over.id === targetDay.id 
-        ? targetActivities.length 
-        : targetActivities.findIndex(a => a.activityId === over.id);
-      
-      targetActivities.splice(overIndex, 0, draggedActivity);
-      
-      newItinerary[targetDayIndex] = {
-        ...targetDay,
-        activities: targetActivities
-      };
-
-      // Remove empty days and update warnings
-      const filteredItinerary = updateDayWarnings(
-        newItinerary.filter(day => day.activities.length > 0)
-      );
-      
-      updateItinerary(filteredItinerary);
+    if (!sourceDay || !targetDay || sourceDay.destinationId !== targetDay.destinationId) {
+      setActiveId(null);
+      setDraggedActivity(null);
+      setDraggedLocation(undefined);
+      setActiveDroppableId(null);
+      return;
     }
 
+    // Remove activity from source day
+    const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
+    const activityToMove = sourceDay.activities.find(a => a.activityId === active.id);
+    newItinerary[sourceDayIndex] = {
+      ...sourceDay,
+      activities: sourceDay.activities.filter(a => a.activityId !== active.id)
+    };
+
+    // Add activity to target day
+    const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
+    const targetActivities = [...targetDay.activities];
+    
+    // Find insertion index
+    const overIndex = over.id === targetDay.id 
+      ? targetActivities.length 
+      : targetActivities.findIndex(a => a.activityId === over.id);
+    
+    if (activityToMove) {
+      targetActivities.splice(overIndex, 0, activityToMove);
+    }
+
+    newItinerary[targetDayIndex] = {
+      ...targetDay,
+      activities: targetActivities
+    };
+
+    // Remove empty days and update warnings
+    const filteredItinerary = updateDayWarnings(
+      newItinerary.filter(day => day.activities.length > 0)
+    );
+    
+    updateItinerary(filteredItinerary);
+    
     setActiveId(null);
     setDraggedActivity(null);
     setDraggedLocation(undefined);
