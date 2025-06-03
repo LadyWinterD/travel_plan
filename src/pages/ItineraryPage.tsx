@@ -19,6 +19,7 @@ import {
   DragStartEvent,
   DragOverEvent,
   MeasuringStrategy,
+  DragOverlay as DndDragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -62,6 +63,7 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
       ref={setNodeRef}
       style={style}
       className={`mb-3 ${isDragging ? 'opacity-50' : ''}`}
+      data-activity-id={activity.activityId}
     >
       <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
         <div className="flex items-center gap-4">
@@ -132,6 +134,7 @@ const ItineraryPage: React.FC = () => {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
   const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
+  const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -166,40 +169,67 @@ const ItineraryPage: React.FC = () => {
     }
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    if (over) {
+      const droppableId = over.id.toString().split('-')[0];
+      setActiveDroppableId(droppableId);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over) return;
+    if (!over || !draggedActivity) return;
 
-    if (active.id !== over.id) {
-      const oldIndex = dailyItinerary.findIndex(day => 
-        day.activities.some(activity => activity.activityId === active.id)
-      );
+    const sourceDay = dailyItinerary.find(day => 
+      day.activities.some(a => a.activityId === active.id)
+    );
+    
+    const targetDay = dailyItinerary.find(day => 
+      day.activities.some(a => a.activityId === over.id) || day.id === over.id
+    );
+
+    if (sourceDay && targetDay && sourceDay.destinationId === targetDay.destinationId) {
+      const newItinerary = [...dailyItinerary];
       
-      if (oldIndex !== -1) {
-        const newItinerary = [...dailyItinerary];
-        const dayActivities = [...newItinerary[oldIndex].activities];
-        
-        const oldActivityIndex = dayActivities.findIndex(
-          activity => activity.activityId === active.id
-        );
-        const newActivityIndex = dayActivities.findIndex(
-          activity => activity.activityId === over.id
-        );
-
-        newItinerary[oldIndex].activities = arrayMove(
-          dayActivities,
-          oldActivityIndex,
-          newActivityIndex
-        );
-
-        updateItinerary(newItinerary);
-      }
+      // Remove from source day
+      const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
+      const sourceActivities = [...newItinerary[sourceDayIndex].activities];
+      const activityIndex = sourceActivities.findIndex(a => a.activityId === active.id);
+      const [movedActivity] = sourceActivities.splice(activityIndex, 1);
+      
+      // Add to target day
+      const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
+      const targetActivities = [...newItinerary[targetDayIndex].activities];
+      
+      const overIndex = over.id === targetDay.id 
+        ? targetActivities.length 
+        : targetActivities.findIndex(a => a.activityId === over.id);
+      
+      targetActivities.splice(overIndex, 0, movedActivity);
+      
+      // Update both days
+      newItinerary[sourceDayIndex] = {
+        ...newItinerary[sourceDayIndex],
+        activities: sourceActivities
+      };
+      
+      newItinerary[targetDayIndex] = {
+        ...newItinerary[targetDayIndex],
+        activities: targetActivities
+      };
+      
+      // Remove empty days
+      const filteredItinerary = newItinerary.filter(day => day.activities.length > 0);
+      
+      updateItinerary(filteredItinerary);
     }
 
     setActiveId(null);
     setDraggedActivity(null);
     setDraggedLocation(undefined);
+    setActiveDroppableId(null);
   };
 
   const handleDeleteActivity = (date: string, activityId: string) => {
@@ -218,6 +248,15 @@ const ItineraryPage: React.FC = () => {
     updateItinerary(newItinerary);
   };
 
+  // Group days by destination
+  const daysByDestination = dailyItinerary.reduce((acc, day) => {
+    if (!acc[day.destinationId]) {
+      acc[day.destinationId] = [];
+    }
+    acc[day.destinationId].push(day);
+    return acc;
+  }, {} as Record<string, TripDay[]>);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8 text-center">Your Itinerary</h1>
@@ -227,6 +266,7 @@ const ItineraryPage: React.FC = () => {
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
           modifiers={[restrictToVerticalAxis]}
           measuring={{
@@ -235,44 +275,52 @@ const ItineraryPage: React.FC = () => {
             }
           }}
         >
-          <div className="space-y-6">
-            {dailyItinerary.map((day, index) => {
-              const location = getLocationForDay(day.destinationId);
+          <div className="space-y-8">
+            {Object.entries(daysByDestination).map(([destinationId, days]) => {
+              const location = getLocationForDay(destinationId);
               return (
-                <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="mb-6">
-                    <h3 className="text-xl font-semibold">Day {index + 1}</h3>
-                    <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
-                    {location && (
-                      <div className="flex items-center text-sm text-gray-600 mt-1">
-                        <MapPin size={14} className="mr-1" />
-                        {location}
-                      </div>
-                    )}
-                    {day.warning && (
-                      <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
-                        <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
-                        {day.warning}
-                      </div>
-                    )}
+                <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                  <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white">
+                    <h2 className="text-xl font-semibold">{location}</h2>
+                    <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
                   </div>
                   
-                  <SortableContext 
-                    items={day.activities.map(a => a.activityId)} 
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div>
-                      {day.activities.map((activity) => (
-                        <SortableActivity
-                          key={activity.activityId}
-                          activity={activity}
-                          onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
-                          isDragging={activity.activityId === activeId}
-                          location={location}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
+                  <div className="divide-y divide-gray-100">
+                    {days.map((day, index) => (
+                      <div 
+                        key={day.id}
+                        className={`p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
+                      >
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold">Day {index + 1}</h3>
+                          <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+                          {day.warning && (
+                            <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
+                              <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
+                              {day.warning}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <SortableContext 
+                          items={day.activities.map(a => a.activityId)} 
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div>
+                            {day.activities.map((activity) => (
+                              <SortableActivity
+                                key={activity.activityId}
+                                activity={activity}
+                                onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                                isDragging={activity.activityId === activeId}
+                                location={location}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
