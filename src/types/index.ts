@@ -45,6 +45,7 @@ export interface TripDay {
   destinationId: string;
   activities: ScheduledActivity[];
   weatherData?: WeatherData;
+  warning?: string;
 }
 
 export interface ScheduledActivity {

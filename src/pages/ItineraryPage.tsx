@@ -253,6 +253,12 @@ const ItineraryPage: React.FC = () => {
                           {location}
                         </div>
                       )}
+                      {day.warning && (
+                        <div className="mt-2 p-2 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
+                          <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
+                          {day.warning}
+                        </div>
+                      )}
                     </div>
                     
                     <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
