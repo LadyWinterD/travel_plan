@@ -210,7 +210,7 @@ const ItineraryPage: React.FC = () => {
     );
     
     const targetDay = newItinerary.find(day => 
-      day.id === over.id || day.activities.some(a => a.activityId === over.id)
+      day.activities.some(a => a.activityId === over.id) || day.id === over.id
     );
 
     if (!sourceDay || !targetDay || sourceDay.destinationId !== targetDay.destinationId) {
@@ -221,31 +221,48 @@ const ItineraryPage: React.FC = () => {
       return;
     }
 
-    // Remove activity from source day
-    const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
-    const activityToMove = sourceDay.activities.find(a => a.activityId === active.id);
-    newItinerary[sourceDayIndex] = {
-      ...sourceDay,
-      activities: sourceDay.activities.filter(a => a.activityId !== active.id)
-    };
+    // If source and target are the same day, just reorder
+    if (sourceDay.id === targetDay.id) {
+      const oldIndex = sourceDay.activities.findIndex(a => a.activityId === active.id);
+      const newIndex = targetDay.activities.findIndex(a => a.activityId === over.id);
+      
+      const reorderedActivities = arrayMove(sourceDay.activities, oldIndex, newIndex);
+      
+      const updatedDay = {
+        ...sourceDay,
+        activities: reorderedActivities
+      };
+      
+      const dayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
+      newItinerary[dayIndex] = updatedDay;
+    } else {
+      // Moving between different days
+      // 1. Remove from source day
+      const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
+      const activityToMove = sourceDay.activities.find(a => a.activityId === active.id);
+      newItinerary[sourceDayIndex] = {
+        ...sourceDay,
+        activities: sourceDay.activities.filter(a => a.activityId !== active.id)
+      };
 
-    // Add activity to target day
-    const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
-    const targetActivities = [...targetDay.activities];
-    
-    // Find insertion index
-    const overIndex = over.id === targetDay.id 
-      ? targetActivities.length 
-      : targetActivities.findIndex(a => a.activityId === over.id);
-    
-    if (activityToMove) {
-      targetActivities.splice(overIndex, 0, activityToMove);
+      // 2. Add to target day
+      const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
+      const targetActivities = [...targetDay.activities];
+      
+      // Find insertion index
+      const overIndex = over.id === targetDay.id 
+        ? targetActivities.length 
+        : targetActivities.findIndex(a => a.activityId === over.id);
+      
+      if (activityToMove) {
+        targetActivities.splice(overIndex, 0, activityToMove);
+      }
+
+      newItinerary[targetDayIndex] = {
+        ...targetDay,
+        activities: targetActivities
+      };
     }
-
-    newItinerary[targetDayIndex] = {
-      ...targetDay,
-      activities: targetActivities
-    };
 
     // Remove empty days and update warnings
     const filteredItinerary = updateDayWarnings(
@@ -397,3 +414,5 @@ const ItineraryPage: React.FC = () => {
 };
 
 export default ItineraryPage;
+
+export default ItineraryPage
