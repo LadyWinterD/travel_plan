@@ -204,7 +204,7 @@ const ItineraryPage: React.FC = () => {
       const tripDates = getTripDates();
       const activitiesByDestination = destinations.map(destination => ({
         destinationId: destination.id,
-        activities: selectedActivities.filter(activity => activity.destinationId === destination.id)
+        activities: selectedActivities[destination.id] || [] // Fixed: Access activities using destination ID
       }));
 
       // Calculate days per destination
