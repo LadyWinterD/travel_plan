@@ -201,7 +201,7 @@ const ItineraryPage: React.FC = () => {
     );
     
     const targetDay = dailyItinerary.find(day => 
-      day.activities.some(a => a.activityId === over.id) || day.id === over.id
+      day.id === over.id || day.activities.some(a => a.activityId === over.id)
     );
 
     if (sourceDay && targetDay && sourceDay.destinationId === targetDay.destinationId) {
@@ -209,31 +209,27 @@ const ItineraryPage: React.FC = () => {
       
       // Remove from source day
       const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
-      const sourceActivities = [...newItinerary[sourceDayIndex].activities];
-      const activityIndex = sourceActivities.findIndex(a => a.activityId === active.id);
-      const [movedActivity] = sourceActivities.splice(activityIndex, 1);
-      
+      newItinerary[sourceDayIndex] = {
+        ...sourceDay,
+        activities: sourceDay.activities.filter(a => a.activityId !== active.id)
+      };
+
       // Add to target day
       const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
-      const targetActivities = [...newItinerary[targetDayIndex].activities];
+      const targetActivities = [...targetDay.activities];
       
+      // Find the insertion index
       const overIndex = over.id === targetDay.id 
         ? targetActivities.length 
         : targetActivities.findIndex(a => a.activityId === over.id);
       
-      targetActivities.splice(overIndex, 0, movedActivity);
-      
-      // Update both days with new activities and recalculate warnings
-      newItinerary[sourceDayIndex] = {
-        ...newItinerary[sourceDayIndex],
-        activities: sourceActivities
-      };
+      targetActivities.splice(overIndex, 0, draggedActivity);
       
       newItinerary[targetDayIndex] = {
-        ...newItinerary[targetDayIndex],
+        ...targetDay,
         activities: targetActivities
       };
-      
+
       // Remove empty days and update warnings
       const filteredItinerary = updateDayWarnings(
         newItinerary.filter(day => day.activities.length > 0)
