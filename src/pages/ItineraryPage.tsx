@@ -30,8 +30,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
-// Previous helper functions remain the same...
-
 interface SortableActivityProps {
   activity: ScheduledActivity;
   onDelete: () => void;
@@ -120,13 +118,14 @@ const DragOverlayContent: React.FC<{ activity: ScheduledActivity }> = ({ activit
 );
 
 const ItineraryPage: React.FC = () => {
-  // Previous state declarations remain the same...
+  const { dailyItinerary, updateItinerary } = useAppContext();
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 8px movement required before drag starts
+        distance: 8,
       }
     }),
     useSensor(KeyboardSensor, {
@@ -150,12 +149,8 @@ const ItineraryPage: React.FC = () => {
     }
   };
 
-  // Rest of the component implementation remains the same...
-
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Previous JSX remains the same until DndContext */}
-      
       {dailyItinerary.length > 0 ? (
         <DndContext
           sensors={sensors}
@@ -170,7 +165,27 @@ const ItineraryPage: React.FC = () => {
           }}
         >
           <div className="space-y-6">
-            {/* Previous day mapping remains the same */}
+            {dailyItinerary.map((day, index) => (
+              <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold">Day {index + 1}</h3>
+                  <div className="text-sm text-gray-600">{day.date}</div>
+                </div>
+                
+                <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-4">
+                    {day.activities.map((activity) => (
+                      <SortableActivity
+                        key={activity.activityId}
+                        activity={activity}
+                        onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                        isDragging={activity.activityId === activeId}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </div>
+            ))}
           </div>
           
           <DragOverlay dropAnimation={{
@@ -181,11 +196,10 @@ const ItineraryPage: React.FC = () => {
           </DragOverlay>
         </DndContext>
       ) : (
-        // Previous empty state JSX remains the same
-        <div></div>
+        <div className="text-center py-12">
+          <p className="text-gray-600">No activities scheduled yet.</p>
+        </div>
       )}
-      
-      {/* Previous navigation buttons remain the same */}
     </div>
   );
 };
