@@ -93,10 +93,12 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       const activities = selectedActivities[destination.id] || [];
       if (activities.length === 0) return;
 
-      // Sort activities by preference match
+      // Sort activities by preference match with defensive programming
       const sortedActivities = [...activities].sort((a, b) => {
-        const aMatches = a.categories.filter(cat => preferences.includes(cat)).length;
-        const bMatches = b.categories.filter(cat => preferences.includes(cat)).length;
+        const aCategories = a.categories || [];
+        const bCategories = b.categories || [];
+        const aMatches = aCategories.filter(cat => preferences.includes(cat)).length;
+        const bMatches = bCategories.filter(cat => preferences.includes(cat)).length;
         return bMatches - aMatches;
       });
 
