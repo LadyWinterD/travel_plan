@@ -117,7 +117,18 @@ const DragOverlayContent: React.FC<{ activity: ScheduledActivity }> = ({ activit
   </div>
 );
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
 const ItineraryPage: React.FC = () => {
+  const navigate = useNavigate();
   const { dailyItinerary, updateItinerary } = useAppContext();
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
@@ -202,6 +213,8 @@ const ItineraryPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8 text-center">Your Itinerary</h1>
+      
       {dailyItinerary.length > 0 ? (
         <DndContext
           sensors={sensors}
@@ -220,7 +233,7 @@ const ItineraryPage: React.FC = () => {
               <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold">Day {index + 1}</h3>
-                  <div className="text-sm text-gray-600">{day.date}</div>
+                  <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
                 </div>
                 
                 <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
@@ -247,10 +260,27 @@ const ItineraryPage: React.FC = () => {
           </DragOverlay>
         </DndContext>
       ) : (
-        <div className="text-center py-12">
+        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+          <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
           <p className="text-gray-600">No activities scheduled yet.</p>
+          <button
+            onClick={() => navigate('/activities')}
+            className="mt-4 px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
+          >
+            Add Activities
+          </button>
         </div>
       )}
+      
+      {/* Navigation Buttons */}
+      <div className="mt-8 flex justify-between">
+        <button
+          onClick={() => navigate('/activities')}
+          className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+        >
+          Back to Activities
+        </button>
+      </div>
     </div>
   );
 };
