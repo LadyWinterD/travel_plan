@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
+import PreferencesForm from './components/PreferencesForm';
 import DestinationsPage from './pages/DestinationsPage';
 import ActivitiesPage from './pages/ActivitiesPage';
 import ItineraryPage from './pages/ItineraryPage';
@@ -17,6 +18,7 @@ function App() {
           <main className="flex-grow">
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/preferences" element={<PreferencesForm />} />
               <Route path="/destinations" element={<DestinationsPage />} />
               <Route path="/activities" element={<ActivitiesPage />} />
               <Route path="/itinerary" element={<ItineraryPage />} />

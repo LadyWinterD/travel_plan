@@ -20,7 +20,7 @@ export interface Activity {
     amount: number;
     currencyCode: string;
   };
-  category: string;
+  categories: string[];
   indoor: boolean; // Used for weather optimization
   location?: {
     lat: number;
@@ -63,4 +63,10 @@ export interface StoredTripData {
   selectedActivities: Record<string, Activity[]>;
   dailyItinerary: TripDay[];
   weatherData: Record<string, WeatherData[]>;
+  preferences: string[];
+}
+
+// Preferences Types
+export interface UserPreferences {
+  categories: string[];
 }

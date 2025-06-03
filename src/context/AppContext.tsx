@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Destination, Activity, TripDay, WeatherData, ScheduledActivity } from '../types';
+import { Destination, Activity, TripDay, WeatherData, ScheduledActivity, UserPreferences } from '../types';
 import { getStoredTrip, storeTrip } from '../utils/storage';
 
 interface AppContextType {
@@ -9,6 +9,7 @@ interface AppContextType {
   selectedActivities: Record<string, Activity[]>;
   dailyItinerary: TripDay[];
   weatherData: Record<string, WeatherData[]>;
+  preferences: string[];
   
   // Actions
   addDestination: (destination: Destination) => void;
@@ -18,6 +19,7 @@ interface AppContextType {
   toggleActivity: (destinationId: string, activity: Activity) => void;
   updateItinerary: (newItinerary: TripDay[]) => void;
   resetTrip: () => void;
+  updatePreferences: (newPreferences: string[]) => void;
 }
 
 const defaultContext: AppContextType = {
@@ -27,6 +29,7 @@ const defaultContext: AppContextType = {
   selectedActivities: {},
   dailyItinerary: [],
   weatherData: {},
+  preferences: [],
   
   addDestination: () => {},
   removeDestination: () => {},
@@ -35,6 +38,7 @@ const defaultContext: AppContextType = {
   toggleActivity: () => {},
   updateItinerary: () => {},
   resetTrip: () => {},
+  updatePreferences: () => {},
 };
 
 const AppContext = createContext<AppContextType>(defaultContext);
@@ -76,6 +80,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const [selectedActivities, setSelectedActivities] = useState<Record<string, Activity[]>>(initialData?.selectedActivities || {});
   const [dailyItinerary, setDailyItinerary] = useState<TripDay[]>(initialData?.dailyItinerary || []);
   const [weatherData, setWeatherData] = useState<Record<string, WeatherData[]>>(initialData?.weatherData || {});
+  const [preferences, setPreferences] = useState<string[]>(initialData?.preferences || []);
 
   // Update itinerary when activities or dates change
   useEffect(() => {
@@ -88,7 +93,14 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       const activities = selectedActivities[destination.id] || [];
       if (activities.length === 0) return;
 
-      const scheduledActivities = generateTimeSlots(activities, destination.days);
+      // Sort activities by preference match
+      const sortedActivities = [...activities].sort((a, b) => {
+        const aMatches = a.categories.filter(cat => preferences.includes(cat)).length;
+        const bMatches = b.categories.filter(cat => preferences.includes(cat)).length;
+        return bMatches - aMatches;
+      });
+
+      const scheduledActivities = generateTimeSlots(sortedActivities, destination.days);
 
       // Create days for this destination
       for (let i = 0; i < destination.days; i++) {
@@ -102,7 +114,6 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
           }));
 
         if (dayActivities.length > 0) {
-          // Calculate total duration for this day
           const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
           
           newItinerary.push({
@@ -110,7 +121,6 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
             date: currentDate.toISOString(),
             destinationId: destination.id,
             activities: dayActivities,
-            // Only add warning if this specific day exceeds 6 hours
             warning: dailyDuration > 360 ? `This day's schedule exceeds 6 hours. Consider moving some activities to another day.` : undefined
           });
         }
@@ -120,21 +130,22 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     });
 
     setDailyItinerary(newItinerary);
-  }, [startDate, endDate, selectedActivities, destinations]);
+  }, [startDate, endDate, selectedActivities, destinations, preferences]);
 
   // Save to localStorage when data changes
   useEffect(() => {
-    if (destinations.length > 0 || startDate || endDate) {
+    if (destinations.length > 0 || startDate || endDate || preferences.length > 0) {
       storeTrip({
         destinations,
         startDate: startDate?.toISOString(),
         endDate: endDate?.toISOString(),
         selectedActivities,
         dailyItinerary,
-        weatherData
+        weatherData,
+        preferences
       });
     }
-  }, [destinations, startDate, endDate, selectedActivities, dailyItinerary, weatherData]);
+  }, [destinations, startDate, endDate, selectedActivities, dailyItinerary, weatherData, preferences]);
 
   const addDestination = (destination: Destination) => {
     setDestinations(prev => [...prev, destination]);
@@ -185,6 +196,10 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     setDailyItinerary(newItinerary);
   };
 
+  const updatePreferences = (newPreferences: string[]) => {
+    setPreferences(newPreferences);
+  };
+
   const resetTrip = () => {
     setDestinations([]);
     setStartDate(null);
@@ -192,6 +207,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     setSelectedActivities({});
     setDailyItinerary([]);
     setWeatherData({});
+    setPreferences([]);
     localStorage.removeItem('travelPlanner');
   };
 
@@ -202,6 +218,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     selectedActivities,
     dailyItinerary,
     weatherData,
+    preferences,
     
     addDestination,
     removeDestination,
@@ -209,7 +226,8 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     setDates,
     toggleActivity,
     updateItinerary,
-    resetTrip
+    resetTrip,
+    updatePreferences
   };
 
   return (

@@ -2,8 +2,6 @@ import { Activity, Destination, WeatherData } from '../types';
 
 // Mock Activities by destination
 const generateMockActivities = (destinationId: string): Activity[] => {
-  console.log('Generating mock activities for destination:', destinationId);
-  
   const activitySets: Record<string, Activity[]> = {
     'dest-001': [ // Paris
       {
@@ -14,7 +12,7 @@ const generateMockActivities = (destinationId: string): Activity[] => {
         duration: 180,
         rating: 4.5,
         price: { amount: 25, currencyCode: 'EUR' },
-        category: 'Landmark',
+        categories: ['Historical Sites', 'Cultural', 'Entertainment'],
         indoor: false,
         location: { lat: 48.8584, lng: 2.2945 }
       },
@@ -29,7 +27,7 @@ const generateMockActivities = (destinationId: string): Activity[] => {
         duration: 180,
         rating: 4.7,
         price: { amount: 16, currencyCode: 'EUR' },
-        category: 'Landmark',
+        categories: ['Historical Sites', 'Cultural'],
         indoor: false,
         location: { lat: 41.8902, lng: 12.4922 }
       },
@@ -39,7 +37,19 @@ const generateMockActivities = (destinationId: string): Activity[] => {
   
   // Generate 10 activities for any destination not in our predefined sets
   if (!activitySets[destinationId]) {
-    console.log('Generating generic activities for destination:', destinationId);
+    const categories = [
+      'Museums',
+      'Outdoor',
+      'Food & Dining',
+      'Shopping',
+      'Historical Sites',
+      'Adventure',
+      'Nightlife',
+      'Cultural',
+      'Nature',
+      'Entertainment'
+    ];
+    
     return Array.from({ length: 10 }, (_, i) => ({
       id: `act-${destinationId}-${i + 1}`,
       name: `Activity ${i + 1}`,
@@ -48,7 +58,10 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       duration: 60 + (i * 30),
       rating: 4 + (Math.random() * 1),
       price: { amount: 10 + (i * 5), currencyCode: 'EUR' },
-      category: i % 2 === 0 ? 'Landmark' : 'Tour',
+      categories: [
+        categories[Math.floor(Math.random() * categories.length)],
+        categories[Math.floor(Math.random() * categories.length)]
+      ],
       indoor: i % 2 === 0,
       location: { lat: 0, lng: 0 }
     }));
@@ -63,8 +76,6 @@ export const getMockActivities = (destinationId: string): Activity[] => {
 
 // Mock Weather Data
 export const getMockWeather = (destinationId: string, date: string): WeatherData => {
-  console.log('Generating mock weather for destination:', destinationId, 'date:', date);
-  
   const dateObj = new Date(date);
   const dateSeed = dateObj.getDate() + dateObj.getMonth();
   const randomVariation = (dateSeed % 10) - 5;
