@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X } from 'lucide-react';
@@ -25,6 +25,59 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// Helper functions moved outside component
+const calculateTotalDuration = (activities: Activity[]) => {
+  return activities.reduce((sum, act) => sum + act.duration, 0);
+};
+
+const distributeActivities = (activities: Activity[], numDays: number): Activity[][] => {
+  const MAX_MINUTES_PER_DAY = 360; // 6 hours
+  const days: Activity[][] = Array(numDays).fill(null).map(() => []);
+  let currentDayIndex = 0;
+  let currentDayDuration = 0;
+  
+  // Sort activities by duration (descending) to optimize distribution
+  const sortedActivities = [...activities].sort((a, b) => b.duration - a.duration);
+  
+  sortedActivities.forEach(activity => {
+    // If we're on the last day, add remaining activities regardless of duration
+    if (currentDayIndex === numDays - 1) {
+      days[currentDayIndex].push(activity);
+      return;
+    }
+    
+    // If adding this activity would exceed 6 hours and we have more days available
+    if (currentDayDuration + activity.duration > MAX_MINUTES_PER_DAY && currentDayIndex < numDays - 1) {
+      currentDayIndex++;
+      currentDayDuration = 0;
+    }
+    
+    days[currentDayIndex].push(activity);
+    currentDayDuration += activity.duration;
+  });
+  
+  return days;
+};
+
+const scheduleActivities = (activities: Activity[], startDate: Date): ScheduledActivity[] => {
+  let currentTime = new Date(startDate);
+  currentTime.setHours(9, 0, 0, 0); // Start at 9:00 AM
+
+  return activities.map(activity => {
+    const startTime = currentTime.toTimeString().slice(0, 5);
+    currentTime.setMinutes(currentTime.getMinutes() + activity.duration);
+    const endTime = currentTime.toTimeString().slice(0, 5);
+    currentTime.setMinutes(currentTime.getMinutes() + 30); // 30-minute break
+
+    return {
+      activityId: activity.id,
+      startTime,
+      endTime,
+      activity,
+    };
+  });
+};
 
 interface SortableActivityProps {
   activity: ScheduledActivity;
@@ -123,7 +176,7 @@ const ItineraryPage: React.FC = () => {
   );
   
   // Calculate trip dates based on start and end dates
-  const getTripDates = () => {
+  const getTripDates = useCallback(() => {
     if (!startDate || !endDate) return [];
     
     const dates: Date[] = [];
@@ -135,62 +188,70 @@ const ItineraryPage: React.FC = () => {
     }
     
     return dates;
-  };
+  }, [startDate, endDate]);
 
-  // Calculate total duration for a set of activities
-  const calculateTotalDuration = (activities: Activity[]) => {
-    return activities.reduce((sum, act) => sum + act.duration, 0);
-  };
+  // Generate itinerary implementation
+  const generateItinerary = useCallback(async () => {
+    if (!startDate || !endDate || destinations.length === 0) {
+      setErrorMessage('Missing required trip information');
+      return;
+    }
 
-  // Distribute activities across days
-  const distributeActivities = (activities: Activity[], numDays: number): Activity[][] => {
-    const MAX_MINUTES_PER_DAY = 360; // 6 hours
-    const days: Activity[][] = Array(numDays).fill(null).map(() => []);
-    let currentDayIndex = 0;
-    let currentDayDuration = 0;
-    
-    // Sort activities by duration (descending) to optimize distribution
-    const sortedActivities = [...activities].sort((a, b) => b.duration - a.duration);
-    
-    sortedActivities.forEach(activity => {
-      // If we're on the last day, add remaining activities regardless of duration
-      if (currentDayIndex === numDays - 1) {
-        days[currentDayIndex].push(activity);
-        return;
+    setIsGenerating(true);
+    setErrorMessage(null);
+
+    try {
+      const tripDates = getTripDates();
+      const activitiesByDestination = destinations.map(destination => ({
+        destinationId: destination.id,
+        activities: selectedActivities.filter(activity => activity.destinationId === destination.id)
+      }));
+
+      // Calculate days per destination
+      const totalDays = tripDates.length;
+      const daysPerDestination = Math.floor(totalDays / destinations.length);
+      let remainingDays = totalDays % destinations.length;
+
+      let currentDateIndex = 0;
+      const newItinerary: TripDay[] = [];
+
+      // Distribute activities across destinations and days
+      for (const { destinationId, activities } of activitiesByDestination) {
+        const destinationDays = daysPerDestination + (remainingDays > 0 ? 1 : 0);
+        remainingDays--;
+
+        if (activities.length > 0) {
+          const distributedActivities = distributeActivities(activities, destinationDays);
+
+          for (let i = 0; i < destinationDays && currentDateIndex < tripDates.length; i++) {
+            const date = tripDates[currentDateIndex];
+            const dayActivities = distributedActivities[i] || [];
+            const scheduledActivities = scheduleActivities(dayActivities, date);
+            
+            // Get weather data for the day
+            const weather = await getMockWeather(destinationId, date);
+
+            newItinerary.push({
+              id: uuidv4(),
+              date: date.toISOString(),
+              destinationId,
+              activities: scheduledActivities,
+              weatherData: weather
+            });
+
+            currentDateIndex++;
+          }
+        }
       }
-      
-      // If adding this activity would exceed 6 hours and we have more days available
-      if (currentDayDuration + activity.duration > MAX_MINUTES_PER_DAY && currentDayIndex < numDays - 1) {
-        currentDayIndex++;
-        currentDayDuration = 0;
-      }
-      
-      days[currentDayIndex].push(activity);
-      currentDayDuration += activity.duration;
-    });
-    
-    return days;
-  };
 
-  // Schedule activities for a single day
-  const scheduleActivities = (activities: Activity[], startDate: Date): ScheduledActivity[] => {
-    let currentTime = new Date(startDate);
-    currentTime.setHours(9, 0, 0, 0); // Start at 9:00 AM
-
-    return activities.map(activity => {
-      const startTime = currentTime.toTimeString().slice(0, 5);
-      currentTime.setMinutes(currentTime.getMinutes() + activity.duration);
-      const endTime = currentTime.toTimeString().slice(0, 5);
-      currentTime.setMinutes(currentTime.getMinutes() + 30); // 30-minute break
-
-      return {
-        activityId: activity.id,
-        startTime,
-        endTime,
-        activity,
-      };
-    });
-  };
+      updateItinerary(newItinerary);
+    } catch (error) {
+      setErrorMessage('Failed to generate itinerary. Please try again.');
+      console.error('Error generating itinerary:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [destinations, selectedActivities, startDate, endDate, getTripDates, updateItinerary]);
 
   // Handle drag end for reordering activities
   const handleDragEnd = (event: DragEndEvent) => {
