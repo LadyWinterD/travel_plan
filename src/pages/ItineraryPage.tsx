@@ -12,7 +12,10 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  DragEndEvent,
+  DragOverlay,
+  defaultDropAnimation,
+  UniqueIdentifier
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -35,7 +38,13 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete 
     setNodeRef,
     transform,
     transition,
-  } = useSortable({ id: activity.activityId });
+  } = useSortable({ 
+    id: activity.activityId,
+    data: {
+      type: 'activity',
+      activity
+    }
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -104,6 +113,7 @@ const ItineraryPage: React.FC = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -181,102 +191,92 @@ const ItineraryPage: React.FC = () => {
       };
     });
   };
-  
-  // Generate optimized itinerary
-  const generateItinerary = () => {
-    if (!startDate || !endDate || destinations.length === 0) {
-      setErrorMessage('Please set trip dates and destinations first');
-      return;
-    }
-    
-    setIsGenerating(true);
-    setErrorMessage(null);
-    
-    try {
-      const tripDates = getTripDates();
-      const newItinerary: TripDay[] = [];
-      let dateIndex = 0;
-      
-      // For each destination, distribute and schedule activities
-      destinations.forEach(destination => {
-        const destActivities = selectedActivities[destination.id] || [];
-        
-        // Skip if no activities selected for this destination
-        if (destActivities.length === 0) return;
-        
-        // Distribute activities across available days
-        const distributedActivities = distributeActivities(destActivities, destination.days);
-        
-        // Create schedule for each day
-        for (let day = 0; day < destination.days; day++) {
-          if (dateIndex >= tripDates.length) break;
-          
-          const currentDate = tripDates[dateIndex];
-          const dateStr = currentDate.toISOString().split('T')[0];
-          const dayActivities = distributedActivities[day] || [];
-          
-          // Get weather data
-          const weather = getMockWeather(destination.id, dateStr);
-          
-          // Schedule activities for this day
-          const scheduledActivities = scheduleActivities(dayActivities, currentDate);
-          
-          newItinerary.push({
-            id: uuidv4(),
-            date: dateStr,
-            destinationId: destination.id,
-            activities: scheduledActivities,
-            weatherData: weather,
-          });
-          
-          dateIndex++;
-        }
-      });
-      
-      updateItinerary(newItinerary);
-    } catch (error) {
-      console.error('Error generating itinerary:', error);
-      setErrorMessage('Failed to generate itinerary. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-  
+
   // Handle drag end for reordering activities
-  const handleDragEnd = (event: DragEndEvent, dayId: string) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
     
-    if (over && active.id !== over.id) {
-      const oldIndex = dailyItinerary.findIndex(day => day.id === dayId);
-      const day = dailyItinerary[oldIndex];
+    if (!over) return;
+
+    const activeDay = dailyItinerary.find(day => 
+      day.activities.some(a => a.activityId === active.id)
+    );
+    
+    const overDay = dailyItinerary.find(day => 
+      day.activities.some(a => a.activityId === over.id)
+    );
+    
+    if (!activeDay || !overDay) return;
+
+    // Only allow moving between days of the same destination
+    if (activeDay.destinationId !== overDay.destinationId) return;
+    
+    const updatedItinerary = dailyItinerary.map(day => {
+      // Remove from source day
+      if (day.id === activeDay.id) {
+        return {
+          ...day,
+          activities: day.activities.filter(a => a.activityId !== active.id)
+        };
+      }
       
-      const activities = [...day.activities];
-      const oldActivityIndex = activities.findIndex(a => a.activityId === active.id);
-      const newActivityIndex = activities.findIndex(a => a.activityId === over.id);
+      // Add to target day
+      if (day.id === overDay.id) {
+        const activities = [...day.activities];
+        const activeActivity = activeDay.activities.find(a => a.activityId === active.id);
+        const overIndex = activities.findIndex(a => a.activityId === over.id);
+        
+        if (activeActivity) {
+          activities.splice(overIndex, 0, activeActivity);
+        }
+        
+        // Recalculate times
+        let currentTime = new Date(day.date);
+        currentTime.setHours(9, 0, 0, 0);
+        
+        const rescheduledActivities = activities.map(activity => ({
+          ...activity,
+          startTime: currentTime.toTimeString().slice(0, 5),
+          endTime: (() => {
+            currentTime.setMinutes(currentTime.getMinutes() + activity.activity.duration);
+            return currentTime.toTimeString().slice(0, 5);
+          })(),
+        }));
+        
+        return {
+          ...day,
+          activities: rescheduledActivities
+        };
+      }
       
-      const reorderedActivities = arrayMove(activities, oldActivityIndex, newActivityIndex);
-      
-      // Recalculate times
-      let currentTime = new Date(day.date);
-      currentTime.setHours(9, 0, 0, 0);
-      
-      const updatedActivities = reorderedActivities.map(activity => ({
-        ...activity,
-        startTime: currentTime.toTimeString().slice(0, 5),
-        endTime: (() => {
-          currentTime.setMinutes(currentTime.getMinutes() + activity.activity.duration);
-          return currentTime.toTimeString().slice(0, 5);
-        })(),
-      }));
-      
-      const updatedItinerary = [...dailyItinerary];
-      updatedItinerary[oldIndex] = {
-        ...day,
-        activities: updatedActivities,
-      };
-      
-      updateItinerary(updatedItinerary);
-    }
+      return day;
+    });
+    
+    // Clean up empty source day's times
+    const finalItinerary = updatedItinerary.map(day => {
+      if (day.id === activeDay.id && day.activities.length > 0) {
+        let currentTime = new Date(day.date);
+        currentTime.setHours(9, 0, 0, 0);
+        
+        const rescheduledActivities = day.activities.map(activity => ({
+          ...activity,
+          startTime: currentTime.toTimeString().slice(0, 5),
+          endTime: (() => {
+            currentTime.setMinutes(currentTime.getMinutes() + activity.activity.duration);
+            return currentTime.toTimeString().slice(0, 5);
+          })(),
+        }));
+        
+        return {
+          ...day,
+          activities: rescheduledActivities
+        };
+      }
+      return day;
+    });
+    
+    updateItinerary(finalItinerary);
   };
   
   // Handle activity deletion
@@ -389,50 +389,51 @@ const ItineraryPage: React.FC = () => {
       
       {/* Itinerary Display */}
       {dailyItinerary.length > 0 ? (
-        <div className="space-y-6">
-          {dailyItinerary.map((day) => {
-            const totalDuration = calculateTotalDuration(day.activities.map(a => a.activity));
-            const showWarning = totalDuration > 360; // More than 6 hours
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          onDragStart={(event) => setActiveId(event.active.id)}
+        >
+          <div className="space-y-6">
+            {dailyItinerary.map((day) => {
+              const totalDuration = calculateTotalDuration(day.activities.map(a => a.activity));
+              const showWarning = totalDuration > 360; // More than 6 hours
 
-            return (
-              <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {/* Day Header */}
-                <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white p-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                      </h3>
-                      <p className="text-white/90">{getDestinationName(day.destinationId)}</p>
+              return (
+                <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  {/* Day Header */}
+                  <div className="bg-gradient-to-r from-teal-500 to-blue-500 text-white p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </h3>
+                        <p className="text-white/90">{getDestinationName(day.destinationId)}</p>
+                      </div>
+                      
+                      {day.weatherData && (
+                        <div className="mt-2 sm:mt-0 flex items-center bg-white/20 rounded-full px-3 py-1">
+                          {getWeatherIcon(day.weatherData)}
+                          <span className="ml-1">{day.weatherData.temperature}°C</span>
+                          <span className="ml-1 text-sm">{day.weatherData.condition}</span>
+                        </div>
+                      )}
                     </div>
-                    
-                    {day.weatherData && (
-                      <div className="mt-2 sm:mt-0 flex items-center bg-white/20 rounded-full px-3 py-1">
-                        {getWeatherIcon(day.weatherData)}
-                        <span className="ml-1">{day.weatherData.temperature}°C</span>
-                        <span className="ml-1 text-sm">{day.weatherData.condition}</span>
+                  </div>
+                  
+                  {/* Day Activities */}
+                  <div className="p-4">
+                    {showWarning && (
+                      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start">
+                        <AlertTriangle size={16} className="text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-700">
+                          Total activities time ({Math.round(totalDuration / 60)} hours) exceeds the recommended 6 hours per day
+                        </p>
                       </div>
                     )}
-                  </div>
-                </div>
-                
-                {/* Day Activities */}
-                <div className="p-4">
-                  {showWarning && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start">
-                      <AlertTriangle size={16} className="text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-yellow-700">
-                        Total activities time ({Math.round(totalDuration / 60)} hours) exceeds the recommended 6 hours per day
-                      </p>
-                    </div>
-                  )}
 
-                  {day.activities.length > 0 ? (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={(event) => handleDragEnd(event, day.id)}
-                    >
+                    {day.activities.length > 0 ? (
                       <SortableContext
                         items={day.activities.map(a => a.activityId)}
                         strategy={verticalListSortingStrategy}
@@ -447,18 +448,18 @@ const ItineraryPage: React.FC = () => {
                           ))}
                         </div>
                       </SortableContext>
-                    </DndContext>
-                  ) : (
-                    <div className="text-center py-6 text-gray-500">
-                      <Info size={24} className="mx-auto mb-2" />
-                      <p>No activities scheduled for this day</p>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-center py-6 text-gray-500">
+                        <Info size={24} className="mx-auto mb-2" />
+                        <p>No activities scheduled for this day</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DndContext>
       ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           {isGenerating ? (
