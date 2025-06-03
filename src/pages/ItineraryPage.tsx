@@ -58,45 +58,38 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
   };
 
   const ActivityContent = (
-    <div className="flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0 group bg-white rounded-lg">
-      <div className="sm:w-32 flex-shrink-0 mb-2 sm:mb-0">
-        <div className="text-gray-600 font-medium">
-          {activity.startTime} - {activity.endTime}
+    <div className="flex items-center bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex-shrink-0 w-16 text-sm text-gray-600">
+        {activity.startTime}
+      </div>
+      
+      <div 
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded mr-2 touch-none"
+      >
+        <GripVertical size={16} className="text-gray-400" />
+      </div>
+      
+      <div 
+        className="w-12 h-12 rounded-md bg-center bg-cover flex-shrink-0 mr-3"
+        style={{ backgroundImage: `url(${activity.activity.image})` }}
+      ></div>
+      
+      <div className="flex-grow">
+        <h4 className="font-medium">{activity.activity.name}</h4>
+        <div className="flex items-center text-sm text-gray-600 mt-1">
+          <Clock size={14} className="mr-1" />
+          {Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}
         </div>
       </div>
       
-      <div className="flex-grow">
-        <div className="flex items-start">
-          <div 
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded mr-2 touch-none"
-          >
-            <GripVertical size={16} className="text-gray-400" />
-          </div>
-          
-          <div 
-            className="w-12 h-12 rounded-md bg-center bg-cover flex-shrink-0 mr-3"
-            style={{ backgroundImage: `url(${activity.activity.image})` }}
-          ></div>
-          
-          <div className="flex-grow">
-            <div className="flex justify-between items-start">
-              <h4 className="font-medium">{activity.activity.name}</h4>
-              <button
-                onClick={onDelete}
-                className="p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="flex items-center text-sm text-gray-600 mt-1">
-              <Clock size={14} className="mr-1" />
-              {Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
+      <button
+        onClick={onDelete}
+        className="ml-4 p-1.5 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
 
@@ -104,7 +97,7 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
     <div 
       ref={setNodeRef}
       style={style}
-      className={`transition-transform duration-200 ease-in-out ${isDragging ? 'z-50' : ''}`}
+      className={`mb-2 ${isDragging ? 'z-50' : ''}`}
     >
       {ActivityContent}
     </div>
@@ -112,7 +105,7 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
 };
 
 const DragOverlayContent: React.FC<{ activity: ScheduledActivity }> = ({ activity }) => (
-  <div className="bg-white rounded-lg shadow-lg border border-teal-500">
+  <div className="bg-white rounded-lg shadow-lg border-2 border-teal-500">
     <SortableActivity activity={activity} onDelete={() => {}} isDragging />
   </div>
 );
@@ -212,74 +205,76 @@ const ItineraryPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Your Itinerary</h1>
-      
-      {dailyItinerary.length > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-          measuring={{
-            droppable: {
-              strategy: MeasuringStrategy.Always
-            }
-          }}
-        >
-          <div className="space-y-6">
-            {dailyItinerary.map((day, index) => (
-              <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold">Day {index + 1}</h3>
-                  <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
-                </div>
-                
-                <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-4">
-                    {day.activities.map((activity) => (
-                      <SortableActivity
-                        key={activity.activityId}
-                        activity={activity}
-                        onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
-                        isDragging={activity.activityId === activeId}
-                      />
-                    ))}
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8 text-center">Your Itinerary</h1>
+        
+        {dailyItinerary.length > 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+            measuring={{
+              droppable: {
+                strategy: MeasuringStrategy.Always
+              }
+            }}
+          >
+            <div className="space-y-6">
+              {dailyItinerary.map((day, index) => (
+                <div key={day.date} className="bg-white rounded-lg shadow-sm p-6">
+                  <div className="mb-6">
+                    <h3 className="text-xl font-semibold">Day {index + 1}</h3>
+                    <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
                   </div>
-                </SortableContext>
-              </div>
-            ))}
+                  
+                  <SortableContext items={day.activities.map(a => a.activityId)} strategy={verticalListSortingStrategy}>
+                    <div>
+                      {day.activities.map((activity) => (
+                        <SortableActivity
+                          key={activity.activityId}
+                          activity={activity}
+                          onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                          isDragging={activity.activityId === activeId}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+              ))}
+            </div>
+            
+            <DragOverlay dropAnimation={{
+              duration: 200,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}>
+              {draggedActivity ? <DragOverlayContent activity={draggedActivity} /> : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+            <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 mb-4">No activities scheduled yet.</p>
+            <button
+              onClick={() => navigate('/activities')}
+              className="px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
+            >
+              Add Activities
+            </button>
           </div>
-          
-          <DragOverlay dropAnimation={{
-            duration: 200,
-            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-          }}>
-            {draggedActivity ? <DragOverlayContent activity={draggedActivity} /> : null}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-          <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-600">No activities scheduled yet.</p>
+        )}
+        
+        {/* Navigation Buttons */}
+        <div className="mt-8 flex justify-between">
           <button
             onClick={() => navigate('/activities')}
-            className="mt-4 px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
           >
-            Add Activities
+            Back to Activities
           </button>
         </div>
-      )}
-      
-      {/* Navigation Buttons */}
-      <div className="mt-8 flex justify-between">
-        <button
-          onClick={() => navigate('/activities')}
-          className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-        >
-          Back to Activities
-        </button>
       </div>
     </div>
   );
