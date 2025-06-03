@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Destination, Activity, TripDay, WeatherData } from '../types';
+import { Destination, Activity, TripDay, WeatherData, ScheduledActivity } from '../types';
 import { getStoredTrip, storeTrip } from '../utils/storage';
 
 interface AppContextType {
@@ -43,15 +43,12 @@ export const useAppContext = () => useContext(AppContext);
 
 const generateTimeSlots = (activities: Activity[], daysAvailable: number): ScheduledActivity[] => {
   const MINUTES_PER_DAY = 720; // 12 hours per day (8 AM - 8 PM)
-  const totalDuration = activities.reduce((sum, act) => sum + act.duration, 0);
-  const averageDailyDuration = Math.ceil(totalDuration / daysAvailable);
-  
   let currentTime = 480; // Start at 8 AM (in minutes from midnight)
   let currentDay = 0;
   
   return activities.map(activity => {
     // If adding this activity would exceed 6 hours and we have more days available
-    if (currentTime + activity.duration > 480 + MINUTES_PER_DAY / 2 && currentDay < daysAvailable - 1) {
+    if (currentTime - 480 + activity.duration > 360 && currentDay < daysAvailable - 1) {
       currentTime = 480; // Reset to 8 AM
       currentDay++;
     }
@@ -71,7 +68,6 @@ const generateTimeSlots = (activities: Activity[], daysAvailable: number): Sched
 };
 
 export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
-  // Load stored trip data or use defaults
   const initialData = getStoredTrip();
   
   const [destinations, setDestinations] = useState<Destination[]>(initialData?.destinations || []);
@@ -93,8 +89,6 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       if (activities.length === 0) return;
 
       const scheduledActivities = generateTimeSlots(activities, destination.days);
-      const totalDuration = activities.reduce((sum, act) => sum + act.duration, 0);
-      const isOverloaded = totalDuration > destination.days * 360; // 6 hours per day
 
       // Create days for this destination
       for (let i = 0; i < destination.days; i++) {
@@ -108,12 +102,16 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
           }));
 
         if (dayActivities.length > 0) {
+          // Calculate total duration for this day
+          const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
+          
           newItinerary.push({
             id: `day-${currentDate.toISOString()}`,
             date: currentDate.toISOString(),
             destinationId: destination.id,
             activities: dayActivities,
-            warning: isOverloaded ? `This schedule might be tight. Consider spreading activities across ${Math.ceil(totalDuration / 360)} days.` : undefined
+            // Only add warning if this specific day exceeds 6 hours
+            warning: dailyDuration > 360 ? `This day's schedule exceeds 6 hours. Consider moving some activities to another day.` : undefined
           });
         }
 
