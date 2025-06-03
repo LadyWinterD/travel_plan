@@ -152,6 +152,20 @@ const ItineraryPage: React.FC = () => {
     return destination ? `${destination.name}, ${destination.country}` : undefined;
   };
 
+  const calculateDayDuration = (activities: ScheduledActivity[]): number => {
+    return activities.reduce((total, activity) => total + activity.activity.duration, 0);
+  };
+
+  const updateDayWarnings = (days: TripDay[]): TripDay[] => {
+    return days.map(day => {
+      const totalDuration = calculateDayDuration(day.activities);
+      return {
+        ...day,
+        warning: totalDuration > 360 ? `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.` : undefined
+      };
+    });
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     setActiveId(active.id);
@@ -209,7 +223,7 @@ const ItineraryPage: React.FC = () => {
       
       targetActivities.splice(overIndex, 0, movedActivity);
       
-      // Update both days
+      // Update both days with new activities and recalculate warnings
       newItinerary[sourceDayIndex] = {
         ...newItinerary[sourceDayIndex],
         activities: sourceActivities
@@ -220,8 +234,10 @@ const ItineraryPage: React.FC = () => {
         activities: targetActivities
       };
       
-      // Remove empty days
-      const filteredItinerary = newItinerary.filter(day => day.activities.length > 0);
+      // Remove empty days and update warnings
+      const filteredItinerary = updateDayWarnings(
+        newItinerary.filter(day => day.activities.length > 0)
+      );
       
       updateItinerary(filteredItinerary);
     }
@@ -233,17 +249,21 @@ const ItineraryPage: React.FC = () => {
   };
 
   const handleDeleteActivity = (date: string, activityId: string) => {
-    const newItinerary = dailyItinerary.map(day => {
-      if (day.date === date) {
-        return {
-          ...day,
-          activities: day.activities.filter(
-            activity => activity.activityId !== activityId
-          )
-        };
-      }
-      return day;
-    }).filter(day => day.activities.length > 0);
+    const newItinerary = updateDayWarnings(
+      dailyItinerary
+        .map(day => {
+          if (day.date === date) {
+            return {
+              ...day,
+              activities: day.activities.filter(
+                activity => activity.activityId !== activityId
+              )
+            };
+          }
+          return day;
+        })
+        .filter(day => day.activities.length > 0)
+    );
     
     updateItinerary(newItinerary);
   };
