@@ -1,10 +1,94 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle } from 'lucide-react';
+import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { getMockWeather } from '../utils/mockData';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableActivityProps {
+  activity: ScheduledActivity;
+  onDelete: () => void;
+}
+
+const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: activity.activityId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0 group"
+    >
+      <div className="sm:w-32 flex-shrink-0 mb-2 sm:mb-0">
+        <div className="text-gray-600 font-medium">
+          {activity.startTime} - {activity.endTime}
+        </div>
+      </div>
+      
+      <div className="flex-grow">
+        <div className="flex items-start">
+          <div 
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded mr-2"
+          >
+            <GripVertical size={16} className="text-gray-400" />
+          </div>
+          
+          <div 
+            className="w-12 h-12 rounded-md bg-center bg-cover flex-shrink-0 mr-3"
+            style={{ backgroundImage: `url(${activity.activity.image})` }}
+          ></div>
+          
+          <div className="flex-grow">
+            <div className="flex justify-between items-start">
+              <h4 className="font-medium">{activity.activity.name}</h4>
+              <button
+                onClick={onDelete}
+                className="p-1 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex items-center text-sm text-gray-600 mt-1">
+              <Clock size={14} className="mr-1" />
+              {Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +104,13 @@ const ItineraryPage: React.FC = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
   
   // Calculate trip dates based on start and end dates
   const getTripDates = () => {
@@ -151,6 +242,73 @@ const ItineraryPage: React.FC = () => {
     }
   };
   
+  // Handle drag end for reordering activities
+  const handleDragEnd = (event: DragEndEvent, dayId: string) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = dailyItinerary.findIndex(day => day.id === dayId);
+      const day = dailyItinerary[oldIndex];
+      
+      const activities = [...day.activities];
+      const oldActivityIndex = activities.findIndex(a => a.activityId === active.id);
+      const newActivityIndex = activities.findIndex(a => a.activityId === over.id);
+      
+      const reorderedActivities = arrayMove(activities, oldActivityIndex, newActivityIndex);
+      
+      // Recalculate times
+      let currentTime = new Date(day.date);
+      currentTime.setHours(9, 0, 0, 0);
+      
+      const updatedActivities = reorderedActivities.map(activity => ({
+        ...activity,
+        startTime: currentTime.toTimeString().slice(0, 5),
+        endTime: (() => {
+          currentTime.setMinutes(currentTime.getMinutes() + activity.activity.duration);
+          return currentTime.toTimeString().slice(0, 5);
+        })(),
+      }));
+      
+      const updatedItinerary = [...dailyItinerary];
+      updatedItinerary[oldIndex] = {
+        ...day,
+        activities: updatedActivities,
+      };
+      
+      updateItinerary(updatedItinerary);
+    }
+  };
+  
+  // Handle activity deletion
+  const handleDeleteActivity = (dayId: string, activityId: string) => {
+    const updatedItinerary = dailyItinerary.map(day => {
+      if (day.id === dayId) {
+        const updatedActivities = day.activities.filter(a => a.activityId !== activityId);
+        
+        // Recalculate times for remaining activities
+        let currentTime = new Date(day.date);
+        currentTime.setHours(9, 0, 0, 0);
+        
+        const rescheduledActivities = updatedActivities.map(activity => ({
+          ...activity,
+          startTime: currentTime.toTimeString().slice(0, 5),
+          endTime: (() => {
+            currentTime.setMinutes(currentTime.getMinutes() + activity.activity.duration);
+            return currentTime.toTimeString().slice(0, 5);
+          })(),
+        }));
+        
+        return {
+          ...day,
+          activities: rescheduledActivities,
+        };
+      }
+      return day;
+    });
+    
+    updateItinerary(updatedItinerary);
+  };
+  
   // Generate itinerary when destinations or activities change
   useEffect(() => {
     if (destinations.length > 0 && startDate && endDate) {
@@ -270,37 +428,26 @@ const ItineraryPage: React.FC = () => {
                   )}
 
                   {day.activities.length > 0 ? (
-                    <div className="space-y-4">
-                      {day.activities.map((scheduled, index) => (
-                        <div 
-                          key={`${scheduled.activityId}-${index}`}
-                          className="flex flex-col sm:flex-row border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
-                        >
-                          <div className="sm:w-32 flex-shrink-0 mb-2 sm:mb-0">
-                            <div className="text-gray-600 font-medium">
-                              {scheduled.startTime} - {scheduled.endTime}
-                            </div>
-                          </div>
-                          
-                          <div className="flex-grow">
-                            <div className="flex items-start">
-                              <div 
-                                className="w-12 h-12 rounded-md bg-center bg-cover flex-shrink-0 mr-3"
-                                style={{ backgroundImage: `url(${scheduled.activity.image})` }}
-                              ></div>
-                              
-                              <div>
-                                <h4 className="font-medium">{scheduled.activity.name}</h4>
-                                <div className="flex items-center text-sm text-gray-600 mt-1">
-                                  <Clock size={14} className="mr-1" />
-                                  {Math.floor(scheduled.activity.duration / 60)} hr {scheduled.activity.duration % 60 > 0 ? `${scheduled.activity.duration % 60} min` : ''}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event) => handleDragEnd(event, day.id)}
+                    >
+                      <SortableContext
+                        items={day.activities.map(a => a.activityId)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-4">
+                          {day.activities.map((scheduled) => (
+                            <SortableActivity
+                              key={scheduled.activityId}
+                              activity={scheduled}
+                              onDelete={() => handleDeleteActivity(day.id, scheduled.activityId)}
+                            />
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </SortableContext>
+                    </DndContext>
                   ) : (
                     <div className="text-center py-6 text-gray-500">
                       <Info size={24} className="mx-auto mb-2" />
