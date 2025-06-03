@@ -149,6 +149,57 @@ const ItineraryPage: React.FC = () => {
     }
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+
+    if (active.id !== over.id) {
+      const oldIndex = dailyItinerary.findIndex(day => 
+        day.activities.some(activity => activity.activityId === active.id)
+      );
+      
+      if (oldIndex !== -1) {
+        const newItinerary = [...dailyItinerary];
+        const dayActivities = [...newItinerary[oldIndex].activities];
+        
+        const oldActivityIndex = dayActivities.findIndex(
+          activity => activity.activityId === active.id
+        );
+        const newActivityIndex = dayActivities.findIndex(
+          activity => activity.activityId === over.id
+        );
+
+        newItinerary[oldIndex].activities = arrayMove(
+          dayActivities,
+          oldActivityIndex,
+          newActivityIndex
+        );
+
+        updateItinerary(newItinerary);
+      }
+    }
+
+    setActiveId(null);
+    setDraggedActivity(null);
+  };
+
+  const handleDeleteActivity = (date: string, activityId: string) => {
+    const newItinerary = dailyItinerary.map(day => {
+      if (day.date === date) {
+        return {
+          ...day,
+          activities: day.activities.filter(
+            activity => activity.activityId !== activityId
+          )
+        };
+      }
+      return day;
+    });
+    
+    updateItinerary(newItinerary);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {dailyItinerary.length > 0 ? (
