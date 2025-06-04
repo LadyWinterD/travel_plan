@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin } from 'lucide-react';
+import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { getMockWeather } from '../utils/mockData';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,9 +36,31 @@ interface SortableActivityProps {
   onDelete: () => void;
   isDragging?: boolean;
   location?: string;
+  weather?: WeatherData;
 }
 
-const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, isDragging, location }) => {
+const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
+  const getWeatherIcon = () => {
+    if (weather.isRainy) return <CloudRain className="text-blue-500" />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500" />;
+    return <Cloud className="text-gray-500" />;
+  };
+
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      {getWeatherIcon()}
+      <span>{Math.round(weather.temperature)}°C</span>
+      {weather.isRainy && (
+        <span className="flex items-center text-blue-500">
+          <Umbrella size={14} className="mr-1" />
+          {Math.round(weather.precipitation)}mm
+        </span>
+      )}
+    </div>
+  );
+};
+
+const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, isDragging, location, weather }) => {
   const {
     attributes,
     listeners,
@@ -57,6 +79,8 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const showWeatherWarning = weather?.isRainy && !activity.activity.indoor;
 
   return (
     <div 
@@ -97,7 +121,15 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
                   <span className="truncate">{location}</span>
                 </div>
               )}
+              {weather && <WeatherDisplay weather={weather} />}
             </div>
+            
+            {showWeatherWarning && (
+              <div className="mt-2 text-sm text-yellow-700 bg-yellow-50 px-3 py-1 rounded-md flex items-center">
+                <AlertTriangle size={14} className="mr-1 flex-shrink-0" />
+                <span>This is an outdoor activity and rain is forecasted</span>
+              </div>
+            )}
           </div>
           
           <button
@@ -112,9 +144,9 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
   );
 };
 
-const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: string }> = ({ activity, location }) => (
+const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: string; weather?: WeatherData }> = ({ activity, location, weather }) => (
   <div className="bg-white rounded-lg shadow-xl border-2 border-teal-500">
-    <SortableActivity activity={activity} onDelete={() => {}} location={location} />
+    <SortableActivity activity={activity} onDelete={() => {}} location={location} weather={weather} />
   </div>
 );
 
@@ -135,6 +167,19 @@ const ItineraryPage: React.FC = () => {
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
   const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
   const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
+  const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>({});
+
+  useEffect(() => {
+    // Fetch weather data for each day
+    const newWeatherData: Record<string, WeatherData> = {};
+    dailyItinerary.forEach(day => {
+      const destination = destinations.find(d => d.id === day.destinationId);
+      if (destination) {
+        newWeatherData[day.date] = getMockWeather(destination.id, day.date);
+      }
+    });
+    setWeatherData(newWeatherData);
+  }, [dailyItinerary, destinations]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -159,9 +204,20 @@ const ItineraryPage: React.FC = () => {
   const updateDayWarnings = (days: TripDay[]): TripDay[] => {
     return days.map(day => {
       const totalDuration = calculateDayDuration(day.activities);
+      const weather = weatherData[day.date];
+      const hasOutdoorActivitiesInRain = weather?.isRainy && 
+        day.activities.some(activity => !activity.activity.indoor);
+
+      let warning = undefined;
+      if (totalDuration > 360) {
+        warning = `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.`;
+      } else if (hasOutdoorActivitiesInRain) {
+        warning = `There are outdoor activities scheduled on a rainy day. Consider rearranging if possible.`;
+      }
+
       return {
         ...day,
-        warning: totalDuration > 360 ? `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.` : undefined
+        warning
       };
     });
   };
@@ -325,8 +381,15 @@ const ItineraryPage: React.FC = () => {
                         className={`p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
                       >
                         <div className="mb-6">
-                          <h3 className="text-lg font-semibold">Day {index + 1}</h3>
-                          <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="text-lg font-semibold">Day {index + 1}</h3>
+                              <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+                            </div>
+                            {weatherData[day.date] && (
+                              <WeatherDisplay weather={weatherData[day.date]} />
+                            )}
+                          </div>
                           {day.warning && (
                             <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
                               <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
@@ -347,6 +410,7 @@ const ItineraryPage: React.FC = () => {
                                 onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
                                 isDragging={activity.activityId === activeId}
                                 location={location}
+                                weather={weatherData[day.date]}
                               />
                             ))}
                           </div>
@@ -367,6 +431,9 @@ const ItineraryPage: React.FC = () => {
               <DragOverlayContent 
                 activity={draggedActivity} 
                 location={draggedLocation}
+                weather={weatherData[dailyItinerary.find(day => 
+                  day.activities.some(a => a.activityId === draggedActivity.activityId)
+                )?.date || '']}
               />
             ) : null}
           </DragOverlay>
