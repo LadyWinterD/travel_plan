@@ -1,4 +1,5 @@
-// ==================== 复制并替换你的整个 WeatherDisplay.tsx 文件 ====================
+// WeatherDisplay.tsx
+
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Cloud, Sun, CloudRain, Thermometer, Wind, Droplets, AlertTriangle } from 'lucide-react';
@@ -21,9 +22,9 @@ interface WeatherDisplayProps {
 const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) => {
   const { destinations } = useAppContext();
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMockData, setIsMockData] = useState(false); // Track if we are showing mock data
+  const [isMockData, setIsMockData] = useState(false);
 
   // Helper to get a weather icon based on the condition
   const getWeatherIcon = (condition: string) => {
@@ -55,7 +56,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
   };
 
   useEffect(() => {
-    // Ensure we don't run the fetch if essential props are missing
     if (!destinationId || !date || destinations.length === 0) {
       setIsLoading(false);
       return;
@@ -64,7 +64,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
     const fetchWeatherData = async () => {
       setIsLoading(true);
       setError(null);
-      setIsMockData(false); // Reset mock data flag on new fetch
+      setIsMockData(false);
 
       const destination = destinations.find(d => d.id === destinationId);
       const cityName = destination?.name;
@@ -76,7 +76,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
       }
 
       try {
-        const apiKey = 'f37afaba87034221b29110532250706'; // Your API Key
+        const apiKey = 'f37afaba87034221b29110532250706';
         // The one and only correct, direct URL
         const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}`;
 
@@ -84,7 +84,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
         const data = await response.json();
 
         if (!response.ok) {
-          // Throw an error with the message from the API if available
           throw new Error(data.error?.message || 'Network response was not ok.');
         }
 
@@ -93,7 +92,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
           condition: data.current.condition.text,
           humidity: data.current.humidity,
           windSpeed: Math.round(data.current.wind_kph),
-          isRainy: data.current.precip_mm > 0.1, // A more reliable way to check for rain
+          isRainy: data.current.precip_mm > 0.1,
         };
         
         setWeatherData(processedData);
@@ -118,7 +117,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
     };
 
     fetchWeatherData();
-  }, [destinationId, date, destinations]); // Dependencies are correct
+  }, [destinationId, date, destinations]);
 
   const destination = destinations.find(d => d.id === destinationId);
   const location = destination ? `${destination.name}, ${destination.country}` : 'Loading...';
@@ -134,12 +133,10 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
     );
   }
   
-  // Don't render anything if there's no data at all (e.g., on initial load)
   if (!weatherData) {
     return null; 
   }
 
-  // Main component render
   return (
     <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6 shadow-sm">
       <div className="flex items-center justify-between gap-4">
