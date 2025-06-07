@@ -124,7 +124,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   // Fetch real weather data from API
   const fetchWeatherForCity = async (cityName: string): Promise<WeatherData | null> => {
     try {
-      const apiKey = 'f37afaba87034221b29110532250706';
+      const apiKey = '37781fb79e564cf493f112949250706';
       const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&aqi=no`;
       
       const response = await fetch(url);
