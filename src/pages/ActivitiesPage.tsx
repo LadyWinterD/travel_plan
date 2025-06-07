@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer } from 'lucide-react';
 import { getMockActivities, getMockWeather, getWeatherBasedRecommendations } from '../utils/mockData';
+import WeatherDisplay from '../components/WeatherDisplay';
 
 const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
@@ -164,6 +165,13 @@ const ActivitiesPage: React.FC = () => {
           ))}
         </div>
       </div>
+      
+      {/* API Weather Display */}
+      {currentDestination && (
+        <div className="mb-6">
+          <WeatherDisplay city={`${currentDestination.name}, ${currentDestination.country}`} />
+        </div>
+      )}
       
       {/* Weather Information */}
       {currentDestination && weatherData && (
