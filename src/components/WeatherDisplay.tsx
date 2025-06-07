@@ -13,28 +13,6 @@ interface WeatherData {
   windSpeed?: number;
 }
 
-// Mock weather data generator
-const generateMockWeatherData = (cityName: string): WeatherData => {
-  // Use city name to generate consistent but varied weather data
-  const hash = cityName.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  
-  const conditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain', 'Clear'];
-  const baseTemp = 15 + (Math.abs(hash) % 20); // Temperature between 15-35°C
-  const humidity = 40 + (Math.abs(hash * 2) % 40); // Humidity between 40-80%
-  const windSpeed = 5 + (Math.abs(hash * 3) % 15); // Wind speed between 5-20 km/h
-  const condition = conditions[Math.abs(hash) % conditions.length];
-  
-  return {
-    temperature: baseTemp,
-    condition,
-    humidity,
-    windSpeed
-  };
-};
-
 const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -58,14 +36,27 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
           return;
         }
         
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Make an asynchronous fetch call to the OpenWeatherMap API using the cityName
+        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=YOUR_REAL_API_KEY&units=metric`);
         
-        // Generate mock weather data instead of making real API call
-        const mockData = generateMockWeatherData(cityName);
+        // Check if response.ok is false. If it is, throw a new Error
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        
+        // If the response is ok, parse the JSON data
+        const data = await response.json();
+        
+        // Transform the API response to match our WeatherData interface
+        const transformedData: WeatherData = {
+          temperature: data.main.temp,
+          condition: data.weather[0].description,
+          humidity: data.main.humidity,
+          windSpeed: data.wind.speed
+        };
         
         // Finally, call setWeatherData to update the state
-        setWeatherData(mockData);
+        setWeatherData(transformedData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch weather data');
         console.error('Weather fetch error:', err);
