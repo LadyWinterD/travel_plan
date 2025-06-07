@@ -1,7 +1,9 @@
+// ==================== 复制并替换你的整个 WeatherDisplay.tsx 文件 ====================
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Cloud, Sun, CloudRain, Umbrella, Thermometer, Wind, Droplets } from 'lucide-react';
+import { Cloud, Sun, CloudRain, Thermometer, Wind, Droplets, AlertTriangle } from 'lucide-react';
 
+// Interface for our component's state
 interface WeatherData {
   temperature: number;
   condition: string;
@@ -10,6 +12,7 @@ interface WeatherData {
   isRainy: boolean;
 }
 
+// Props for the component
 interface WeatherDisplayProps {
   destinationId: string;
   date: string;
@@ -18,124 +21,133 @@ interface WeatherDisplayProps {
 const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) => {
   const { destinations } = useAppContext();
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
+  const [isMockData, setIsMockData] = useState(false); // Track if we are showing mock data
 
-  const getWeatherIcon = (condition: string, temp: number) => {
+  // Helper to get a weather icon based on the condition
+  const getWeatherIcon = (condition: string) => {
     const lowerCondition = condition.toLowerCase();
     if (lowerCondition.includes('rain') || lowerCondition.includes('drizzle')) {
-      return <CloudRain className="text-blue-500\" size={24} />;
+      return <CloudRain className="text-blue-500" size={24} />;
     }
     if (lowerCondition.includes('sun') || lowerCondition.includes('clear')) {
       return <Sun className="text-yellow-500" size={24} />;
     }
-    if (temp > 25) {
-      return <Sun className="text-yellow-500\" size={24} />;
-    }
     return <Cloud className="text-gray-500" size={24} />;
   };
 
-  const getWeatherAdvice = (weatherData: WeatherData) => {
-    if (weatherData.isRainy) {
-      return "建议选择室内活动，或准备雨具";
+  // Helper to get travel advice based on the weather
+  const getWeatherAdvice = (data: WeatherData) => {
+    if (data.isRainy) {
+      return "Indoor activities or an umbrella are recommended.";
     }
-    if (weatherData.temperature > 30) {
-      return "天气炎热，建议选择有空调的室内活动";
+    if (data.temperature > 30) {
+      return "Hot weather! Consider air-conditioned indoor activities.";
     }
-    if (weatherData.temperature < 5) {
-      return "天气寒冷，建议选择室内活动保暖";
+    if (data.temperature < 5) {
+      return "Cold weather! Best to choose warm indoor activities.";
     }
-    if (weatherData.temperature > 20) {
-      return "天气宜人，适合户外活动";
+    if (data.temperature > 20) {
+      return "Pleasant weather, great for outdoor activities.";
     }
-    return "天气适中，室内外活动都不错";
+    return "Moderate weather, suitable for both indoor and outdoor plans.";
   };
 
   useEffect(() => {
+    // Ensure we don't run the fetch if essential props are missing
+    if (!destinationId || !date || destinations.length === 0) {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchWeatherData = async () => {
       setIsLoading(true);
       setError(null);
+      setIsMockData(false); // Reset mock data flag on new fetch
+
+      const destination = destinations.find(d => d.id === destinationId);
+      const cityName = destination?.name;
+
+      if (!cityName) {
+        setError("Destination city not found.");
+        setIsLoading(false);
+        return;
+      }
 
       try {
-        const destination = destinations.find(d => d.id === destinationId);
-        if (!destination) {
-          throw new Error('Destination not found');
-        }
+        const apiKey = 'f37afaba87034221b29110532250706'; // Your API Key
+        // The one and only correct, direct URL
+        const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}`;
 
-        const cityName = destination.name;
-        if (!cityName) {
-          return;
-        }
-
-        // Use a CORS proxy to avoid CORS issues
-        const proxyUrl = 'https://api.allorigins.win/raw?url=';
-        const apiUrl = `http://api.weatherapi.com/v1/current.json?key=f37afaba87034221b29110532250706&q=${encodeURIComponent(cityName)}&aqi=no`;
-        const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-
+        const response = await fetch(url);
         const data = await response.json();
 
-        const processedWeatherData: WeatherData = {
+        if (!response.ok) {
+          // Throw an error with the message from the API if available
+          throw new Error(data.error?.message || 'Network response was not ok.');
+        }
+
+        const processedData: WeatherData = {
           temperature: Math.round(data.current.temp_c),
           condition: data.current.condition.text,
           humidity: data.current.humidity,
           windSpeed: Math.round(data.current.wind_kph),
-          isRainy: data.current.condition.text.toLowerCase().includes('rain') || 
-                   data.current.condition.text.toLowerCase().includes('drizzle')
+          isRainy: data.current.precip_mm > 0.1, // A more reliable way to check for rain
         };
-
-        setWeatherData(processedWeatherData);
-      } catch (err) {
-        console.error('Weather fetch error:', err);
-        setError('Unable to fetch weather data');
         
-        // Fallback to mock data if API fails
-        const mockWeatherData: WeatherData = {
+        setWeatherData(processedData);
+
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'An unknown error occurred';
+        setError(message);
+        console.error("Weather fetch error:", err);
+        
+        // Fallback to mock data only if the API call fails
+        setIsMockData(true);
+        setWeatherData({
           temperature: 20,
-          condition: 'Partly cloudy',
+          condition: 'Unavailable',
           humidity: 65,
           windSpeed: 10,
-          isRainy: false
-        };
-        setWeatherData(mockWeatherData);
+          isRainy: false,
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (destinationId && destinations.length > 0) {
-      fetchWeatherData();
-    }
-  }, [destinationId, destinations]);
+    fetchWeatherData();
+  }, [destinationId, date, destinations]); // Dependencies are correct
 
   const destination = destinations.find(d => d.id === destinationId);
-  const location = destination ? `${destination.name}, ${destination.country}` : 'Unknown Location';
+  const location = destination ? `${destination.name}, ${destination.country}` : 'Loading...';
 
   if (isLoading) {
     return (
       <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6">
         <div className="flex items-center justify-center">
           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-teal-500"></div>
-          <span className="ml-2 text-gray-600">Loading weather...</span>
+          <span className="ml-3 text-gray-600">Loading weather for {destination?.name}...</span>
         </div>
       </div>
     );
   }
-
+  
+  // Don't render anything if there's no data at all (e.g., on initial load)
   if (!weatherData) {
-    return null;
+    return null; 
   }
 
+  // Main component render
   return (
-    <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6">
-      <div className="flex items-center justify-between">
+    <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        {/* Left side: Weather details */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">{location} 今日天气</h3>
+          <h3 className="text-lg font-semibold text-gray-800">Weather Today in {location}</h3>
           <div className="flex items-center gap-3 mt-2">
-            {getWeatherIcon(weatherData.condition, weatherData.temperature)}
+            {getWeatherIcon(weatherData.condition)}
             <div>
               <div className="flex items-center gap-2">
                 <Thermometer size={16} className="text-red-500" />
@@ -145,26 +157,34 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
               <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                 <div className="flex items-center gap-1">
                   <Droplets size={14} />
-                  <span>湿度: {weatherData.humidity}%</span>
+                  <span>Humidity: {weatherData.humidity}%</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Wind size={14} />
-                  <span>风速: {weatherData.windSpeed} km/h</span>
+                  <span>Wind: {weatherData.windSpeed} km/h</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-600 mb-1">出行建议</div>
-          <div className="text-sm font-medium text-gray-800 max-w-48">
+
+        {/* Right side: Travel advice */}
+        <div className="text-right flex-shrink-0">
+          <div className="text-sm text-gray-600 mb-1">Travel Advice</div>
+          <div className="text-sm font-medium text-gray-800 max-w-xs">
             {getWeatherAdvice(weatherData)}
           </div>
         </div>
       </div>
+
+      {/* Error/Fallback Notice */}
       {error && (
-        <div className="mt-2 text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
-          {error} (显示模拟数据)
+        <div className="mt-3 text-xs text-yellow-700 bg-yellow-100 px-3 py-1.5 rounded-md flex items-center">
+          <AlertTriangle size={14} className="mr-2"/>
+          {isMockData 
+            ? `Could not fetch real weather (${error}). Showing estimated data.`
+            : `An error occurred: ${error}`
+          }
         </div>
       )}
     </div>
