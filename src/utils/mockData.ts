@@ -6,8 +6,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
     'dest-001': [ // Paris
       {
         id: 'act-paris-001',
-        name: '埃菲尔铁塔',
-        description: '标志性的铁塔，可俯瞰整个巴黎城市美景',
+        name: 'Eiffel Tower',
+        description: 'Iconic iron tower offering panoramic views of Paris',
         image: 'https://images.pexels.com/photos/699466/pexels-photo-699466.jpeg',
         duration: 180,
         rating: 4.5,
@@ -18,8 +18,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-002',
-        name: '卢浮宫博物馆',
-        description: '世界著名的艺术博物馆，收藏蒙娜丽莎等珍品',
+        name: 'Louvre Museum',
+        description: 'World-famous art museum housing the Mona Lisa and countless masterpieces',
         image: 'https://images.pexels.com/photos/2675266/pexels-photo-2675266.jpeg',
         duration: 240,
         rating: 4.7,
@@ -30,8 +30,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-003',
-        name: '塞纳河游船',
-        description: '乘船游览塞纳河，欣赏巴黎两岸美景',
+        name: 'Seine River Cruise',
+        description: 'Scenic boat tour along the Seine River with beautiful city views',
         image: 'https://images.pexels.com/photos/1530259/pexels-photo-1530259.jpeg',
         duration: 90,
         rating: 4.3,
@@ -42,8 +42,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-004',
-        name: '香榭丽舍大街购物',
-        description: '在世界著名的购物街享受购物乐趣',
+        name: 'Champs-Élysées Shopping',
+        description: 'Shop along the world-famous avenue with luxury boutiques and cafes',
         image: 'https://images.pexels.com/photos/1461974/pexels-photo-1461974.jpeg',
         duration: 120,
         rating: 4.2,
@@ -54,8 +54,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-005',
-        name: '蒙马特高地',
-        description: '艺术家聚集地，可欣赏巴黎全景',
+        name: 'Montmartre District',
+        description: 'Historic artist quarter with stunning views and charming streets',
         image: 'https://images.pexels.com/photos/1461974/pexels-photo-1461974.jpeg',
         duration: 150,
         rating: 4.4,
@@ -66,8 +66,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-006',
-        name: '法式料理体验',
-        description: '品尝正宗法式美食和葡萄酒',
+        name: 'French Cuisine Experience',
+        description: 'Authentic French dining experience with wine tasting',
         image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
         duration: 120,
         rating: 4.6,
@@ -78,8 +78,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-007',
-        name: '凡尔赛宫',
-        description: '法国皇室宫殿，华丽的建筑和花园',
+        name: 'Palace of Versailles',
+        description: 'Magnificent royal palace with stunning gardens and opulent rooms',
         image: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
         duration: 300,
         rating: 4.8,
@@ -90,8 +90,8 @@ const generateMockActivities = (destinationId: string): Activity[] => {
       },
       {
         id: 'act-paris-008',
-        name: '巴黎圣母院',
-        description: '哥特式建筑杰作，历史悠久的大教堂',
+        name: 'Notre-Dame Cathedral',
+        description: 'Gothic architectural masterpiece and historic cathedral',
         image: 'https://images.pexels.com/photos/1850619/pexels-photo-1850619.jpeg',
         duration: 90,
         rating: 4.5,
@@ -119,14 +119,14 @@ const generateMockActivities = (destinationId: string): Activity[] => {
     ];
     
     const activityNames = [
-      '当地博物馆', '城市公园', '美食街', '购物中心', '历史古迹',
-      '冒险活动', '夜生活区', '文化中心', '自然景观', '娱乐场所'
+      'Local Museum', 'City Park', 'Food Market', 'Shopping Center', 'Historic Monument',
+      'Adventure Tour', 'Nightlife District', 'Cultural Center', 'Nature Reserve', 'Entertainment Complex'
     ];
     
     return Array.from({ length: 10 }, (_, i) => ({
       id: `act-${destinationId}-${String(i + 1).padStart(3, '0')}`,
-      name: activityNames[i] || `活动 ${i + 1}`,
-      description: `${activityNames[i] || `活动 ${i + 1}`}的详细描述，提供独特的体验`,
+      name: activityNames[i] || `Activity ${i + 1}`,
+      description: `Experience the best of ${activityNames[i] || `Activity ${i + 1}`} with unique local insights`,
       image: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
       duration: 60 + (i * 30),
       rating: 4 + (Math.random() * 1),
@@ -163,19 +163,19 @@ export const getMockWeather = (destinationId: string, date: string): WeatherData
   const rainChance = 0.2 + 0.1 * Math.sin((dayOfYear - 120) * 2 * Math.PI / 365) + Math.random() * 0.3;
   const isRainy = rainChance > 0.6;
   
-  const conditions = ['晴朗', '多云', '阴天', '小雨', '中雨'];
+  const conditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain', 'Heavy Rain'];
   let condition: string;
   let precipitation = 0;
   
   if (isRainy) {
-    condition = Math.random() > 0.5 ? '小雨' : '中雨';
+    condition = Math.random() > 0.5 ? 'Light Rain' : 'Heavy Rain';
     precipitation = Math.random() * 15 + 2;
   } else if (temperature > 25) {
-    condition = '晴朗';
+    condition = 'Sunny';
   } else if (temperature > 15) {
-    condition = Math.random() > 0.5 ? '多云' : '晴朗';
+    condition = Math.random() > 0.5 ? 'Partly Cloudy' : 'Sunny';
   } else {
-    condition = '阴天';
+    condition = 'Cloudy';
   }
   
   return {
@@ -194,33 +194,57 @@ export const getWeatherBasedRecommendations = (
   weather: WeatherData,
   preferences: string[] = []
 ): Activity[] => {
+  console.log('🌤️ Weather-based filtering:', {
+    totalActivities: activities.length,
+    weather: weather.condition,
+    temperature: weather.temperature,
+    isRainy: weather.isRainy,
+    preferences: preferences.length
+  });
+
   // Filter activities based on weather
   let weatherAppropriate = activities.filter(activity => {
     if (weather.isRainy && !activity.indoor) {
+      console.log(`❌ Filtering out outdoor activity "${activity.name}" due to rain`);
       return false; // Avoid outdoor activities when raining
     }
     if (weather.temperature < 5 && !activity.indoor) {
+      console.log(`❌ Filtering out outdoor activity "${activity.name}" due to cold weather`);
       return false; // Avoid outdoor activities when very cold
     }
     return true;
   });
 
+  console.log(`✅ Weather-appropriate activities: ${weatherAppropriate.length}`);
+
   // Apply preference filtering if preferences exist
   if (preferences.length > 0) {
+    const beforePreferenceFilter = weatherAppropriate.length;
     weatherAppropriate = weatherAppropriate.filter(activity =>
       activity.categories.some(category => preferences.includes(category))
     );
+    console.log(`🎯 After preference filtering: ${weatherAppropriate.length} (was ${beforePreferenceFilter})`);
   }
 
   // Sort by rating and weather appropriateness
-  return weatherAppropriate.sort((a, b) => {
+  const sortedActivities = weatherAppropriate.sort((a, b) => {
     // Prioritize indoor activities during bad weather
     if (weather.isRainy || weather.temperature < 10) {
       if (a.indoor && !b.indoor) return -1;
       if (!a.indoor && b.indoor) return 1;
     }
     
+    // Prioritize outdoor activities during good weather
+    if (!weather.isRainy && weather.temperature > 20) {
+      if (!a.indoor && b.indoor) return -1;
+      if (a.indoor && !b.indoor) return 1;
+    }
+    
     // Then sort by rating
     return b.rating - a.rating;
   });
+
+  console.log(`🏆 Final sorted activities: ${sortedActivities.length}`);
+  
+  return sortedActivities;
 };

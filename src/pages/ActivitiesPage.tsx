@@ -7,32 +7,32 @@ import { getMockActivities, getMockWeather, getWeatherBasedRecommendations } fro
 
 const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500\" size={24} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={24} />;
     if (weather.temperature > 25) return <Sun className="text-yellow-500" size={24} />;
     return <Cloud className="text-gray-500" size={24} />;
   };
 
   const getWeatherAdvice = () => {
     if (weather.isRainy) {
-      return "建议选择室内活动，或准备雨具";
+      return "Recommended: Indoor activities or bring rain gear";
     }
     if (weather.temperature > 30) {
-      return "天气炎热，建议选择有空调的室内活动";
+      return "Hot weather: Consider air-conditioned indoor activities";
     }
     if (weather.temperature < 5) {
-      return "天气寒冷，建议选择室内活动保暖";
+      return "Cold weather: Indoor activities recommended for warmth";
     }
     if (weather.temperature > 20) {
-      return "天气宜人，适合户外活动";
+      return "Perfect weather for outdoor activities";
     }
-    return "天气适中，室内外活动都不错";
+    return "Moderate weather: Both indoor and outdoor activities are great";
   };
 
   return (
     <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">{location} 今日天气</h3>
+          <h3 className="text-lg font-semibold text-gray-800">{location} Today's Weather</h3>
           <div className="flex items-center gap-3 mt-2">
             {getWeatherIcon()}
             <div>
@@ -44,14 +44,14 @@ const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ wea
               {weather.isRainy && (
                 <div className="flex items-center gap-1 text-blue-600 text-sm mt-1">
                   <Umbrella size={14} />
-                  <span>降水量: {Math.round(weather.precipitation)}mm</span>
+                  <span>Precipitation: {Math.round(weather.precipitation)}mm</span>
                 </div>
               )}
             </div>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-sm text-gray-600 mb-1">出行建议</div>
+          <div className="text-sm text-gray-600 mb-1">Travel Advice</div>
           <div className="text-sm font-medium text-gray-800 max-w-48">
             {getWeatherAdvice()}
           </div>
@@ -124,9 +124,9 @@ const ActivitiesPage: React.FC = () => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     
-    if (hours === 0) return `${mins} 分钟`;
-    if (mins === 0) return `${hours} 小时`;
-    return `${hours} 小时 ${mins} 分钟`;
+    if (hours === 0) return `${mins} minutes`;
+    if (mins === 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+    return `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes`;
   };
   
   // Get the current destination object
@@ -138,7 +138,7 @@ const ActivitiesPage: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">选择活动</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center">Select Activities</h1>
       
       {/* Destination Tabs */}
       <div className="mb-8">
@@ -176,8 +176,8 @@ const ActivitiesPage: React.FC = () => {
       {/* Weather Recommendations Toggle */}
       <div className="mb-6 flex items-center justify-between bg-white rounded-lg p-4 shadow-sm">
         <div>
-          <h3 className="font-medium text-gray-800">智能推荐</h3>
-          <p className="text-sm text-gray-600">根据天气条件和您的偏好推荐活动</p>
+          <h3 className="font-medium text-gray-800">Smart Weather Recommendations</h3>
+          <p className="text-sm text-gray-600">Get activity suggestions based on weather conditions and your preferences</p>
         </div>
         <label className="flex items-center">
           <input
@@ -186,7 +186,7 @@ const ActivitiesPage: React.FC = () => {
             onChange={(e) => setShowWeatherRecommendations(e.target.checked)}
             className="mr-2"
           />
-          <span className="text-sm">启用天气推荐</span>
+          <span className="text-sm">Enable Weather Recommendations</span>
         </label>
       </div>
       
@@ -196,17 +196,17 @@ const ActivitiesPage: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between">
             <div>
               <h2 className="text-2xl font-bold">{currentDestination.name}, {currentDestination.country}</h2>
-              <p className="mt-1">停留时间: {currentDestination.days} {currentDestination.days === 1 ? '天' : '天'}</p>
+              <p className="mt-1">Duration: {currentDestination.days} {currentDestination.days === 1 ? 'day' : 'days'}</p>
               {weatherData && (
                 <p className="mt-1 text-sm opacity-90">
-                  {showWeatherRecommendations ? '已根据天气优化推荐' : '显示所有活动'}
+                  {showWeatherRecommendations ? 'Showing weather-optimized recommendations' : 'Showing all activities'}
                 </p>
               )}
             </div>
             <div className="mt-4 md:mt-0">
               <div className="bg-white/20 rounded-md px-4 py-2">
-                <p className="text-sm">已选活动: {selectedActivities[currentDestination.id]?.length || 0}</p>
-                <p className="text-sm mt-1">建议: 每天2-4个活动</p>
+                <p className="text-sm">Selected activities: {selectedActivities[currentDestination.id]?.length || 0}</p>
+                <p className="text-sm mt-1">Recommended: 2-4 activities per day</p>
               </div>
             </div>
           </div>
@@ -217,7 +217,7 @@ const ActivitiesPage: React.FC = () => {
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">正在加载活动...</p>
+          <p className="mt-4 text-gray-600">Loading activities...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -237,12 +237,12 @@ const ActivitiesPage: React.FC = () => {
                   <h3 className="text-white font-semibold text-lg">{activity.name}</h3>
                   {activity.indoor && weatherData?.isRainy && (
                     <div className="mt-1 text-xs bg-green-500 text-white px-2 py-1 rounded">
-                      ☂️ 雨天推荐
+                      ☂️ Rainy Day Recommended
                     </div>
                   )}
                   {!activity.indoor && weatherData && !weatherData.isRainy && weatherData.temperature > 15 && (
                     <div className="mt-1 text-xs bg-yellow-500 text-white px-2 py-1 rounded">
-                      ☀️ 好天气推荐
+                      ☀️ Perfect Weather Activity
                     </div>
                   )}
                 </div>
@@ -277,7 +277,7 @@ const ActivitiesPage: React.FC = () => {
                   <div className={`text-xs px-2 py-1 rounded ${
                     activity.indoor ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
                   }`}>
-                    {activity.indoor ? '室内' : '户外'}
+                    {activity.indoor ? 'Indoor' : 'Outdoor'}
                   </div>
                 </div>
                 
@@ -290,7 +290,7 @@ const ActivitiesPage: React.FC = () => {
                         : 'bg-teal-500 text-white hover:bg-teal-600'
                     }`}
                   >
-                    {isActivitySelected(activeDestination!, activity.id) ? '移除' : '添加到行程'}
+                    {isActivitySelected(activeDestination!, activity.id) ? 'Remove from Trip' : 'Add to Trip'}
                   </button>
                 </div>
               </div>
@@ -303,8 +303,8 @@ const ActivitiesPage: React.FC = () => {
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-600">
             {showWeatherRecommendations 
-              ? '根据当前天气和偏好，暂无推荐活动。请尝试关闭天气推荐查看所有活动。'
-              : '此目的地暂无活动。'
+              ? 'No activities match current weather and preferences. Try disabling weather recommendations to see all activities.'
+              : 'No activities available for this destination.'
             }
           </p>
         </div>
@@ -316,14 +316,14 @@ const ActivitiesPage: React.FC = () => {
           onClick={() => navigate('/destinations')}
           className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
         >
-          返回目的地
+          Back to Destinations
         </button>
         
         <button
           onClick={() => navigate('/itinerary')}
           className="px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
         >
-          继续到行程
+          Continue to Itinerary
         </button>
       </div>
     </div>
