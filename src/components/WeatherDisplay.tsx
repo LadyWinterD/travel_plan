@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getMockWeather } from '../utils/mockData';
 import { useAppContext } from '../context/AppContext';
 
 interface WeatherDisplayProps {
@@ -28,17 +27,28 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
       setError(null);
       
       try {
-        const mockWeatherData = getMockWeather(destinationId, date);
+        // Get the destination object and cityName variable
+        const destination = destinations.find(d => d.id === destinationId);
+        const cityName = destination ? destination.name : null;
         
-        // Convert mock weather data to the expected format
-        const convertedData: WeatherData = {
-          temperature: mockWeatherData.temperature,
-          condition: mockWeatherData.condition,
-          humidity: mockWeatherData.humidity,
-          windSpeed: mockWeatherData.windSpeed
-        };
+        // If there is no cityName, simply return to stop the function
+        if (!cityName) {
+          return;
+        }
         
-        setWeatherData(convertedData);
+        // Make an asynchronous fetch call to the OpenWeatherMap API using the cityName
+        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=YOUR_REAL_API_KEY&units=metric`);
+        
+        // Check if response.ok is false. If it is, throw a new Error
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        
+        // If the response is ok, parse the JSON data
+        const data = await response.json();
+        
+        // Finally, call setWeatherData(data) to update the state
+        setWeatherData(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch weather data');
         console.error('Weather fetch error:', err);
@@ -48,7 +58,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
     };
 
     fetchWeatherData();
-  }, [destinationId, date]);
+  }, [destinationId, date, destinations]);
 
   // Get city name for display
   const destination = destinations.find(d => d.id === destinationId);
