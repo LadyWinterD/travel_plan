@@ -37,7 +37,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
         }
         
         // Make an asynchronous fetch call to the WeatherAPI.com API using the cityName
-        const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=YOUR_REAL_API_KEY&q=${cityName}`);
+        const response = await fetch(`http://api.weatherapi.com/v1/current.json?key=f37afaba87034221b29110532250706&q=${cityName}`);
         
         // Check if response.ok is false. If it is, throw a new Error
         if (!response.ok) {
