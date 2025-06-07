@@ -1,4 +1,4 @@
-// WeatherDisplay.tsx
+// src/components/WeatherDisplay.tsx
 
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
@@ -24,7 +24,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMockData, setIsMockData] = useState(false);
 
   // Helper to get a weather icon based on the condition
   const getWeatherIcon = (condition: string) => {
@@ -49,10 +48,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
     if (data.temperature < 5) {
       return "Cold weather! Best to choose warm indoor activities.";
     }
-    if (data.temperature > 20) {
-      return "Pleasant weather, great for outdoor activities.";
-    }
-    return "Moderate weather, suitable for both indoor and outdoor plans.";
+    return "Pleasant weather, great for outdoor activities.";
   };
 
   useEffect(() => {
@@ -64,7 +60,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
     const fetchWeatherData = async () => {
       setIsLoading(true);
       setError(null);
-      setIsMockData(false);
 
       const destination = destinations.find(d => d.id === destinationId);
       const cityName = destination?.name;
@@ -76,14 +71,17 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
       }
 
       try {
-        const apiKey = '37781fb79e564cf493f112949250706';
-        // The one and only correct, direct URL
+        // 使用你的有效 API Key
+        const apiKey = '37781fb79e564cf493f112949250706'; 
+        
+        // 正确的、直接的 API URL，不使用任何代理
         const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}`;
 
         const response = await fetch(url);
         const data = await response.json();
 
         if (!response.ok) {
+          // 如果API返回错误（例如Key无效，找不到城市），就抛出错误信息
           throw new Error(data.error?.message || 'Network response was not ok.');
         }
 
@@ -101,16 +99,6 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
         const message = err instanceof Error ? err.message : 'An unknown error occurred';
         setError(message);
         console.error("Weather fetch error:", err);
-        
-        // Fallback to mock data only if the API call fails
-        setIsMockData(true);
-        setWeatherData({
-          temperature: 20,
-          condition: 'Unavailable',
-          humidity: 65,
-          windSpeed: 10,
-          isRainy: false,
-        });
       } finally {
         setIsLoading(false);
       }
@@ -118,72 +106,46 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
 
     fetchWeatherData();
   }, [destinationId, date, destinations]);
-
+  
+  // --- UI / JSX 部分 ---
   const destination = destinations.find(d => d.id === destinationId);
   const location = destination ? `${destination.name}, ${destination.country}` : 'Loading...';
 
   if (isLoading) {
     return (
-      <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-teal-500"></div>
-          <span className="ml-3 text-gray-600">Loading weather for {destination?.name}...</span>
-        </div>
-      </div>
+      <div className="text-center p-4">Loading weather...</div>
     );
   }
-  
+
+  if (error) {
+    return (
+       <div className="text-center p-4 text-red-500 flex items-center justify-center">
+         <AlertTriangle size={16} className="mr-2"/> Error: {error}
+       </div>
+    )
+  }
+
   if (!weatherData) {
     return null; 
   }
-
+  
   return (
-    <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        {/* Left side: Weather details */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">Weather Today in {location}</h3>
-          <div className="flex items-center gap-3 mt-2">
-            {getWeatherIcon(weatherData.condition)}
-            <div>
-              <div className="flex items-center gap-2">
-                <Thermometer size={16} className="text-red-500" />
-                <span className="text-xl font-bold">{weatherData.temperature}°C</span>
-                <span className="text-gray-600">{weatherData.condition}</span>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                <div className="flex items-center gap-1">
-                  <Droplets size={14} />
-                  <span>Humidity: {weatherData.humidity}%</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Wind size={14} />
-                  <span>Wind: {weatherData.windSpeed} km/h</span>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="bg-blue-50 rounded-lg p-4 shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-800">Weather in {location}</h3>
+      <div className="flex justify-between items-center mt-2">
+        <div className="flex items-center gap-3">
+          {getWeatherIcon(weatherData.condition)}
+          <span className="text-2xl font-bold">{weatherData.temperature}°C</span>
+          <span className="text-gray-600">{weatherData.condition}</span>
         </div>
-
-        {/* Right side: Travel advice */}
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm text-gray-600 mb-1">Travel Advice</div>
-          <div className="text-sm font-medium text-gray-800 max-w-xs">
-            {getWeatherAdvice(weatherData)}
-          </div>
+        <div className="text-sm text-gray-500">
+          <p>Humidity: {weatherData.humidity}%</p>
+          <p>Wind: {weatherData.windSpeed} km/h</p>
         </div>
       </div>
-
-      {/* Error/Fallback Notice */}
-      {error && (
-        <div className="mt-3 text-xs text-yellow-700 bg-yellow-100 px-3 py-1.5 rounded-md flex items-center">
-          <AlertTriangle size={14} className="mr-2"/>
-          {isMockData 
-            ? `Could not fetch real weather (${error}). Showing estimated data.`
-            : `An error occurred: ${error}`
-          }
-        </div>
-      )}
+      <div className="mt-3 text-sm text-gray-700 bg-gray-100 p-2 rounded">
+        <strong>Advice:</strong> {getWeatherAdvice(weatherData)}
+      </div>
     </div>
   );
 };
