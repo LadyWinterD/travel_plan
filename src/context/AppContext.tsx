@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Destination, Activity, TripDay, WeatherData, ScheduledActivity, UserPreferences } from '../types';
 import { getStoredTrip, storeTrip } from '../utils/storage';
+import { getMockWeather } from '../utils/mockData';
 
 interface AppContextType {
   destinations: Destination[];
@@ -99,6 +100,17 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         const bCategories = b.categories || [];
         const aMatches = aCategories.filter(cat => preferences.includes(cat)).length;
         const bMatches = bCategories.filter(cat => preferences.includes(cat)).length;
+        
+        // Also consider weather appropriateness
+        const dateStr = currentDate.toISOString();
+        const weather = getMockWeather(destination.id, dateStr);
+        
+        if (weather.isRainy) {
+          // Prioritize indoor activities when raining
+          if (a.indoor && !b.indoor) return -1;
+          if (!a.indoor && b.indoor) return 1;
+        }
+        
         return bMatches - aMatches;
       });
 
@@ -117,13 +129,27 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
 
         if (dayActivities.length > 0) {
           const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
+          const dateStr = currentDate.toISOString();
+          const weather = getMockWeather(destination.id, dateStr);
+          
+          // Check for weather warnings
+          const hasOutdoorActivitiesInRain = weather.isRainy && 
+            dayActivities.some(act => !act.activity.indoor);
+          
+          let warning = undefined;
+          if (dailyDuration > 360) {
+            warning = `这一天的行程超过6小时，建议将一些活动分散到其他天。`;
+          } else if (hasOutdoorActivitiesInRain) {
+            warning = `今天有雨，但安排了户外活动。建议重新安排或准备雨具。`;
+          }
           
           newItinerary.push({
             id: `day-${currentDate.toISOString()}`,
             date: currentDate.toISOString(),
             destinationId: destination.id,
             activities: dayActivities,
-            warning: dailyDuration > 360 ? `This day's schedule exceeds 6 hours. Consider moving some activities to another day.` : undefined
+            weatherData: weather,
+            warning
           });
         }
 
