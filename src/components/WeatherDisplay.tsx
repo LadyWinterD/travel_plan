@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { getMockWeather } from '../utils/mockData';
+import { useAppContext } from '../context/AppContext';
 
 interface WeatherDisplayProps {
-  city: string;
+  destinationId: string;
+  date: string;
 }
 
 interface WeatherData {
@@ -11,27 +14,31 @@ interface WeatherData {
   windSpeed?: number;
 }
 
-const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ city }) => {
+const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { destinations } = useAppContext();
 
   useEffect(() => {
-    if (!city) return;
+    if (!destinationId || !date) return;
 
     const fetchWeatherData = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const response = await fetch(`https://api.placeholder.com/weather/${encodeURIComponent(city)}`);
+        const mockWeatherData = getMockWeather(destinationId, date);
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        // Convert mock weather data to the expected format
+        const convertedData: WeatherData = {
+          temperature: mockWeatherData.temperature,
+          condition: mockWeatherData.condition,
+          humidity: mockWeatherData.humidity,
+          windSpeed: mockWeatherData.windSpeed
+        };
         
-        const data = await response.json();
-        setWeatherData(data);
+        setWeatherData(convertedData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch weather data');
         console.error('Weather fetch error:', err);
@@ -41,7 +48,11 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ city }) => {
     };
 
     fetchWeatherData();
-  }, [city]);
+  }, [destinationId, date]);
+
+  // Get city name for display
+  const destination = destinations.find(d => d.id === destinationId);
+  const cityName = destination ? `${destination.name}, ${destination.country}` : 'Unknown Location';
 
   if (isLoading) {
     return (
@@ -70,7 +81,7 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ city }) => {
 
   return (
     <div className="bg-gradient-to-r from-blue-100 to-sky-100 rounded-lg p-4">
-      <h3 className="text-lg font-semibold text-gray-800 mb-2">Weather in {city}</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-2">Weather in {cityName}</h3>
       <div className="flex items-center justify-between">
         <div>
           <div className="text-2xl font-bold text-blue-700">

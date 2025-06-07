@@ -169,7 +169,10 @@ const ActivitiesPage: React.FC = () => {
       {/* API Weather Display */}
       {currentDestination && (
         <div className="mb-6">
-          <WeatherDisplay city={`${currentDestination.name}, ${currentDestination.country}`} />
+          <WeatherDisplay 
+            destinationId={currentDestination.id} 
+            date={new Date().toISOString()} 
+          />
         </div>
       )}
       
