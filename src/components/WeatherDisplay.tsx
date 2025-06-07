@@ -24,13 +24,13 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
   const getWeatherIcon = (condition: string, temp: number) => {
     const lowerCondition = condition.toLowerCase();
     if (lowerCondition.includes('rain') || lowerCondition.includes('drizzle')) {
-      return <CloudRain className="text-blue-500" size={24} />;
+      return <CloudRain className="text-blue-500\" size={24} />;
     }
     if (lowerCondition.includes('sun') || lowerCondition.includes('clear')) {
       return <Sun className="text-yellow-500" size={24} />;
     }
     if (temp > 25) {
-      return <Sun className="text-yellow-500" size={24} />;
+      return <Sun className="text-yellow-500\" size={24} />;
     }
     return <Cloud className="text-gray-500" size={24} />;
   };
