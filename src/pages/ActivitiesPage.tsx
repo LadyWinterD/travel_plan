@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin } from 'lucide-react';
+import { getMockActivities, getWeatherBasedRecommendations } from '../utils/mockData';
 
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
