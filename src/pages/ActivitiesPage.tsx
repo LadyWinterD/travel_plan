@@ -1,5 +1,3 @@
-// src/pages/ActivitiesPage.tsx - 最终完整修正版
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
