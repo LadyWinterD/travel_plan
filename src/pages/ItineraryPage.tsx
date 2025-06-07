@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
-import { getMockWeather } from '../utils/mockData';
 import { v4 as uuidv4 } from 'uuid';
 import {
   DndContext,
@@ -162,24 +161,11 @@ const formatDate = (dateString: string) => {
 
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { dailyItinerary, updateItinerary, destinations } = useAppContext();
+  const { dailyItinerary, updateItinerary, destinations, weatherData } = useAppContext();
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
   const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
   const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
-  const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>({});
-
-  useEffect(() => {
-    // Fetch weather data for each day
-    const newWeatherData: Record<string, WeatherData> = {};
-    dailyItinerary.forEach(day => {
-      const destination = destinations.find(d => d.id === day.destinationId);
-      if (destination) {
-        newWeatherData[day.date] = getMockWeather(destination.id, day.date);
-      }
-    });
-    setWeatherData(newWeatherData);
-  }, [dailyItinerary, destinations]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -204,7 +190,8 @@ const ItineraryPage: React.FC = () => {
   const updateDayWarnings = (days: TripDay[]): TripDay[] => {
     return days.map(day => {
       const totalDuration = calculateDayDuration(day.activities);
-      const weather = weatherData[day.date];
+      const destination = destinations.find(d => d.id === day.destinationId);
+      const weather = destination ? weatherData[destination.name] : null;
       const hasOutdoorActivitiesInRain = weather?.isRainy && 
         day.activities.some(activity => !activity.activity.indoor);
 
@@ -217,7 +204,8 @@ const ItineraryPage: React.FC = () => {
 
       return {
         ...day,
-        warning
+        warning,
+        weatherData: weather
       };
     });
   };
@@ -386,8 +374,8 @@ const ItineraryPage: React.FC = () => {
                               <h3 className="text-lg font-semibold">Day {index + 1}</h3>
                               <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
                             </div>
-                            {weatherData[day.date] && (
-                              <WeatherDisplay weather={weatherData[day.date]} />
+                            {day.weatherData && (
+                              <WeatherDisplay weather={day.weatherData} />
                             )}
                           </div>
                           {day.warning && (
@@ -410,7 +398,7 @@ const ItineraryPage: React.FC = () => {
                                 onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
                                 isDragging={activity.activityId === activeId}
                                 location={location}
-                                weather={weatherData[day.date]}
+                                weather={day.weatherData}
                               />
                             ))}
                           </div>
@@ -431,9 +419,9 @@ const ItineraryPage: React.FC = () => {
               <DragOverlayContent 
                 activity={draggedActivity} 
                 location={draggedLocation}
-                weather={weatherData[dailyItinerary.find(day => 
+                weather={dailyItinerary.find(day => 
                   day.activities.some(a => a.activityId === draggedActivity.activityId)
-                )?.date || '']}
+                )?.weatherData}
               />
             ) : null}
           </DragOverlay>
