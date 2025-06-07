@@ -138,9 +138,9 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
           
           let warning = undefined;
           if (dailyDuration > 360) {
-            warning = `这一天的行程超过6小时，建议将一些活动分散到其他天。`;
+            warning = `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.`;
           } else if (hasOutdoorActivitiesInRain) {
-            warning = `今天有雨，但安排了户外活动。建议重新安排或准备雨具。`;
+            warning = `There are outdoor activities scheduled on a rainy day. Consider rearranging if possible.`;
           }
           
           newItinerary.push({
