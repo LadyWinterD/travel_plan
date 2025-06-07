@@ -36,8 +36,8 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
           return;
         }
         
-        // Make an asynchronous fetch call to the OpenWeatherMap API using the cityName
-        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=YOUR_REAL_API_KEY&units=metric`);
+        // Make an asynchronous fetch call to the WeatherAPI.com API using the cityName
+        const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=YOUR_REAL_API_KEY&q=${cityName}`);
         
         // Check if response.ok is false. If it is, throw a new Error
         if (!response.ok) {
@@ -47,12 +47,12 @@ const WeatherDisplay: React.FC<WeatherDisplayProps> = ({ destinationId, date }) 
         // If the response is ok, parse the JSON data
         const data = await response.json();
         
-        // Transform the API response to match our WeatherData interface
+        // Transform the API response to match our WeatherData interface using WeatherAPI.com format
         const transformedData: WeatherData = {
-          temperature: data.main.temp,
-          condition: data.weather[0].description,
-          humidity: data.main.humidity,
-          windSpeed: data.wind.speed
+          temperature: data.current.temp_c,
+          condition: data.current.condition.text,
+          humidity: data.current.humidity,
+          windSpeed: data.current.wind_kph
         };
         
         // Finally, call setWeatherData to update the state
