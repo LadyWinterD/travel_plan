@@ -1,90 +1,36 @@
+// src/pages/ActivitiesPage.tsx - 最终完整修正版
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer } from 'lucide-react';
-import { getMockActivities, getWeatherBasedRecommendations } from '../utils/mockData';
-import WeatherDisplay from '../components/WeatherDisplay'; 
+import { Clock, Star, DollarSign, Check, MapPin } from 'lucide-react';
 
-
-const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
-  const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500" size={24} />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={24} />;
-    return <Cloud className="text-gray-500" size={24} />;
-  };
-
-  const getWeatherAdvice = () => {
-    if (weather.isRainy) return "Recommended: Indoor activities or bring rain gear";
-    if (weather.temperature > 30) return "Hot weather: Consider air-conditioned indoor activities";
-    if (weather.temperature < 5) return "Cold weather: Indoor activities recommended for warmth";
-    if (weather.temperature > 20) return "Perfect weather for outdoor activities";
-    return "Moderate weather: Both indoor and outdoor activities are great";
-  };
-
-  return (
-    <div className="bg-gradient-to-r from-blue-100 to-teal-100 rounded-lg p-4 mb-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">{location} Today's Weather</h3>
-          <div className="flex items-center gap-3 mt-2">
-            {getWeatherIcon()}
-            <div>
-              <div className="flex items-center gap-2">
-                <Thermometer size={16} className="text-red-500" />
-                <span className="text-xl font-bold">{Math.round(weather.temperature)}°C</span>
-                <span className="text-gray-600">{weather.condition}</span>
-              </div>
- 
-              {weather.isRainy && weather.precipitation && (
-                <div className="flex items-center gap-1 text-blue-600 text-sm mt-1">
-                  <Umbrella size={14} />
-                  <span>Precipitation: {Math.round(weather.precipitation)}mm</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-600 mb-1">Travel Advice</div>
-          <div className="text-sm font-medium text-gray-800 max-w-48">
-            {getWeatherAdvice()}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-// 主要页面组件
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  // 从中央 Context 获取所有需要的数据和方法
-  const { 
-    destinations, 
-    selectedActivities, 
-    toggleActivity, 
+  const {
+    destinations,
+    selectedActivities,
+    toggleActivity,
     preferences,
-    weather, // 中央天气数据
-    isWeatherLoading, // 中央加载状态
-    fetchWeatherForCity // 中央获取天气的方法
+    weather,
+    isWeatherLoading,
+    fetchWeatherForCity
   } = useAppContext();
-  
+
   const [activeDestination, setActiveDestination] = useState<string | null>(
     destinations.length > 0 ? destinations[0].id : null
   );
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState<boolean>(false);
   const [showWeatherRecommendations, setShowWeatherRecommendations] = useState<boolean>(true);
-  
+
   // 主 useEffect，用于获取活动和天气
   useEffect(() => {
     if (!activeDestination) return;
 
     const destination = destinations.find(d => d.id === activeDestination);
     
-    // 当城市改变时，调用中央方法获取真实天气
     if (destination?.name) {
       fetchWeatherForCity(destination.name);
     }
@@ -92,17 +38,13 @@ const ActivitiesPage: React.FC = () => {
     setLoadingActivities(true);
     
     const allDestinationActivities = getMockActivities(activeDestination);
-    
-    // 从中央 weather state 中获取当前城市的真实天气
     const currentCityWeather = destination ? weather[destination.name] : null;
     
     let finalActivities = allDestinationActivities;
 
-    // 如果真实天气存在，并且用户开启了天气推荐，则使用真实天气来过滤活动
     if (currentCityWeather && showWeatherRecommendations) {
       finalActivities = getWeatherBasedRecommendations(allDestinationActivities, currentCityWeather, preferences);
     } else if (preferences.length > 0) {
-      // 否则，只根据用户偏好来过滤
       finalActivities = allDestinationActivities.filter(activity =>
         activity.categories.some(category => preferences.includes(category))
       );
@@ -113,14 +55,14 @@ const ActivitiesPage: React.FC = () => {
     
   }, [activeDestination, preferences, showWeatherRecommendations, destinations, fetchWeatherForCity, weather]);
   
-  // 如果没有选择目的地，则重定向
+  // 重定向逻辑
   useEffect(() => {
     if (destinations.length === 0) {
       navigate('/destinations');
     }
   }, [destinations, navigate]);
 
-  // 其他辅助函数
+  // 辅助函数
   const isActivitySelected = (destinationId: string, activityId: string): boolean => {
     return selectedActivities[destinationId]?.some(a => a.id === activityId) || false;
   };
@@ -134,12 +76,10 @@ const ActivitiesPage: React.FC = () => {
   };
   
   const currentDestination = destinations.find(d => d.id === activeDestination);
-  // 再次从中央 state 获取当前城市天气，用于传递给子组件
+  // **关键修正**：我们在这里获取当前城市的天气，并把它传递给下面的渲染逻辑
   const currentCityWeather = currentDestination ? weather[currentDestination.name] : null;
 
-  if (destinations.length === 0) {
-    return null; // 重定向中...
-  }
+  if (destinations.length === 0) return null;
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -170,19 +110,7 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
-      {/* 真实天气组件，现在它也应该从 Context 中获取数据 */}
-      {/* 为了简化，我们直接在这里显示天气信息，而不是用两个组件 */}
-      
-      {isWeatherLoading && <div className="text-center p-4">Loading weather...</div>}
-      
-      {currentDestination && currentCityWeather && (
-        <WeatherCard 
-          weather={currentCityWeather}
-          location={`${currentDestination.name}, ${currentDestination.country}`}
-        />
-      )}
-      
-      {/* Weather Recommendations Toggle */}
+      {/* 天气推荐开关 */}
       <div className="mb-6 flex items-center justify-between bg-white rounded-lg p-4 shadow-sm">
         <div>
           <h3 className="font-medium text-gray-800">Smart Weather Recommendations</h3>
@@ -199,11 +127,11 @@ const ActivitiesPage: React.FC = () => {
         </label>
       </div>
       
-      {/* Activities List */}
-      {loadingActivities ? (
+      {/* 活动列表 */}
+      {loadingActivities || isWeatherLoading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading activities...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -218,14 +146,50 @@ const ActivitiesPage: React.FC = () => {
                 className="h-48 bg-center bg-cover relative"
                 style={{ backgroundImage: `url(${activity.image})` }}
               >
-                {/* ... (内部的 badge 和 checkmark JSX 保持不变) ... */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 p-4 w-full">
+                  <h3 className="text-white font-semibold text-lg">{activity.name}</h3>
+                  {/* **关键修正**：在这里使用 `currentCityWeather` 而不是不存在的 `weatherData` */}
+                  {activity.indoor && currentCityWeather?.isRainy && (
+                    <div className="mt-1 text-xs bg-green-500 text-white px-2 py-1 rounded">
+                      ☂️ Rainy Day Recommended
+                    </div>
+                  )}
+                  {!activity.indoor && currentCityWeather && !currentCityWeather.isRainy && currentCityWeather.temperature > 15 && (
+                    <div className="mt-1 text-xs bg-yellow-500 text-white px-2 py-1 rounded">
+                      ☀️ Perfect Weather Activity
+                    </div>
+                  )}
+                </div>
+                {isActivitySelected(activeDestination!, activity.id) && (
+                  <div className="absolute top-2 right-2 bg-teal-500 text-white p-1 rounded-full">
+                    <Check size={20} />
+                  </div>
+                )}
               </div>
               
               <div className="p-4">
-                <h3 className="font-semibold text-lg text-gray-900">{activity.name}</h3>
                 <p className="text-gray-600 text-sm line-clamp-2 h-10 mt-1">{activity.description}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {/* ... (内部的 duration, rating, price 等 JSX 保持不变) ... */}
+                  <div className="flex items-center text-sm text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                    <Clock size={14} className="mr-1" />
+                    {formatDuration(activity.duration)}
+                  </div>
+                  <div className="flex items-center text-sm text-yellow-700 bg-yellow-50 px-2 py-1 rounded">
+                    <Star size={14} className="mr-1" />
+                    {activity.rating.toFixed(1)}
+                  </div>
+                  {activity.price && activity.price.amount > 0 && (
+                    <div className="flex items-center text-sm text-blue-700 bg-blue-50 px-2 py-1 rounded">
+                      <DollarSign size={14} className="mr-1" />
+                      {activity.price.amount} {activity.price.currencyCode}
+                    </div>
+                  )}
+                  <div className={`text-xs px-2 py-1 rounded ${
+                    activity.indoor ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                  }`}>
+                    {activity.indoor ? 'Indoor' : 'Outdoor'}
+                  </div>
                 </div>
                 <div className="mt-4">
                   <button
@@ -245,7 +209,7 @@ const ActivitiesPage: React.FC = () => {
         </div>
       )}
       
-      {activities.length === 0 && !loadingActivities && (
+      {activities.length === 0 && !loadingActivities && !isWeatherLoading && (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-600">
             No activities match your criteria. Try changing your preferences or disabling weather recommendations.
