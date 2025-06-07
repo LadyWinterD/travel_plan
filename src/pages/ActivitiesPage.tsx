@@ -9,7 +9,7 @@ import WeatherDisplay from '../components/WeatherDisplay';
 const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500\" size={24} />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={24} />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500\" size={24} />;
     return <Cloud className="text-gray-500" size={24} />;
   };
 
