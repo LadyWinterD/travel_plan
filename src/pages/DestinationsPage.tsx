@@ -67,7 +67,7 @@ const DestinationsPage: React.FC = () => {
   const canProceed = destinations.length > 0 && startDate && endDate;
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Main Container & Title */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Your Trip</h1>
@@ -81,30 +81,68 @@ const DestinationsPage: React.FC = () => {
         </div>
       )}
       
-      {/* Destination Input Section */}
+      {/* Single Line Form: Destination, Start Date, End Date, Add Button */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Destinations</h2>
-        
-        <form onSubmit={handleAddDestination} className="flex gap-3">
-          <input
-            type="text"
-            value={cityName}
-            onChange={(e) => setCityName(e.target.value)}
-            placeholder="e.g., Paris"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            className="px-6 py-2 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors"
-          >
-            Add Destination
-          </button>
+        <form onSubmit={handleAddDestination} className="flex gap-3 items-end">
+          {/* Destination Input */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Destination
+            </label>
+            <input
+              type="text"
+              value={cityName}
+              onChange={(e) => setCityName(e.target.value)}
+              placeholder="e.g., Paris"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+          </div>
+          
+          {/* Start Date */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={formatDateForInput(startDate)}
+              onChange={handleStartDateChange}
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+          </div>
+          
+          {/* End Date */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={formatDateForInput(endDate)}
+              onChange={handleEndDateChange}
+              min={startDate ? formatDateForInput(startDate) : ''}
+              disabled={!startDate}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+            />
+          </div>
+          
+          {/* Add Destination Button */}
+          <div>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors whitespace-nowrap"
+            >
+              Add Destination
+            </button>
+          </div>
         </form>
       </div>
       
       {/* Added Destinations List */}
       {destinations.length > 0 && (
         <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Destinations</h2>
           <div className="space-y-3">
             {destinations.map((destination) => (
               <div 
@@ -141,42 +179,6 @@ const DestinationsPage: React.FC = () => {
           </div>
         </div>
       )}
-      
-      {/* Date Selection Section */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Travel Dates</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
-              Start Date
-            </label>
-            <input
-              type="date"
-              id="startDate"
-              value={formatDateForInput(startDate)}
-              onChange={handleStartDateChange}
-              min={new Date().toISOString().split('T')[0]}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
-              End Date
-            </label>
-            <input
-              type="date"
-              id="endDate"
-              value={formatDateForInput(endDate)}
-              onChange={handleEndDateChange}
-              min={startDate ? formatDateForInput(startDate) : ''}
-              disabled={!startDate}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-          </div>
-        </div>
-      </div>
       
       {/* Navigation Button */}
       <div className="text-center">
