@@ -34,7 +34,7 @@ const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> 
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
     if (weather.temperature > 25) return <Sun className="text-yellow-500\" size={32} />;
-    return <Cloud className="text-gray-500" size={32} />;
+    return <Cloud className="text-gray-500\" size={32} />;
   };
 
   const getWeatherAdvice = () => {
