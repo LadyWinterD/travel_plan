@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Users, Filter } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter } from 'lucide-react';
 import { getMockActivities, getWeatherBasedRecommendations } from '../utils/mockData';
 
 // Interest categories for filtering
@@ -14,20 +14,6 @@ const interestCategories = [
   'History',
   'Nightlife',
   'Adventure'
-];
-
-// Budget options
-const budgetOptions = [
-  { id: 'economic', label: 'Economic', icon: '💲', range: [0, 25] },
-  { id: 'standard', label: 'Standard', icon: '💲💲', range: [25, 75] },
-  { id: 'luxury', label: 'Luxury', icon: '💲💲💲', range: [75, 999] }
-];
-
-// Traveler options
-const travelerOptions = [
-  { id: 'solo', label: 'Solo', icon: '👤' },
-  { id: 'couple', label: 'Couple', icon: '👫' },
-  { id: 'group', label: 'Group 3+', icon: '👥' }
 ];
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
@@ -239,9 +225,6 @@ const ActivitiesPage: React.FC = () => {
   
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [selectedBudget, setSelectedBudget] = useState<string>('');
-  const [selectedTravelerType, setSelectedTravelerType] = useState<string>('couple');
-  const [showGroupActivitiesOnly, setShowGroupActivitiesOnly] = useState<boolean>(false);
   
   // Fetch real weather data when destination changes
   useEffect(() => {
@@ -278,26 +261,6 @@ const ActivitiesPage: React.FC = () => {
       );
     }
     
-    // Apply budget filters
-    if (selectedBudget) {
-      const budgetRange = budgetOptions.find(b => b.id === selectedBudget)?.range || [0, 999];
-      allDestinationActivities = allDestinationActivities.filter(activity => {
-        const price = activity.price?.amount || 0;
-        return price >= budgetRange[0] && price <= budgetRange[1];
-      });
-    }
-    
-    // Apply group activity filter
-    if (showGroupActivitiesOnly) {
-      // Filter for activities suitable for groups (this is a mock implementation)
-      allDestinationActivities = allDestinationActivities.filter(activity =>
-        activity.categories.includes('Adventure') || 
-        activity.categories.includes('Food & Dining') ||
-        activity.categories.includes('Entertainment') ||
-        activity.categories.includes('Cultural')
-      );
-    }
-    
     let finalActivities = allDestinationActivities;
 
     // Apply weather-based filtering if enabled and weather data is available
@@ -311,7 +274,7 @@ const ActivitiesPage: React.FC = () => {
     
     setActivities(finalActivities);
     setLoadingActivities(false);
-  }, [activeDestination, preferences, smartWeatherFiltering, weatherData, selectedInterests, selectedBudget, selectedTravelerType, showGroupActivitiesOnly, destinations]);
+  }, [activeDestination, preferences, smartWeatherFiltering, weatherData, selectedInterests, destinations]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -328,24 +291,6 @@ const ActivitiesPage: React.FC = () => {
         ? prev.filter(i => i !== interest)
         : [...prev, interest]
     );
-  };
-
-  const handleBudgetClick = (budgetId: string) => {
-    // Allow deselection by clicking the same budget again
-    if (selectedBudget === budgetId) {
-      setSelectedBudget(''); // Deselect
-    } else {
-      setSelectedBudget(budgetId); // Select new budget
-    }
-  };
-
-  const handleTravelerClick = (travelerId: string) => {
-    // Allow deselection by clicking the same traveler type again
-    if (selectedTravelerType === travelerId) {
-      setSelectedTravelerType(''); // Deselect
-    } else {
-      setSelectedTravelerType(travelerId); // Select new traveler type
-    }
   };
   
   const currentDestination = destinations.find(d => d.id === activeDestination);
@@ -392,23 +337,44 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
-      {/* 1. Destination Information - Moved to Top */}
+      {/* 1. Destination Information with Smart Weather Filtering */}
       <div className="mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <MapPin className="text-teal-600" size={20} />
-          <h2 className="text-lg font-semibold text-teal-800">
-            {currentDestination.name}, {currentDestination.country}
-          </h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="text-teal-600" size={20} />
+            <div>
+              <h2 className="text-lg font-semibold text-teal-800">
+                {currentDestination.name}, {currentDestination.country}
+              </h2>
+              <p className="text-teal-700 text-sm">
+                Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
+                Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
+                Available Activities: {activities.length}
+                {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.join(', ')}`}
+              </p>
+            </div>
+          </div>
+          
+          {/* Smart Weather Filtering Toggle */}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-sm font-medium text-teal-800">Smart Weather Filtering</div>
+              <div className="text-xs text-teal-600">Optimize for current weather</div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={smartWeatherFiltering}
+                onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+            </label>
+          </div>
         </div>
-        <p className="text-teal-700 text-sm">
-          Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
-          Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
-          Available Activities: {activities.length}
-          {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.join(', ')}`}
-        </p>
       </div>
 
-      {/* 2. Weather Recommendation - Second */}
+      {/* 2. Weather Recommendation */}
       {isWeatherLoading && (
         <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
@@ -422,131 +388,32 @@ const ActivitiesPage: React.FC = () => {
           location={`${currentDestination.name}, ${currentDestination.country}`}
         />
       )}
-
-      {/* Smart Weather Filtering Toggle */}
-      <div className="mb-6 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-medium text-gray-900">Smart Weather Filtering</h3>
-            <p className="text-sm text-gray-600">Show activities optimized for current weather conditions</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={smartWeatherFiltering}
-              onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
-          </label>
-        </div>
-      </div>
       
-      {/* 3. Combined Preferences Section - Three sections in one row */}
+      {/* 3. Interest Categories */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Interest Categories */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Filter size={18} className="text-teal-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Interest Categories</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {interestCategories.map((interest) => (
-                <label
-                  key={interest}
-                  className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
-                    selectedInterests.includes(interest)
-                      ? 'border-teal-500 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedInterests.includes(interest)}
-                    onChange={() => handleInterestToggle(interest)}
-                    className="sr-only"
-                  />
-                  <span className="font-medium text-center">{interest}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Daily Budget Per Person */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <DollarSign size={18} className="text-teal-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Daily Budget</h3>
-            </div>
-            <div className="space-y-2">
-              {budgetOptions.map((budget) => (
-                <button
-                  key={budget.id}
-                  onClick={() => handleBudgetClick(budget.id)}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 ${
-                    selectedBudget === budget.id
-                      ? 'border-teal-500 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{budget.icon}</span>
-                    <span className="text-sm font-medium">{budget.label}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs opacity-75">
-                      ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]}
-                    </span>
-                    {selectedBudget === budget.id && (
-                      <Check size={14} className="text-teal-600 ml-2" />
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Traveler Information */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Users size={18} className="text-teal-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Traveler Type</h3>
-            </div>
-            <div className="space-y-2 mb-4">
-              {travelerOptions.map((traveler) => (
-                <button
-                  key={traveler.id}
-                  onClick={() => handleTravelerClick(traveler.id)}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 ${
-                    selectedTravelerType === traveler.id
-                      ? 'border-teal-500 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{traveler.icon}</span>
-                    <span className="text-sm font-medium">{traveler.label}</span>
-                  </div>
-                  {selectedTravelerType === traveler.id && (
-                    <Check size={14} className="text-teal-600" />
-                  )}
-                </button>
-              ))}
-            </div>
-            
-            {/* Group Activities Checkbox */}
-            <label className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter size={18} className="text-teal-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Interest Categories</h3>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {interestCategories.map((interest) => (
+            <label
+              key={interest}
+              className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
+                selectedInterests.includes(interest)
+                  ? 'border-teal-500 bg-teal-50 text-teal-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              }`}
+            >
               <input
                 type="checkbox"
-                checked={showGroupActivitiesOnly}
-                onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
-                className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                checked={selectedInterests.includes(interest)}
+                onChange={() => handleInterestToggle(interest)}
+                className="sr-only"
               />
-              <span className="text-sm font-medium text-gray-700">Group activities only</span>
+              <span className="font-medium text-center">{interest}</span>
             </label>
-          </div>
+          ))}
         </div>
       </div>
       
@@ -586,12 +453,6 @@ const ActivitiesPage: React.FC = () => {
               className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
             >
               Clear interest filters
-            </button>
-            <button
-              onClick={() => setSelectedBudget('')}
-              className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
-            >
-              Clear budget filter
             </button>
             <button
               onClick={() => setSmartWeatherFiltering(false)}
