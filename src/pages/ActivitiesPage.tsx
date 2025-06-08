@@ -111,7 +111,7 @@ const getWeatherBasedRecommendations = (
 
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { destinations, selectedActivities, toggleActivity, preferences, weatherData, fetchWeatherForCity } = useAppContext();
+  const { destinations, selectedActivities, toggleActivity, preferences, weatherData, fetchWeatherForCity,fetchForecastForCity } = useAppContext();
   
   const [activeDestination, setActiveDestination] = useState<string | null>(
     destinations.length > 0 ? destinations[0].id : null
