@@ -37,7 +37,7 @@ interface TripAdvisorLocation {
   };
 }
 
-interface TripAdvisorSearchResponse {
+interface TripAdvisorAutoCompleteResponse {
   data: {
     Typeahead_autocomplete: {
       results: TripAdvisorLocation[];
@@ -53,14 +53,14 @@ export class TripAdvisorApiError extends Error {
 }
 
 /**
- * Search for attractions in a city using TripAdvisor API
- * This is a single API call that returns attractions directly
+ * CORRECTED: Search for attractions using the auto-complete endpoint as specified
+ * Uses /locations/v2/auto-complete with the exact request format you provided
  */
 export async function searchCityAttractions(cityName: string): Promise<TripAdvisorLocation[]> {
   try {
-    console.log(`🔍 Searching for attractions in: ${cityName}`);
+    console.log(`🔍 Searching for attractions in: ${cityName} using auto-complete API`);
     
-    const response = await fetch(`${BASE_URL}/locations/v2/search?currency=USD&units=km&lang=en_US`, {
+    const response = await fetch(`${BASE_URL}/locations/v2/auto-complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +69,8 @@ export async function searchCityAttractions(cityName: string): Promise<TripAdvis
       },
       body: JSON.stringify({
         query: cityName,
-        updateToken: ""
+        lang: "en_US",
+        units: "km"
       })
     });
 
@@ -80,22 +81,20 @@ export async function searchCityAttractions(cityName: string): Promise<TripAdvis
       );
     }
 
-    const data: TripAdvisorSearchResponse = await response.json();
-    console.log('🎪 TripAdvisor search response:', data);
+    const data: TripAdvisorAutoCompleteResponse = await response.json();
+    console.log('🎪 TripAdvisor auto-complete response:', data);
 
     const results = data.data?.Typeahead_autocomplete?.results || [];
     
-    // Filter for attractions and activities (not just geo locations)
+    // CRITICAL FILTERING: Only include ATTRACTION or ACTIVITY items as specified
     const attractions = results.filter(result => 
       result.__typename === 'Typeahead_LocationItem' &&
-      (result.detailsV2?.placeType === 'ATTRACTION' || 
-       result.detailsV2?.placeType === 'ACTIVITY' ||
-       result.detailsV2?.placeType === 'RESTAURANT' ||
-       result.detailsV2?.placeType === 'HOTEL') &&
+      result.detailsV2?.placeType &&
+      (result.detailsV2.placeType === 'ATTRACTION' || result.detailsV2.placeType === 'ACTIVITY') &&
       result.detailsV2?.names?.name
     );
 
-    console.log(`✅ Found ${attractions.length} attractions for ${cityName}`);
+    console.log(`✅ Found ${attractions.length} attractions/activities for ${cityName}`);
     return attractions;
 
   } catch (error) {
@@ -109,6 +108,7 @@ export async function searchCityAttractions(cityName: string): Promise<TripAdvis
 
 /**
  * Helper function to get the best image URL from TripAdvisor photo data
+ * Replaces {width} and {height} placeholders with 800px as specified
  */
 export function getBestImageUrl(photo?: TripAdvisorLocation['image']): string {
   const fallbackImage = 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
@@ -117,23 +117,22 @@ export function getBestImageUrl(photo?: TripAdvisorLocation['image']): string {
     return fallbackImage;
   }
 
-  // Try to get a good sized image from photoSizes array
+  // CORRECTED: Use urlTemplate and replace placeholders with w=800 as specified
+  if (photo.photo.photoSizeDynamic?.urlTemplate) {
+    return photo.photo.photoSizeDynamic.urlTemplate
+      .replace('{width}', '800')
+      .replace('{height}', '600');
+  }
+
+  // Fallback to photoSizes array if urlTemplate not available
   if (photo.photo.photoSizes && photo.photo.photoSizes.length > 0) {
-    // Find the largest image that's reasonable for our UI (prefer 400-800px width)
     const sortedSizes = photo.photo.photoSizes
-      .filter(size => size.width > 200) // Filter out very small images
-      .sort((a, b) => b.width - a.width); // Sort by width descending
+      .filter(size => size.width > 200)
+      .sort((a, b) => b.width - a.width);
     
     if (sortedSizes.length > 0) {
       return sortedSizes[0].url;
     }
-  }
-
-  // Fallback to dynamic URL template with reasonable dimensions
-  if (photo.photo.photoSizeDynamic?.urlTemplate) {
-    return photo.photo.photoSizeDynamic.urlTemplate
-      .replace('{width}', '400')
-      .replace('{height}', '300');
   }
 
   return fallbackImage;
@@ -153,12 +152,6 @@ export function extractCategories(attraction: TripAdvisorLocation): string[] {
       break;
     case 'activity':
       categories.push('Adventure', 'Entertainment');
-      break;
-    case 'restaurant':
-      categories.push('Food & Dining');
-      break;
-    case 'hotel':
-      categories.push('Accommodation');
       break;
     default:
       categories.push('Entertainment');
@@ -183,7 +176,6 @@ export function extractCategories(attraction: TripAdvisorLocation): string[] {
  */
 export function isLikelyIndoor(attraction: TripAdvisorLocation): boolean {
   const name = attraction.detailsV2?.names?.name?.toLowerCase() || '';
-  const placeType = attraction.detailsV2?.placeType?.toLowerCase() || '';
   
   const indoorKeywords = [
     'museum', 'gallery', 'theater', 'theatre', 'mall', 'shopping', 'restaurant',
@@ -195,11 +187,6 @@ export function isLikelyIndoor(attraction: TripAdvisorLocation): boolean {
     'park', 'garden', 'beach', 'mountain', 'trail', 'outdoor', 'bridge',
     'tower', 'monument', 'square', 'market', 'street', 'viewpoint'
   ];
-  
-  // Restaurant and hotel types are typically indoor
-  if (placeType === 'restaurant' || placeType === 'hotel') {
-    return true;
-  }
   
   const hasIndoorKeyword = indoorKeywords.some(keyword => name.includes(keyword));
   const hasOutdoorKeyword = outdoorKeywords.some(keyword => name.includes(keyword));

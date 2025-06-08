@@ -43,8 +43,8 @@ export const getMockWeather = (destinationId: string, date: string): WeatherData
 };
 
 /**
- * CORRECTED: Fetch real activities from TripAdvisor API
- * Now uses the correct API structure and single endpoint
+ * CORRECTED: Fetch real activities from TripAdvisor auto-complete API
+ * Now uses the exact endpoint and mapping you specified
  */
 export const getMockActivities = async (destinationId: string, cityName?: string): Promise<Activity[]> => {
   // If no city name provided, fall back to mock data
@@ -54,9 +54,9 @@ export const getMockActivities = async (destinationId: string, cityName?: string
   }
 
   try {
-    console.log(`🚀 Fetching real attractions for: ${cityName}`);
+    console.log(`🚀 Fetching real attractions for: ${cityName} using auto-complete API`);
     
-    // CORRECTED: Single API call to get attractions directly
+    // Use the auto-complete API as specified
     const attractions = await searchCityAttractions(cityName);
     
     if (!attractions || attractions.length === 0) {
@@ -64,22 +64,32 @@ export const getMockActivities = async (destinationId: string, cityName?: string
       return generateFallbackMockActivities(destinationId);
     }
 
-    // Map TripAdvisor data to our Activity interface
+    // CORRECTED: Map TripAdvisor data exactly as specified in requirements
     const activities: Activity[] = attractions.slice(0, 20).map((attraction, index) => {
       const categories = extractCategories(attraction);
       const isIndoor = isLikelyIndoor(attraction);
       
       return {
-        id: `tripadvisor-${attraction.detailsV2.locationId || index}`,
-        name: attraction.detailsV2.names.name || `Attraction ${index + 1}`,
-        description: `Experience ${attraction.detailsV2.names.name || 'this amazing attraction'} in ${cityName}. ${attraction.detailsV2.names.longOnlyHierarchyTypeaheadV2 || ''}`,
+        // Use locationId as specified
+        id: `tripadvisor-${attraction.detailsV2.locationId}`,
+        
+        // Use name from detailsV2.names.name as specified
+        name: attraction.detailsV2.names.name,
+        
+        // Use longOnlyHierarchyTypeaheadV2 as description as specified
+        description: attraction.detailsV2.names.longOnlyHierarchyTypeaheadV2 || `Experience ${attraction.detailsV2.names.name} in ${cityName}`,
+        
+        // Use urlTemplate with w=800 replacement as specified
         image: getBestImageUrl(attraction.image),
-        duration: 60 + (index * 15), // Vary duration from 60-360 minutes
-        rating: 4 + Math.random(), // Generate 4-5 star rating
+        
+        // Default values as specified
+        rating: 4.5,
         price: {
-          amount: Math.floor(Math.random() * 50) + 10, // Random price 10-60
+          amount: 25,
           currencyCode: 'USD'
         },
+        duration: 120, // Default 120 minutes as specified
+        
         categories: categories.length > 0 ? categories : ['Entertainment'],
         indoor: isIndoor,
         location: {
