@@ -5,7 +5,11 @@ import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer } from 'lucide-react';
 import { getMockActivities } from '../utils/mockData';
 
-const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
+const WeatherCard: React.FC<{ 
+  weather: WeatherData; 
+  location: string; 
+  fetchForecastForCity: (city: string, days: number) => Promise<any>;
+}> = ({ weather, location, fetchForecastForCity }) => {
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500\" size={24} />;
     if (weather.temperature > 25) return <Sun className="text-yellow-500\" size={24} />;
@@ -230,6 +234,7 @@ const ActivitiesPage: React.FC = () => {
         <WeatherCard 
           weather={currentWeather} 
           location={`${currentDestination.name}, ${currentDestination.country}`}
+          fetchForecastForCity={fetchForecastForCity}
         />
       )}
       
