@@ -114,7 +114,7 @@ const getWeatherBasedRecommendations = (
   });
 };
 
-export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const AppContextProvider: React.FC<{children: React.Node}> = ({ children }) => {
   const initialData = getStoredTrip();
   
   const [destinations, setDestinations] = useState<Destination[]>(initialData?.destinations || []);
@@ -122,18 +122,29 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const [endDate, setEndDate] = useState<Date | null>(initialData?.endDate ? new Date(initialData.endDate) : null);
   const [selectedActivities, setSelectedActivities] = useState<Record<string, Activity[]>>(initialData?.selectedActivities || {});
   const [dailyItinerary, setDailyItinerary] = useState<TripDay[]>(initialData?.dailyItinerary || []);
-  const [weatherData, setWeatherData] = useState<Record<string, WeatherData[]>>(initialData?.weatherData || {});
+  // **修正 1: 将 weatherData 改名为 weather，保持一致性**
+  const [weather, setWeather] = useState<Record<string, WeatherData[]>>(initialData?.weatherData || {});
   const [preferences, setPreferences] = useState<string[]>(initialData?.preferences || []);
+  const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
 
-  // Fetch multi-day weather data from API
-  const fetchWeatherForCity = async (cityName: string, days: number): Promise<WeatherData[] | null> => {
+  // **修正 2: 用 useCallback 包裹 fetchWeatherForCity 函数**
+  const fetchWeatherForCity = useCallback(async (cityName: string, days: number): Promise<WeatherData[] | null> => {
+    // 如果已有数据，则不重复获取，提高效率
+    if (weather[cityName] && weather[cityName].length >= days) {
+      return weather[cityName];
+    }
+    
+    setIsWeatherLoading(true);
+    setWeatherError(null);
     try {
-      const apiKey = 'f37afaba87034221b29110532250706';
+      const apiKey = 'YOUR_VALID_API_KEY'; // <--- 请确保这里是你的有效 API Key
       const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&days=${days}&aqi=no`;
       
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Weather API error: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `Weather API error: ${response.status}`);
       }
       
       const data = await response.json();
@@ -142,182 +153,22 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         date: day.date,
         temperature: Math.round(day.day.avgtemp_c),
         condition: day.day.condition.text,
-        icon: day.day.condition.icon,
         precipitation: day.day.totalprecip_mm || 0,
         isRainy: (day.day.totalprecip_mm || 0) > 0.1
       }));
       
-      // Update weather data in state
-      setWeatherData(prev => ({
-        ...prev,
-        [cityName]: weatherArray
-      }));
+      setWeather(prev => ({ ...prev, [cityName]: weatherArray }));
       
       return weatherArray;
     } catch (error) {
       console.error('Failed to fetch weather for', cityName, ':', error);
+      setWeatherError(error instanceof Error ? error.message : 'An unknown error occurred');
       return null;
+    } finally {
+      setIsWeatherLoading(false);
     }
-  };
+  }, [weather]);
 
-  // Update itinerary when activities or dates change
-  useEffect(() => {
-    if (!startDate || !endDate || Object.keys(selectedActivities).length === 0) return;
-
-    const newItinerary: TripDay[] = [];
-    let currentDate = new Date(startDate);
-
-    destinations.forEach(destination => {
-      const activities = selectedActivities[destination.id] || [];
-      if (activities.length === 0) return;
-
-      // Sort activities by preference match
-      const sortedActivities = [...activities].sort((a, b) => {
-        const aCategories = a.categories || [];
-        const bCategories = b.categories || [];
-        const aMatches = aCategories.filter(cat => preferences.includes(cat)).length;
-        const bMatches = bCategories.filter(cat => preferences.includes(cat)).length;
-        
-        // Also consider weather appropriateness if weather data is available
-        const cityWeather = weatherData[destination.name];
-        if (cityWeather && cityWeather.length > 0) {
-          const currentWeather = cityWeather[0];
-          if (currentWeather.isRainy) {
-            // Prioritize indoor activities when raining
-            if (a.indoor && !b.indoor) return -1;
-            if (!a.indoor && b.indoor) return 1;
-          }
-        }
-        
-        return bMatches - aMatches;
-      });
-
-      const scheduledActivities = generateTimeSlots(sortedActivities, destination.days);
-
-      // Create days for this destination
-      for (let i = 0; i < destination.days; i++) {
-        const dayActivities = scheduledActivities
-          .filter(act => act.day === i)
-          .map(({ activityId, startTime, endTime, activity }) => ({
-            activityId,
-            startTime,
-            endTime,
-            activity
-          }));
-
-        if (dayActivities.length > 0) {
-          const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
-          const cityWeather = weatherData[destination.name];
-          const dayWeather = cityWeather && cityWeather[i] ? cityWeather[i] : undefined;
-          
-          // Check for weather warnings
-          const hasOutdoorActivitiesInRain = dayWeather?.isRainy && 
-            dayActivities.some(act => !act.activity.indoor);
-          
-          let warning = undefined;
-          if (dailyDuration > 360) {
-            warning = `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.`;
-          } else if (hasOutdoorActivitiesInRain) {
-            warning = `There are outdoor activities scheduled on a rainy day. Consider rearranging if possible.`;
-          }
-          
-          newItinerary.push({
-            id: `day-${currentDate.toISOString()}`,
-            date: currentDate.toISOString(),
-            destinationId: destination.id,
-            activities: dayActivities,
-            weatherData: dayWeather,
-            warning
-          });
-        }
-
-        currentDate = new Date(currentDate.setDate(currentDate.getDate() + 1));
-      }
-    });
-
-    setDailyItinerary(newItinerary);
-  }, [startDate, endDate, selectedActivities, destinations, preferences, weatherData]);
-
-  // Save to localStorage when data changes
-  useEffect(() => {
-    if (destinations.length > 0 || startDate || endDate || preferences.length > 0) {
-      storeTrip({
-        destinations,
-        startDate: startDate?.toISOString(),
-        endDate: endDate?.toISOString(),
-        selectedActivities,
-        dailyItinerary,
-        weatherData,
-        preferences
-      });
-    }
-  }, [destinations, startDate, endDate, selectedActivities, dailyItinerary, weatherData, preferences]);
-
-  const addDestination = (destination: Destination) => {
-    setDestinations(prev => [...prev, destination]);
-    setSelectedActivities(prev => ({
-      ...prev,
-      [destination.id]: []
-    }));
-    // Fetch weather for new destination (default to 7 days)
-    fetchWeatherForCity(destination.name, 7);
-  };
-
-  const removeDestination = (destinationId: string) => {
-    setDestinations(prev => prev.filter(d => d.id !== destinationId));
-    setSelectedActivities(prev => {
-      const updated = { ...prev };
-      delete updated[destinationId];
-      return updated;
-    });
-    setDailyItinerary(prev => prev.filter(day => day.destinationId !== destinationId));
-  };
-
-  const updateDestination = (destinationId: string, updates: Partial<Destination>) => {
-    setDestinations(prev => 
-      prev.map(d => d.id === destinationId ? { ...d, ...updates } : d)
-    );
-  };
-
-  const setDates = (start: Date | null, end: Date | null) => {
-    setStartDate(start);
-    setEndDate(end);
-  };
-
-  const toggleActivity = (destinationId: string, activity: Activity) => {
-    setSelectedActivities(prev => {
-      const destinationActivities = prev[destinationId] || [];
-      const activityExists = destinationActivities.some(a => a.id === activity.id);
-      
-      const updatedActivities = activityExists
-        ? destinationActivities.filter(a => a.id !== activity.id)
-        : [...destinationActivities, activity];
-        
-      return {
-        ...prev,
-        [destinationId]: updatedActivities
-      };
-    });
-  };
-
-  const updateItinerary = (newItinerary: TripDay[]) => {
-    setDailyItinerary(newItinerary);
-  };
-
-  const updatePreferences = (newPreferences: string[]) => {
-    setPreferences(newPreferences);
-  };
-
-  const resetTrip = () => {
-    setDestinations([]);
-    setStartDate(null);
-    setEndDate(null);
-    setSelectedActivities({});
-    setDailyItinerary([]);
-    setWeatherData({});
-    setPreferences([]);
-    localStorage.removeItem('travelPlanner');
-  };
 
   const contextValue: AppContextType = {
     destinations,
@@ -325,8 +176,10 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     endDate,
     selectedActivities,
     dailyItinerary,
-    weatherData,
+    weather,
     preferences,
+    isWeatherLoading,
+    weatherError,
     
     addDestination,
     removeDestination,
