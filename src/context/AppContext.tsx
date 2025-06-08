@@ -9,7 +9,7 @@ interface AppContextType {
   endDate: Date | null;
   selectedActivities: Record<string, Activity[]>;
   dailyItinerary: TripDay[];
-  weatherData: Record<string, WeatherData>;
+  weatherData: Record<string, WeatherData[]>;
   preferences: string[];
   
   // Actions
@@ -21,7 +21,7 @@ interface AppContextType {
   updateItinerary: (newItinerary: TripDay[]) => void;
   resetTrip: () => void;
   updatePreferences: (newPreferences: string[]) => void;
-  fetchWeatherForCity: (cityName: string) => Promise<WeatherData | null>;
+  fetchWeatherForCity: (cityName: string, days: number) => Promise<WeatherData[] | null>;
 }
 
 const defaultContext: AppContextType = {
@@ -76,15 +76,19 @@ const generateTimeSlots = (activities: Activity[], daysAvailable: number): Sched
 
 const getWeatherBasedRecommendations = (
   activities: Activity[], 
-  weather: WeatherData,
+  weather: WeatherData[],
   preferences: string[] = []
 ): Activity[] => {
+  // Use the first day's weather for filtering (can be enhanced later)
+  const currentWeather = weather[0];
+  if (!currentWeather) return activities;
+
   // Filter activities based on weather
   let weatherAppropriate = activities.filter(activity => {
-    if (weather.isRainy && !activity.indoor) {
+    if (currentWeather.isRainy && !activity.indoor) {
       return false; // Avoid outdoor activities when raining
     }
-    if (weather.temperature < 5 && !activity.indoor) {
+    if (currentWeather.temperature < 5 && !activity.indoor) {
       return false; // Avoid outdoor activities when very cold
     }
     return true;
@@ -100,7 +104,7 @@ const getWeatherBasedRecommendations = (
   // Sort by rating and weather appropriateness
   return weatherAppropriate.sort((a, b) => {
     // Prioritize indoor activities during bad weather
-    if (weather.isRainy || weather.temperature < 10) {
+    if (currentWeather.isRainy || currentWeather.temperature < 10) {
       if (a.indoor && !b.indoor) return -1;
       if (!a.indoor && b.indoor) return 1;
     }
@@ -118,14 +122,14 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const [endDate, setEndDate] = useState<Date | null>(initialData?.endDate ? new Date(initialData.endDate) : null);
   const [selectedActivities, setSelectedActivities] = useState<Record<string, Activity[]>>(initialData?.selectedActivities || {});
   const [dailyItinerary, setDailyItinerary] = useState<TripDay[]>(initialData?.dailyItinerary || []);
-  const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>(initialData?.weatherData || {});
+  const [weatherData, setWeatherData] = useState<Record<string, WeatherData[]>>(initialData?.weatherData || {});
   const [preferences, setPreferences] = useState<string[]>(initialData?.preferences || []);
 
-  // Fetch real weather data from API
-  const fetchWeatherForCity = async (cityName: string): Promise<WeatherData | null> => {
+  // Fetch multi-day weather data from API
+  const fetchWeatherForCity = async (cityName: string, days: number): Promise<WeatherData[] | null> => {
     try {
-      const apiKey = '37781fb79e564cf493f112949250706';
-      const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&aqi=no`;
+      const apiKey = 'f37afaba87034221b29110532250706';
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&days=${days}&aqi=no`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -134,22 +138,22 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       
       const data = await response.json();
       
-      const weatherInfo: WeatherData = {
-        date: new Date().toISOString(),
-        temperature: Math.round(data.current.temp_c),
-        condition: data.current.condition.text,
-        icon: data.current.condition.icon,
-        precipitation: data.current.precip_mm || 0,
-        isRainy: (data.current.precip_mm || 0) > 0.1
-      };
+      const weatherArray: WeatherData[] = data.forecast.forecastday.map((day: any) => ({
+        date: day.date,
+        temperature: Math.round(day.day.avgtemp_c),
+        condition: day.day.condition.text,
+        icon: day.day.condition.icon,
+        precipitation: day.day.totalprecip_mm || 0,
+        isRainy: (day.day.totalprecip_mm || 0) > 0.1
+      }));
       
       // Update weather data in state
       setWeatherData(prev => ({
         ...prev,
-        [cityName]: weatherInfo
+        [cityName]: weatherArray
       }));
       
-      return weatherInfo;
+      return weatherArray;
     } catch (error) {
       console.error('Failed to fetch weather for', cityName, ':', error);
       return null;
@@ -176,8 +180,9 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         
         // Also consider weather appropriateness if weather data is available
         const cityWeather = weatherData[destination.name];
-        if (cityWeather) {
-          if (cityWeather.isRainy) {
+        if (cityWeather && cityWeather.length > 0) {
+          const currentWeather = cityWeather[0];
+          if (currentWeather.isRainy) {
             // Prioritize indoor activities when raining
             if (a.indoor && !b.indoor) return -1;
             if (!a.indoor && b.indoor) return 1;
@@ -203,9 +208,10 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         if (dayActivities.length > 0) {
           const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
           const cityWeather = weatherData[destination.name];
+          const dayWeather = cityWeather && cityWeather[i] ? cityWeather[i] : undefined;
           
           // Check for weather warnings
-          const hasOutdoorActivitiesInRain = cityWeather?.isRainy && 
+          const hasOutdoorActivitiesInRain = dayWeather?.isRainy && 
             dayActivities.some(act => !act.activity.indoor);
           
           let warning = undefined;
@@ -220,7 +226,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
             date: currentDate.toISOString(),
             destinationId: destination.id,
             activities: dayActivities,
-            weatherData: cityWeather,
+            weatherData: dayWeather,
             warning
           });
         }
@@ -253,8 +259,8 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       ...prev,
       [destination.id]: []
     }));
-    // Fetch weather for new destination
-    fetchWeatherForCity(destination.name);
+    // Fetch weather for new destination (default to 7 days)
+    fetchWeatherForCity(destination.name, 7);
   };
 
   const removeDestination = (destinationId: string) => {
