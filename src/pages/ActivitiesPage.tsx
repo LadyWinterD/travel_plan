@@ -442,103 +442,112 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
-      {/* 3. Interest Categories - Third */}
+      {/* 3. Combined Preferences Section - Three sections in one row */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Filter size={20} className="text-teal-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Interest Categories</h2>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {interestCategories.map((interest) => (
-            <label
-              key={interest}
-              className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                selectedInterests.includes(interest)
-                  ? 'border-teal-500 bg-teal-50 text-teal-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
-              }`}
-            >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Interest Categories */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Filter size={18} className="text-teal-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Interest Categories</h3>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {interestCategories.map((interest) => (
+                <label
+                  key={interest}
+                  className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
+                    selectedInterests.includes(interest)
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInterests.includes(interest)}
+                    onChange={() => handleInterestToggle(interest)}
+                    className="sr-only"
+                  />
+                  <span className="font-medium text-center">{interest}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Daily Budget Per Person */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <DollarSign size={18} className="text-teal-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Daily Budget</h3>
+            </div>
+            <div className="space-y-2">
+              {budgetOptions.map((budget) => (
+                <button
+                  key={budget.id}
+                  onClick={() => handleBudgetClick(budget.id)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 ${
+                    selectedBudget === budget.id
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{budget.icon}</span>
+                    <span className="text-sm font-medium">{budget.label}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs opacity-75">
+                      ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]}
+                    </span>
+                    {selectedBudget === budget.id && (
+                      <Check size={14} className="text-teal-600 ml-2" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Traveler Information */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Users size={18} className="text-teal-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Traveler Type</h3>
+            </div>
+            <div className="space-y-2 mb-4">
+              {travelerOptions.map((traveler) => (
+                <button
+                  key={traveler.id}
+                  onClick={() => handleTravelerClick(traveler.id)}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 ${
+                    selectedTravelerType === traveler.id
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{traveler.icon}</span>
+                    <span className="text-sm font-medium">{traveler.label}</span>
+                  </div>
+                  {selectedTravelerType === traveler.id && (
+                    <Check size={14} className="text-teal-600" />
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            {/* Group Activities Checkbox */}
+            <label className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
               <input
                 type="checkbox"
-                checked={selectedInterests.includes(interest)}
-                onChange={() => handleInterestToggle(interest)}
-                className="sr-only"
+                checked={showGroupActivitiesOnly}
+                onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
+                className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
               />
-              <span className="text-sm font-medium text-center">{interest}</span>
+              <span className="text-sm font-medium text-gray-700">Group activities only</span>
             </label>
-          ))}
+          </div>
         </div>
-      </div>
-
-      {/* 4. Daily Budget Per Person - Fourth */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-2 mb-6">
-          <DollarSign size={20} className="text-teal-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Daily Budget Per Person</h2>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-4">
-          {budgetOptions.map((budget) => (
-            <button
-              key={budget.id}
-              onClick={() => handleBudgetClick(budget.id)}
-              className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all duration-200 ${
-                selectedBudget === budget.id
-                  ? 'border-teal-500 bg-teal-50 text-teal-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
-              }`}
-            >
-              <span className="text-2xl mb-2">{budget.icon}</span>
-              <span className="text-sm font-medium">{budget.label}</span>
-              <span className="text-xs opacity-75 mt-1">
-                ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]}
-              </span>
-              {selectedBudget === budget.id && (
-                <Check size={16} className="text-teal-600 mt-2" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. Traveler Information - Fifth */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Users size={20} className="text-teal-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Traveler Information</h2>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {travelerOptions.map((traveler) => (
-            <button
-              key={traveler.id}
-              onClick={() => handleTravelerClick(traveler.id)}
-              className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all duration-200 ${
-                selectedTravelerType === traveler.id
-                  ? 'border-teal-500 bg-teal-50 text-teal-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
-              }`}
-            >
-              <span className="text-2xl mb-2">{traveler.icon}</span>
-              <span className="text-sm font-medium text-center">{traveler.label}</span>
-              {selectedTravelerType === traveler.id && (
-                <Check size={16} className="text-teal-600 mt-2" />
-              )}
-            </button>
-          ))}
-        </div>
-        
-        {/* Group Activities Checkbox */}
-        <label className="flex items-center justify-center gap-2 p-4 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
-          <input
-            type="checkbox"
-            checked={showGroupActivitiesOnly}
-            onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
-            className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-          />
-          <span className="text-sm font-medium text-gray-700">Group activities only</span>
-        </label>
       </div>
       
       {/* Activity Cards Grid */}
