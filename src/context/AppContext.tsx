@@ -128,7 +128,7 @@ export const AppContextProvider: React.FC<{children: React.Node}> = ({ children 
   const [isWeatherLoading, setIsWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState<string | null>(null);
 
-  // **修正 2: 用 useCallback 包裹 fetchWeatherForCity 函数**
+
   const fetchWeatherForCity = useCallback(async (cityName: string, days: number): Promise<WeatherData[] | null> => {
     // 如果已有数据，则不重复获取，提高效率
     if (weather[cityName] && weather[cityName].length >= days) {
