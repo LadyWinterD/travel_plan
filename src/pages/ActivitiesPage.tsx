@@ -222,6 +222,7 @@ const ActivitiesPage: React.FC = () => {
   const [smartWeatherFiltering, setSmartWeatherFiltering] = useState<boolean>(true);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -245,35 +246,55 @@ const ActivitiesPage: React.FC = () => {
     }
   }, [activeDestination, destinations, fetchWeatherForCity]);
 
-  // Load and filter activities
+  // Load and filter activities - NOW WITH REAL API DATA
   useEffect(() => {
     if (!activeDestination) return;
 
-    setLoadingActivities(true);
+    const loadActivities = async () => {
+      setLoadingActivities(true);
+      setApiError(null);
 
-    const destination = destinations.find(d => d.id === activeDestination);
-    let allDestinationActivities = getMockActivities(activeDestination);
-    
-    // Apply interest category filters
-    if (selectedInterests.length > 0) {
-      allDestinationActivities = allDestinationActivities.filter(activity =>
-        activity.categories.some(category => selectedInterests.includes(category))
-      );
-    }
-    
-    let finalActivities = allDestinationActivities;
+      try {
+        const destination = destinations.find(d => d.id === activeDestination);
+        
+        // NEW: Pass city name to get real TripAdvisor data
+        const allDestinationActivities = await getMockActivities(activeDestination, destination?.name);
+        
+        // Apply interest category filters
+        let filteredActivities = allDestinationActivities;
+        if (selectedInterests.length > 0) {
+          filteredActivities = allDestinationActivities.filter(activity =>
+            activity.categories.some(category => selectedInterests.includes(category))
+          );
+        }
+        
+        let finalActivities = filteredActivities;
 
-    // Apply weather-based filtering if enabled and weather data is available
-    if (smartWeatherFiltering && weatherData) {
-      finalActivities = getWeatherBasedRecommendations(allDestinationActivities, weatherData, preferences);
-    } else if (preferences.length > 0) {
-      finalActivities = allDestinationActivities.filter(activity =>
-        (activity.categories || []).some(category => preferences.includes(category))
-      );
-    }
-    
-    setActivities(finalActivities);
-    setLoadingActivities(false);
+        // Apply weather-based filtering if enabled and weather data is available
+        if (smartWeatherFiltering && weatherData) {
+          finalActivities = getWeatherBasedRecommendations(filteredActivities, weatherData, preferences);
+        } else if (preferences.length > 0) {
+          finalActivities = filteredActivities.filter(activity =>
+            (activity.categories || []).some(category => preferences.includes(category))
+          );
+        }
+        
+        setActivities(finalActivities);
+        
+        // Show success message for real data
+        if (destination?.name && finalActivities.length > 0) {
+          console.log(`✅ Successfully loaded ${finalActivities.length} real activities for ${destination.name}`);
+        }
+        
+      } catch (error) {
+        console.error('Error loading activities:', error);
+        setApiError('Failed to load activities. Please try again.');
+      } finally {
+        setLoadingActivities(false);
+      }
+    };
+
+    loadActivities();
   }, [activeDestination, preferences, smartWeatherFiltering, weatherData, selectedInterests, destinations]);
   
   // Redirect if no destinations
@@ -307,9 +328,19 @@ const ActivitiesPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Page Title */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tell Us Your Interests</h1>
-        <p className="text-gray-600">Select activities that match your travel style and preferences</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
+        <p className="text-gray-600">Powered by TripAdvisor - Select activities that match your travel style</p>
       </div>
+      
+      {/* API Error Message */}
+      {apiError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{apiError}</span>
+          </div>
+        </div>
+      )}
       
       {/* Destination Tabs */}
       <div className="mb-6">
@@ -392,6 +423,8 @@ const ActivitiesPage: React.FC = () => {
       {/* 3. Interest Categories */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
+          <Filter size={18} className="text-teal-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           {interestCategories.map((interest) => (
@@ -419,7 +452,7 @@ const ActivitiesPage: React.FC = () => {
       {loadingActivities ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading activities...</p>
+          <p className="text-gray-500">Loading real attractions from TripAdvisor...</p>
         </div>
       ) : (
         <>
@@ -444,7 +477,10 @@ const ActivitiesPage: React.FC = () => {
           <div className="text-gray-400 mb-4">
             <Sun size={48} className="mx-auto" />
           </div>
-          <p className="text-gray-500 mb-4">No activities found for your current filters.</p>
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
+          <p className="text-gray-500 mb-4">
+            {apiError ? 'There was an error loading attractions.' : 'No activities found for your current filters.'}
+          </p>
           <div className="space-y-2">
             <button
               onClick={() => setSelectedInterests([])}

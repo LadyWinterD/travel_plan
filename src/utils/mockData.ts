@@ -1,151 +1,5 @@
 import { Activity, Destination, WeatherData } from '../types';
-
-// Mock Activities by destination with enhanced data
-const generateMockActivities = (destinationId: string): Activity[] => {
-  const activitySets: Record<string, Activity[]> = {
-    'dest-001': [ // Paris
-      {
-        id: 'act-paris-001',
-        name: 'Eiffel Tower',
-        description: 'Iconic iron tower offering panoramic views of Paris',
-        image: 'https://images.pexels.com/photos/699466/pexels-photo-699466.jpeg',
-        duration: 180,
-        rating: 4.5,
-        price: { amount: 25, currencyCode: 'EUR' },
-        categories: ['Historical Sites', 'Cultural', 'Entertainment'],
-        indoor: false,
-        location: { lat: 48.8584, lng: 2.2945 }
-      },
-      {
-        id: 'act-paris-002',
-        name: 'Louvre Museum',
-        description: 'World-famous art museum housing the Mona Lisa and countless masterpieces',
-        image: 'https://images.pexels.com/photos/2675266/pexels-photo-2675266.jpeg',
-        duration: 240,
-        rating: 4.7,
-        price: { amount: 17, currencyCode: 'EUR' },
-        categories: ['Museums', 'Cultural', 'Historical Sites'],
-        indoor: true,
-        location: { lat: 48.8606, lng: 2.3376 }
-      },
-      {
-        id: 'act-paris-003',
-        name: 'Seine River Cruise',
-        description: 'Scenic boat tour along the Seine River with beautiful city views',
-        image: 'https://images.pexels.com/photos/1530259/pexels-photo-1530259.jpeg',
-        duration: 90,
-        rating: 4.3,
-        price: { amount: 15, currencyCode: 'EUR' },
-        categories: ['Outdoor', 'Entertainment', 'Nature'],
-        indoor: false,
-        location: { lat: 48.8566, lng: 2.3522 }
-      },
-      {
-        id: 'act-paris-004',
-        name: 'Champs-Élysées Shopping',
-        description: 'Shop along the world-famous avenue with luxury boutiques and cafes',
-        image: 'https://images.pexels.com/photos/1461974/pexels-photo-1461974.jpeg',
-        duration: 120,
-        rating: 4.2,
-        price: { amount: 0, currencyCode: 'EUR' },
-        categories: ['Shopping', 'Cultural'],
-        indoor: true,
-        location: { lat: 48.8698, lng: 2.3076 }
-      },
-      {
-        id: 'act-paris-005',
-        name: 'Montmartre District',
-        description: 'Historic artist quarter with stunning views and charming streets',
-        image: 'https://images.pexels.com/photos/1461974/pexels-photo-1461974.jpeg',
-        duration: 150,
-        rating: 4.4,
-        price: { amount: 0, currencyCode: 'EUR' },
-        categories: ['Cultural', 'Outdoor', 'Historical Sites'],
-        indoor: false,
-        location: { lat: 48.8867, lng: 2.3431 }
-      },
-      {
-        id: 'act-paris-006',
-        name: 'French Cuisine Experience',
-        description: 'Authentic French dining experience with wine tasting',
-        image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-        duration: 120,
-        rating: 4.6,
-        price: { amount: 45, currencyCode: 'EUR' },
-        categories: ['Food & Dining', 'Cultural'],
-        indoor: true,
-        location: { lat: 48.8566, lng: 2.3522 }
-      },
-      {
-        id: 'act-paris-007',
-        name: 'Palace of Versailles',
-        description: 'Magnificent royal palace with stunning gardens and opulent rooms',
-        image: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
-        duration: 300,
-        rating: 4.8,
-        price: { amount: 20, currencyCode: 'EUR' },
-        categories: ['Historical Sites', 'Cultural', 'Outdoor'],
-        indoor: false,
-        location: { lat: 48.8049, lng: 2.1204 }
-      },
-      {
-        id: 'act-paris-008',
-        name: 'Notre-Dame Cathedral',
-        description: 'Gothic architectural masterpiece and historic cathedral',
-        image: 'https://images.pexels.com/photos/1850619/pexels-photo-1850619.jpeg',
-        duration: 90,
-        rating: 4.5,
-        price: { amount: 0, currencyCode: 'EUR' },
-        categories: ['Historical Sites', 'Cultural'],
-        indoor: true,
-        location: { lat: 48.8530, lng: 2.3499 }
-      }
-    ]
-  };
-  
-  // Generate activities for any destination not in our predefined sets
-  if (!activitySets[destinationId]) {
-    const categories = [
-      'Museums',
-      'Outdoor',
-      'Food & Dining',
-      'Shopping',
-      'Historical Sites',
-      'Adventure',
-      'Nightlife',
-      'Cultural',
-      'Nature',
-      'Entertainment'
-    ];
-    
-    const activityNames = [
-      'Local Museum', 'City Park', 'Food Market', 'Shopping Center', 'Historic Monument',
-      'Adventure Tour', 'Nightlife District', 'Cultural Center', 'Nature Reserve', 'Entertainment Complex'
-    ];
-    
-    return Array.from({ length: 10 }, (_, i) => ({
-      id: `act-${destinationId}-${String(i + 1).padStart(3, '0')}`,
-      name: activityNames[i] || `Activity ${i + 1}`,
-      description: `Experience the best of ${activityNames[i] || `Activity ${i + 1}`} with unique local insights`,
-      image: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-      duration: 60 + (i * 30),
-      rating: 4 + (Math.random() * 1),
-      price: { amount: 10 + (i * 5), currencyCode: 'EUR' },
-      categories: [
-        categories[i % categories.length],
-        categories[(i + 1) % categories.length]
-      ],
-      indoor: i % 3 !== 0, // 2/3 indoor activities
-      location: { lat: 0, lng: 0 }
-    }));
-  }
-  
-  return activitySets[destinationId] || [];
-};
-
-export const getMockActivities = (destinationId: string): Activity[] => {
-  return generateMockActivities(destinationId);
-};
+import { searchCityLocation, fetchAttractionsByGeoId, getBestImageUrl, extractCategories, isLikelyIndoor, TripAdvisorApiError } from '../services/tripAdvisorApi';
 
 // Enhanced Mock Weather Data with more realistic patterns
 export const getMockWeather = (destinationId: string, date: string): WeatherData => {
@@ -186,6 +40,116 @@ export const getMockWeather = (destinationId: string, date: string): WeatherData
     precipitation,
     isRainy
   };
+};
+
+/**
+ * NEW: Fetch real activities from TripAdvisor API
+ * This replaces the old mock data generation
+ */
+export const getMockActivities = async (destinationId: string, cityName?: string): Promise<Activity[]> => {
+  // If no city name provided, fall back to mock data
+  if (!cityName) {
+    console.log('⚠️ No city name provided, using fallback mock data');
+    return generateFallbackMockActivities(destinationId);
+  }
+
+  try {
+    console.log(`🚀 Fetching real activities for: ${cityName}`);
+    
+    // Step A: Get location geoId
+    const geoId = await searchCityLocation(cityName);
+    
+    if (!geoId) {
+      console.log(`❌ City not found: ${cityName}, using fallback mock data`);
+      return generateFallbackMockActivities(destinationId);
+    }
+
+    // Step B: Fetch attractions using geoId
+    const attractions = await fetchAttractionsByGeoId(geoId);
+    
+    if (!attractions || attractions.length === 0) {
+      console.log(`❌ No attractions found for: ${cityName}, using fallback mock data`);
+      return generateFallbackMockActivities(destinationId);
+    }
+
+    // Map TripAdvisor data to our Activity interface
+    const activities: Activity[] = attractions.slice(0, 20).map((attraction, index) => {
+      const categories = extractCategories(attraction);
+      const isIndoor = isLikelyIndoor(attraction);
+      
+      return {
+        id: `tripadvisor-${attraction.locationId || index}`,
+        name: attraction.name || `Attraction ${index + 1}`,
+        description: attraction.description || `Experience ${attraction.name || 'this amazing attraction'} in ${cityName}`,
+        image: getBestImageUrl(attraction.photo),
+        duration: 60 + (index * 15), // Vary duration from 60-360 minutes
+        rating: attraction.rating || (4 + Math.random()), // Use API rating or generate 4-5 star
+        price: {
+          amount: Math.floor(Math.random() * 50) + 10, // Random price 10-60
+          currencyCode: 'USD'
+        },
+        categories: categories.length > 0 ? categories : ['Entertainment'],
+        indoor: isIndoor,
+        location: {
+          lat: 0, // TripAdvisor doesn't always provide coordinates in this endpoint
+          lng: 0
+        }
+      };
+    });
+
+    console.log(`✅ Successfully fetched ${activities.length} real activities for ${cityName}`);
+    return activities;
+
+  } catch (error) {
+    console.error(`❌ Error fetching activities for ${cityName}:`, error);
+    
+    if (error instanceof TripAdvisorApiError) {
+      console.log('🔄 TripAdvisor API error, using fallback mock data');
+    }
+    
+    return generateFallbackMockActivities(destinationId);
+  }
+};
+
+/**
+ * Fallback mock data generator (used when API fails or no city name provided)
+ */
+const generateFallbackMockActivities = (destinationId: string): Activity[] => {
+  console.log(`🎭 Generating fallback mock activities for destination: ${destinationId}`);
+  
+  const categories = [
+    'Museums',
+    'Outdoor',
+    'Food & Dining',
+    'Shopping',
+    'Historical Sites',
+    'Adventure',
+    'Nightlife',
+    'Cultural',
+    'Nature',
+    'Entertainment'
+  ];
+  
+  const activityNames = [
+    'Local Museum', 'City Park', 'Food Market', 'Shopping Center', 'Historic Monument',
+    'Adventure Tour', 'Nightlife District', 'Cultural Center', 'Nature Reserve', 'Entertainment Complex'
+  ];
+  
+  return Array.from({ length: 10 }, (_, i) => ({
+    id: `fallback-${destinationId}-${String(i + 1).padStart(3, '0')}`,
+    name: activityNames[i] || `Activity ${i + 1}`,
+    description: `Experience the best of ${activityNames[i] || `Activity ${i + 1}`} with unique local insights`,
+    image: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
+    duration: 60 + (i * 30),
+    rating: 4 + (Math.random() * 1),
+    price: { amount: 10 + (i * 5), currencyCode: 'USD' },
+    categories: [
+      categories[i % categories.length],
+      categories[(i + 1) % categories.length]
+    ],
+    indoor: i % 3 !== 0, // 2/3 indoor activities
+    location: { lat: 0, lng: 0 }
+  }));
 };
 
 // Get weather-appropriate activity recommendations
