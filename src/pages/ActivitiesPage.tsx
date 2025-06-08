@@ -451,11 +451,7 @@ const ActivitiesPage: React.FC = () => {
                 </button>
               ))}
             </div>
-            {selectedBudget && (
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                💡 Click again to deselect
-              </p>
-            )}
+
           </div>
           
           {/* Section C: Traveler Information - Compact */}
