@@ -2,12 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer } from 'lucide-react';
-import { getMockActivities, getWeatherBasedRecommendations, getMockWeather } from '../utils/mockData';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Users, Filter } from 'lucide-react';
+import { getMockActivities, getWeatherBasedRecommendations } from '../utils/mockData';
+
+// Interest categories for filtering
+const interestCategories = [
+  'Museums',
+  'Outdoor', 
+  'Food & Dining',
+  'Shopping',
+  'History',
+  'Nightlife',
+  'Adventure'
+];
+
+// Budget options
+const budgetOptions = [
+  { id: 'economic', label: 'Economic', icon: '💲', range: [0, 25] },
+  { id: 'standard', label: 'Standard', icon: '💲💲', range: [25, 75] },
+  { id: 'luxury', label: 'Luxury', icon: '💲💲💲', range: [75, 999] }
+];
+
+// Traveler options
+const travelerOptions = [
+  { id: 'solo', label: 'Solo Traveler' },
+  { id: 'couple', label: 'Couple / Duo' },
+  { id: 'group', label: 'Group (3+)' }
+];
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
     if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
     return <Cloud className="text-gray-500" size={32} />;
   };
@@ -201,7 +226,8 @@ const ActivitiesPage: React.FC = () => {
     toggleActivity, 
     preferences,
     startDate,
-    endDate
+    endDate,
+    fetchWeatherForCity
   } = useAppContext();
   
   const [activeDestination, setActiveDestination] = useState<string | null>(
@@ -211,38 +237,81 @@ const ActivitiesPage: React.FC = () => {
   const [loadingActivities, setLoadingActivities] = useState<boolean>(false);
   const [smartWeatherFiltering, setSmartWeatherFiltering] = useState<boolean>(true);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
   
-  // Load activities when destination changes
+  // Filter states
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [selectedBudget, setSelectedBudget] = useState<string>('standard');
+  const [selectedTravelerType, setSelectedTravelerType] = useState<string>('couple');
+  const [showGroupActivitiesOnly, setShowGroupActivitiesOnly] = useState<boolean>(false);
+  
+  // Fetch real weather data when destination changes
+  useEffect(() => {
+    if (!activeDestination) return;
+
+    const destination = destinations.find(d => d.id === activeDestination);
+    if (destination?.name) {
+      setIsWeatherLoading(true);
+      fetchWeatherForCity(destination.name)
+        .then((weather) => {
+          if (weather) {
+            setWeatherData(weather);
+          }
+        })
+        .finally(() => {
+          setIsWeatherLoading(false);
+        });
+    }
+  }, [activeDestination, destinations, fetchWeatherForCity]);
+
+  // Load and filter activities
   useEffect(() => {
     if (!activeDestination) return;
 
     setLoadingActivities(true);
 
     const destination = destinations.find(d => d.id === activeDestination);
-    const allDestinationActivities = getMockActivities(activeDestination);
+    let allDestinationActivities = getMockActivities(activeDestination);
     
-    // Get weather data for the destination
-    if (destination && startDate) {
-      const weather = getMockWeather(activeDestination, startDate.toISOString());
-      setWeatherData(weather);
-      
-      let finalActivities = allDestinationActivities;
-
-      if (smartWeatherFiltering && weather) {
-        finalActivities = getWeatherBasedRecommendations(allDestinationActivities, weather, preferences);
-      } else if (preferences.length > 0) {
-        finalActivities = allDestinationActivities.filter(activity =>
-          (activity.categories || []).some(category => preferences.includes(category))
-        );
-      }
-      
-      setActivities(finalActivities);
-    } else {
-      setActivities(allDestinationActivities);
+    // Apply interest category filters
+    if (selectedInterests.length > 0) {
+      allDestinationActivities = allDestinationActivities.filter(activity =>
+        activity.categories.some(category => selectedInterests.includes(category))
+      );
     }
     
+    // Apply budget filters
+    const budgetRange = budgetOptions.find(b => b.id === selectedBudget)?.range || [0, 999];
+    allDestinationActivities = allDestinationActivities.filter(activity => {
+      const price = activity.price?.amount || 0;
+      return price >= budgetRange[0] && price <= budgetRange[1];
+    });
+    
+    // Apply group activity filter
+    if (showGroupActivitiesOnly) {
+      // Filter for activities suitable for groups (this is a mock implementation)
+      allDestinationActivities = allDestinationActivities.filter(activity =>
+        activity.categories.includes('Adventure') || 
+        activity.categories.includes('Food & Dining') ||
+        activity.categories.includes('Entertainment') ||
+        activity.categories.includes('Cultural')
+      );
+    }
+    
+    let finalActivities = allDestinationActivities;
+
+    // Apply weather-based filtering if enabled and weather data is available
+    if (smartWeatherFiltering && weatherData) {
+      finalActivities = getWeatherBasedRecommendations(allDestinationActivities, weatherData, preferences);
+    } else if (preferences.length > 0) {
+      finalActivities = allDestinationActivities.filter(activity =>
+        (activity.categories || []).some(category => preferences.includes(category))
+      );
+    }
+    
+    setActivities(finalActivities);
     setLoadingActivities(false);
-  }, [activeDestination, preferences, smartWeatherFiltering, destinations, startDate]);
+  }, [activeDestination, preferences, smartWeatherFiltering, weatherData, selectedInterests, selectedBudget, selectedTravelerType, showGroupActivitiesOnly, destinations]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -251,6 +320,14 @@ const ActivitiesPage: React.FC = () => {
 
   const isActivitySelected = (activityId: string): boolean => { 
     return activeDestination ? selectedActivities[activeDestination]?.some(a => a.id === activityId) || false : false; 
+  };
+  
+  const handleInterestToggle = (interest: string) => {
+    setSelectedInterests(prev => 
+      prev.includes(interest) 
+        ? prev.filter(i => i !== interest)
+        : [...prev, interest]
+    );
   };
   
   const currentDestination = destinations.find(d => d.id === activeDestination);
@@ -297,8 +374,114 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
+      {/* Filter Sections */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Filter size={20} className="text-teal-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Customize Your Experience</h2>
+        </div>
+        
+        {/* Section A: Interest Categories */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Interest Categories</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {interestCategories.map((interest) => (
+              <label
+                key={interest}
+                className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                  selectedInterests.includes(interest)
+                    ? 'border-teal-500 bg-teal-50 text-teal-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedInterests.includes(interest)}
+                  onChange={() => handleInterestToggle(interest)}
+                  className="sr-only"
+                />
+                <span className="text-sm font-medium text-center">{interest}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        
+        {/* Section B: Daily Budget Per Person */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Budget Per Person</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {budgetOptions.map((budget) => (
+              <button
+                key={budget.id}
+                onClick={() => setSelectedBudget(budget.id)}
+                className={`flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-all duration-200 ${
+                  selectedBudget === budget.id
+                    ? 'border-teal-500 bg-teal-50 text-teal-700 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
+                <span className="text-2xl">{budget.icon}</span>
+                <div className="text-left">
+                  <div className="font-semibold">{budget.label}</div>
+                  <div className="text-sm opacity-75">
+                    ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]} per day
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Section C: Traveler Information */}
+        <div className="mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Traveler Information</h3>
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Number of Travelers Dropdown */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Number of Travelers
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedTravelerType}
+                  onChange={(e) => setSelectedTravelerType(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none bg-white"
+                >
+                  {travelerOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <Users size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            
+            {/* Group Activities Checkbox */}
+            <div className="flex items-end">
+              <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={showGroupActivitiesOnly}
+                  onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
+                  className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Show group activities only</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* Weather Forecast Card */}
-      {weatherData && (
+      {isWeatherLoading && (
+        <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
+          <p className="text-gray-500">Loading weather data...</p>
+        </div>
+      )}
+      
+      {weatherData && !isWeatherLoading && (
         <WeatherForecastCard 
           weather={weatherData} 
           location={`${currentDestination.name}, ${currentDestination.country}`}
@@ -344,6 +527,7 @@ const ActivitiesPage: React.FC = () => {
               Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
               Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
               Available Activities: {activities.length}
+              {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.join(', ')}`}
             </p>
           </div>
 
@@ -368,13 +552,21 @@ const ActivitiesPage: React.FC = () => {
           <div className="text-gray-400 mb-4">
             <Sun size={48} className="mx-auto" />
           </div>
-          <p className="text-gray-500 mb-4">No activities found for your current preferences.</p>
-          <button
-            onClick={() => setSmartWeatherFiltering(false)}
-            className="text-teal-600 hover:text-teal-800 underline font-medium"
-          >
-            Show all activities
-          </button>
+          <p className="text-gray-500 mb-4">No activities found for your current filters.</p>
+          <div className="space-y-2">
+            <button
+              onClick={() => setSelectedInterests([])}
+              className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+            >
+              Clear interest filters
+            </button>
+            <button
+              onClick={() => setSmartWeatherFiltering(false)}
+              className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+            >
+              Disable weather filtering
+            </button>
+          </div>
         </div>
       )}
 
