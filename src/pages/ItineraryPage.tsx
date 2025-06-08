@@ -161,7 +161,7 @@ const formatDate = (dateString: string) => {
 
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { dailyItinerary, updateItinerary, destinations, weatherData } = useAppContext();
+  const { dailyItinerary, updateItinerary, destinations, weather } = useAppContext();
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
   const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
@@ -191,8 +191,8 @@ const ItineraryPage: React.FC = () => {
     return days.map(day => {
       const totalDuration = calculateDayDuration(day.activities);
       const destination = destinations.find(d => d.id === day.destinationId);
-      const weather = destination ? weatherData[destination.name] : null;
-      const hasOutdoorActivitiesInRain = weather?.isRainy && 
+      const weatherData = destination ? weather[destination.name]?.[0] : null;
+      const hasOutdoorActivitiesInRain = weatherData?.isRainy && 
         day.activities.some(activity => !activity.activity.indoor);
 
       let warning = undefined;
@@ -205,7 +205,7 @@ const ItineraryPage: React.FC = () => {
       return {
         ...day,
         warning,
-        weatherData: weather
+        weatherData
       };
     });
   };
