@@ -10,6 +10,7 @@ interface AppContextType {
   selectedActivities: Record<string, Activity[]>;
   dailyItinerary: TripDay[];
   weatherData: Record<string, WeatherData>;
+  forecasts: Record<string, WeatherData[]>;
   preferences: string[];
   
   // Actions
@@ -22,6 +23,7 @@ interface AppContextType {
   resetTrip: () => void;
   updatePreferences: (newPreferences: string[]) => void;
   fetchWeatherForCity: (cityName: string) => Promise<WeatherData | null>;
+  fetchForecastForCity: (cityName: string, days: number) => Promise<WeatherData[] | null>;
 }
 
 const defaultContext: AppContextType = {
@@ -31,6 +33,7 @@ const defaultContext: AppContextType = {
   selectedActivities: {},
   dailyItinerary: [],
   weatherData: {},
+  forecasts: {},
   preferences: [],
   
   addDestination: () => {},
@@ -42,6 +45,7 @@ const defaultContext: AppContextType = {
   resetTrip: () => {},
   updatePreferences: () => {},
   fetchWeatherForCity: async () => null,
+  fetchForecastForCity: async () => null,
 };
 
 const AppContext = createContext<AppContextType>(defaultContext);
@@ -119,6 +123,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const [selectedActivities, setSelectedActivities] = useState<Record<string, Activity[]>>(initialData?.selectedActivities || {});
   const [dailyItinerary, setDailyItinerary] = useState<TripDay[]>(initialData?.dailyItinerary || []);
   const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>(initialData?.weatherData || {});
+  const [forecasts, setForecasts] = useState<Record<string, WeatherData[]>>({});
   const [preferences, setPreferences] = useState<string[]>(initialData?.preferences || []);
 
   // Fetch real weather data from API
@@ -152,6 +157,41 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       return weatherInfo;
     } catch (error) {
       console.error('Failed to fetch weather for', cityName, ':', error);
+      return null;
+    }
+  };
+
+  // Fetch multi-day forecast data from API
+  const fetchForecastForCity = async (cityName: string, days: number): Promise<WeatherData[] | null> => {
+    try {
+      const apiKey = '37781fb79e564cf493f112949250706';
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&days=${days}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Forecast API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      const forecastArray: WeatherData[] = data.forecast.forecastday.map((day: any) => ({
+        date: day.date,
+        temperature: Math.round(day.day.avgtemp_c),
+        condition: day.day.condition.text,
+        icon: day.day.condition.icon,
+        precipitation: day.day.totalprecip_mm || 0,
+        isRainy: (day.day.totalprecip_mm || 0) > 0.1
+      }));
+      
+      // Update forecasts state
+      setForecasts(prev => ({
+        ...prev,
+        [cityName]: forecastArray
+      }));
+      
+      return forecastArray;
+    } catch (error) {
+      console.error('Failed to fetch forecast for', cityName, ':', error);
       return null;
     }
   };
@@ -309,6 +349,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     setSelectedActivities({});
     setDailyItinerary([]);
     setWeatherData({});
+    setForecasts({});
     setPreferences([]);
     localStorage.removeItem('travelPlanner');
   };
@@ -320,6 +361,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     selectedActivities,
     dailyItinerary,
     weatherData,
+    forecasts,
     preferences,
     
     addDestination,
@@ -330,7 +372,8 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     updateItinerary,
     resetTrip,
     updatePreferences,
-    fetchWeatherForCity
+    fetchWeatherForCity,
+    fetchForecastForCity
   };
 
   return (
