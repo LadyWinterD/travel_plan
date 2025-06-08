@@ -53,14 +53,14 @@ export class TripAdvisorApiError extends Error {
 }
 
 /**
- * CORRECTED: Search for attractions using the auto-complete endpoint as specified
- * Uses /locations/v2/auto-complete with the exact request format you provided
+ * CORRECTED: Search for attractions using the search endpoint
+ * Uses /locations/v2/search with the exact request format you provided
  */
 export async function searchCityAttractions(cityName: string): Promise<TripAdvisorLocation[]> {
   try {
-    console.log(`🔍 Searching for attractions in: ${cityName} using auto-complete API`);
+    console.log(`🔍 Searching for attractions in: ${cityName} using search API`);
     
-    const response = await fetch(`${BASE_URL}/locations/v2/auto-complete`, {
+    const response = await fetch(`${BASE_URL}/locations/v2/search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export async function searchCityAttractions(cityName: string): Promise<TripAdvis
     }
 
     const data: TripAdvisorAutoCompleteResponse = await response.json();
-    console.log('🎪 TripAdvisor auto-complete response:', data);
+    console.log('🎪 TripAdvisor search response:', data);
 
     const results = data.data?.Typeahead_autocomplete?.results || [];
     
