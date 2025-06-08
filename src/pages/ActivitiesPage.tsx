@@ -1,5 +1,3 @@
-// src/pages/ActivitiesPage.tsx - 最终完整修正版 v2 (保留你的布局)
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
@@ -7,7 +5,6 @@ import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer } from 'lucide-react';
 import { getMockActivities, getWeatherBasedRecommendations } from '../utils/mockData';
 
-// 你的 WeatherCard 组件，现在它的数据源将是正确的
 const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500" size={24} />;
@@ -56,18 +53,16 @@ const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ wea
   );
 };
 
-
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  // 1. 【修正】从 Context 获取正确的 state 和函数
   const { 
     destinations, 
     selectedActivities, 
     toggleActivity, 
     preferences,
-    weather, // 使用 'weather' 而不是 'weatherData'
-    isWeatherLoading,
-    fetchWeatherForCity 
+    weatherData,
+    forecasts,
+    fetchForecastForCity 
   } = useAppContext();
   
   const [activeDestination, setActiveDestination] = useState<string | null>(
@@ -76,20 +71,21 @@ const ActivitiesPage: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState<boolean>(false);
   const [showWeatherRecommendations, setShowWeatherRecommendations] = useState<boolean>(true);
+  const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
   
-  // 2. 【修正】useEffect 的逻辑现在是干净和正确的
   useEffect(() => {
     if (!activeDestination) return;
 
     const destination = destinations.find(d => d.id === activeDestination);
     
-    // 当城市改变时，调用中央方法获取真实天气 (获取未来7天预报)
     if (destination?.name) {
-      fetchWeatherForCity(destination.name, 7);
+      setIsWeatherLoading(true);
+      fetchForecastForCity(destination.name, 7).finally(() => {
+        setIsWeatherLoading(false);
+      });
     }
-  }, [activeDestination, destinations, fetchWeatherForCity]); // 这个 useEffect 只负责触发天气获取
+  }, [activeDestination, destinations, fetchForecastForCity]);
 
-  // 这个新的 useEffect 负责在天气或推荐选项变化时，更新活动列表
   useEffect(() => {
     if (!activeDestination) return;
 
@@ -98,16 +94,13 @@ const ActivitiesPage: React.FC = () => {
     const destination = destinations.find(d => d.id === activeDestination);
     const allDestinationActivities = getMockActivities(activeDestination);
     
-    // 从中央 'weather' state 中获取当前城市的真实天气数据数组
-    const cityForecast = destination ? weather[destination.name] : null;
-    // 我们用预报的第一天作为当前天气来做推荐
+    const cityForecast = destination ? forecasts[destination.name] : null;
     const currentDayWeather = cityForecast?.[0]; 
 
     let finalActivities = allDestinationActivities;
 
     if (currentDayWeather && showWeatherRecommendations) {
-      // 使用真实天气数据来过滤和推荐活动
-      finalActivities = getWeatherBasedRecommendations(allDestinationActivities, [currentDayWeather], preferences);
+      finalActivities = getWeatherBasedRecommendations(allDestinationActivities, currentDayWeather, preferences);
     } else if (preferences.length > 0) {
       finalActivities = allDestinationActivities.filter(activity =>
         (activity.categories || []).some(category => preferences.includes(category))
@@ -117,33 +110,51 @@ const ActivitiesPage: React.FC = () => {
     setActivities(finalActivities);
     setLoadingActivities(false);
     
-  }, [activeDestination, preferences, showWeatherRecommendations, weather]); // 依赖 'weather' 对象的变化
+  }, [activeDestination, preferences, showWeatherRecommendations, forecasts]);
   
-  // 重定向逻辑
-  useEffect(() => { if (destinations.length === 0) navigate('/destinations'); }, [destinations, navigate]);
+  useEffect(() => { 
+    if (destinations.length === 0) navigate('/destinations'); 
+  }, [destinations, navigate]);
 
-  // 辅助函数
-  const isActivitySelected = (activityId: string): boolean => { return activeDestination ? selectedActivities[activeDestination]?.some(a => a.id === activityId) || false : false; };
-  const formatDuration = (minutes: number): string => { const h = Math.floor(minutes / 60); const m = minutes % 60; return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}`.trim() || '0m'; };
+  const isActivitySelected = (activityId: string): boolean => { 
+    return activeDestination ? selectedActivities[activeDestination]?.some(a => a.id === activityId) || false : false; 
+  };
+  
+  const formatDuration = (minutes: number): string => { 
+    const h = Math.floor(minutes / 60); 
+    const m = minutes % 60; 
+    return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}`.trim() || '0m'; 
+  };
   
   const currentDestination = destinations.find(d => d.id === activeDestination);
-  // 3. 【修正】这里也从中央 'weather' state 获取数据
-  const currentCityWeather = currentDestination ? weather[currentDestination.name]?.[0] : null;
+  const currentCityWeather = currentDestination ? forecasts[currentDestination.name]?.[0] : null;
 
-  if (!currentDestination) { return <div className="p-8 text-center">Please select a destination to see activities.</div>; }
+  if (!currentDestination) { 
+    return <div className="p-8 text-center">Please select a destination to see activities.</div>; 
+  }
   
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* 你的所有 JSX 布局都保持原样 */}
       <h1 className="text-3xl font-bold mb-8 text-center">Select Activities</h1>
       
       <div className="mb-8">
         <div className="flex overflow-x-auto pb-2 space-x-2">
-            {/* ... Destination Tabs JSX ... */}
+          {destinations.map((destination) => (
+            <button
+              key={destination.id}
+              onClick={() => setActiveDestination(destination.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeDestination === destination.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {destination.name}
+            </button>
+          ))}
         </div>
       </div>
       
-      {/* 4. 【修正】WeatherCard 现在总是接收到真实数据（如果存在） */}
       {isWeatherLoading && <div className="text-center p-4">Loading Weather...</div>}
       {currentDestination && currentCityWeather && (
         <WeatherCard 
@@ -152,29 +163,149 @@ const ActivitiesPage: React.FC = () => {
         />
       )}
       
-      {/* ... Weather Recommendations Toggle JSX ... */}
-      {/* ... Current Destination Info Banner JSX ... */}
+      <div className="mb-6">
+        <label className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={showWeatherRecommendations}
+            onChange={(e) => setShowWeatherRecommendations(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-sm font-medium">Show weather-based recommendations</span>
+        </label>
+      </div>
+      
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin className="text-blue-600" size={20} />
+          <h2 className="text-lg font-semibold text-blue-800">
+            {currentDestination.name}, {currentDestination.country}
+          </h2>
+        </div>
+        <p className="text-blue-700 text-sm">
+          Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
+          Selected Activities: {selectedActivities[currentDestination.id]?.length || 0}
+        </p>
+      </div>
       
       {loadingActivities ? (
         <div className="text-center py-12">Loading activities...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {activities.map((activity) => (
-            <div key={activity.id} className={`...`}>
-              {/* ... 你的 Activity Card JSX 保持不变 ... */}
-              {/* 它内部的天气徽章逻辑现在也会使用正确的 currentCityWeather */}
-              {!activity.indoor && currentCityWeather && !currentCityWeather.isRainy && currentCityWeather.temperature > 15 && (
-                <div className="mt-1 text-xs bg-yellow-500 text-white px-2 py-1 rounded">
-                  ☀️ Perfect Weather Activity
+            <div 
+              key={activity.id} 
+              className={`bg-white rounded-lg shadow-md overflow-hidden border-2 transition-all duration-200 hover:shadow-lg ${
+                isActivitySelected(activity.id) 
+                  ? 'border-green-500 bg-green-50' 
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <img 
+                src={activity.image} 
+                alt={activity.name}
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-800 flex-1">
+                    {activity.name}
+                  </h3>
+                  <button
+                    onClick={() => toggleActivity(activeDestination!, activity)}
+                    className={`ml-2 p-2 rounded-full transition-colors ${
+                      isActivitySelected(activity.id)
+                        ? 'bg-green-500 text-white hover:bg-green-600'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Check size={16} />
+                  </button>
                 </div>
-              )}
-              {/* ... */}
+                
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  {activity.description}
+                </p>
+                
+                <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                  <div className="flex items-center gap-1">
+                    <Clock size={14} />
+                    <span>{formatDuration(activity.duration)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star size={14} className="text-yellow-500" />
+                    <span>{activity.rating.toFixed(1)}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <DollarSign size={14} />
+                    <span>
+                      {activity.price.amount === 0 
+                        ? 'Free' 
+                        : `${activity.price.amount} ${activity.price.currencyCode}`
+                      }
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {activity.categories.map((category) => (
+                    <span 
+                      key={category}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    activity.indoor 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {activity.indoor ? '🏢 Indoor' : '🌳 Outdoor'}
+                  </span>
+                  
+                  {!activity.indoor && currentCityWeather && !currentCityWeather.isRainy && currentCityWeather.temperature > 15 && (
+                    <div className="text-xs bg-yellow-500 text-white px-2 py-1 rounded">
+                      ☀️ Perfect Weather Activity
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ... No activities & Navigation Buttons JSX ... */}
+      {activities.length === 0 && !loadingActivities && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">No activities found for your current preferences.</p>
+          <button
+            onClick={() => setShowWeatherRecommendations(false)}
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            Show all activities
+          </button>
+        </div>
+      )}
+
+      <div className="flex justify-between mt-8">
+        <button
+          onClick={() => navigate('/destinations')}
+          className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+        >
+          Back to Destinations
+        </button>
+        <button
+          onClick={() => navigate('/itinerary')}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
+        >
+          View Itinerary
+        </button>
+      </div>
     </div>
   );
 };
