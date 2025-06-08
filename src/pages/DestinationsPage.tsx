@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Destination } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import CityAutocomplete from '../components/CityAutocomplete';
 
 const DestinationsPage: React.FC = () => {
   const navigate = useNavigate();
   const { destinations, addDestination, removeDestination, updateDestination, setDates, startDate, endDate } = useAppContext();
   
   const [cityName, setCityName] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('');
   const [error, setError] = useState<string | null>(null);
   
   // Handle form submission for adding a new destination
@@ -16,7 +18,7 @@ const DestinationsPage: React.FC = () => {
     e.preventDefault();
     
     if (!cityName.trim()) {
-      setError('Please enter a city name');
+      setError('Please select a city from the dropdown');
       return;
     }
     
@@ -29,7 +31,7 @@ const DestinationsPage: React.FC = () => {
     const newDestination: Destination = {
       id: uuidv4(),
       name: cityName.trim(),
-      country: '', // We'll set this as empty for now
+      country: selectedCountry || 'Unknown',
       days: 3, // Default to 3 days
       image: `https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg` // Default image
     };
@@ -38,7 +40,20 @@ const DestinationsPage: React.FC = () => {
     
     // Reset form
     setCityName('');
+    setSelectedCountry('');
     setError(null);
+  };
+  
+  // Handle city selection from autocomplete
+  const handleCityChange = (value: string, country?: string) => {
+    setCityName(value);
+    if (country) {
+      setSelectedCountry(country);
+    }
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
   };
   
   // Handle days change for a destination
@@ -84,17 +99,16 @@ const DestinationsPage: React.FC = () => {
       {/* Single Line Form: Destination, Start Date, End Date, Add Button */}
       <div className="mb-8">
         <form onSubmit={handleAddDestination} className="flex gap-3 items-end">
-          {/* Destination Input */}
+          {/* Destination Input with Autocomplete */}
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Destination
             </label>
-            <input
-              type="text"
+            <CityAutocomplete
               value={cityName}
-              onChange={(e) => setCityName(e.target.value)}
+              onChange={handleCityChange}
               placeholder="e.g., Paris"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              error={!!error && error.includes('city')}
             />
           </div>
           
@@ -152,6 +166,9 @@ const DestinationsPage: React.FC = () => {
                 {/* Destination Name */}
                 <div className="flex-1">
                   <span className="font-bold text-gray-900">{destination.name}</span>
+                  {destination.country && (
+                    <span className="text-gray-500 ml-2">({destination.country})</span>
+                  )}
                 </div>
                 
                 {/* Days to Stay Input */}
