@@ -120,12 +120,11 @@ const ActivityCard: React.FC<{
 
   return (
     <div 
-      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg cursor-pointer ${
+      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
         isSelected 
           ? 'border-teal-500 ring-2 ring-teal-200 transform scale-105' 
           : 'border-gray-200 hover:border-gray-300'
       }`}
-      onClick={onToggle}
     >
       {/* Weather Badge */}
       {getWeatherBadge()}
@@ -136,37 +135,15 @@ const ActivityCard: React.FC<{
         style={{ backgroundImage: `url(${activity.image})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-        
-        {/* Add to Trip Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          className={`absolute bottom-3 right-3 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-            isSelected
-              ? 'bg-teal-500 text-white shadow-lg'
-              : 'bg-white/90 text-gray-800 hover:bg-white'
-          }`}
-        >
-          {isSelected ? (
-            <span className="flex items-center gap-2">
-              <Check size={16} />
-              Added
-            </span>
-          ) : (
-            'Add to Trip'
-          )}
-        </button>
       </div>
       
       {/* Activity Content */}
-      <div className="p-4">
+      <div className="p-4 flex flex-col h-full">
         <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
           {activity.name}
         </h3>
         
-        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+        <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-grow">
           {activity.description}
         </p>
         
@@ -187,7 +164,7 @@ const ActivityCard: React.FC<{
         </div>
         
         {/* Category Tags */}
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="flex flex-wrap gap-1 mb-3">
           {activity.categories.slice(0, 3).map((category) => (
             <span 
               key={category}
@@ -204,7 +181,7 @@ const ActivityCard: React.FC<{
         </div>
         
         {/* Indoor/Outdoor Badge */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-4">
           <span className={`text-xs px-2 py-1 rounded-full ${
             activity.indoor 
               ? 'bg-blue-100 text-blue-800' 
@@ -213,6 +190,25 @@ const ActivityCard: React.FC<{
             {activity.indoor ? '🏢 Indoor' : '🌳 Outdoor'}
           </span>
         </div>
+        
+        {/* Add to Trip Button - Now at the bottom */}
+        <button
+          onClick={onToggle}
+          className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+            isSelected
+              ? 'bg-teal-500 text-white shadow-lg hover:bg-teal-600'
+              : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+          }`}
+        >
+          {isSelected ? (
+            <span className="flex items-center justify-center gap-2">
+              <Check size={16} />
+              Added to Trip
+            </span>
+          ) : (
+            'Add to Trip'
+          )}
+        </button>
       </div>
     </div>
   );
