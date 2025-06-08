@@ -105,7 +105,7 @@ const getWeatherBasedRecommendations = (
 
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { destinations, selectedActivities, toggleActivity, preferences, weatherData, fetchWeatherForCity } = useAppContext();
+  const { destinations, selectedActivities, toggleActivity, preferences, weather, fetchWeatherForCity } = useAppContext();
   
   const [activeDestination, setActiveDestination] = useState<string | null>(
     destinations.length > 0 ? destinations[0].id : null
@@ -130,7 +130,7 @@ const ActivitiesPage: React.FC = () => {
     // Fetch weather data for the destination
     const loadWeatherAndActivities = async () => {
       // Get weather data (either from cache or fetch new)
-      let currentWeather = weatherData[destination.name];
+      let currentWeather = weather[destination.name];
       if (!currentWeather) {
         currentWeather = await fetchWeatherForCity(destination.name);
       }
@@ -157,7 +157,7 @@ const ActivitiesPage: React.FC = () => {
 
     loadWeatherAndActivities();
     
-  }, [activeDestination, preferences, showWeatherRecommendations, destinations, fetchWeatherForCity, weatherData]);
+  }, [activeDestination, preferences, showWeatherRecommendations, destinations, fetchWeatherForCity, weather]);
   
   // If no destinations are available, redirect to destinations page
   useEffect(() => {
@@ -184,7 +184,7 @@ const ActivitiesPage: React.FC = () => {
   
   // Get the current destination object
   const currentDestination = destinations.find(d => d.id === activeDestination);
-  const currentWeather = currentDestination ? weatherData[currentDestination.name] : null;
+  const currentWeather = currentDestination ? weather[currentDestination.name] : null;
   
   if (destinations.length === 0) {
     return null; // Redirect handled by useEffect
