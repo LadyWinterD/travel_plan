@@ -120,7 +120,7 @@ const ActivityCard: React.FC<{
 
   return (
     <div 
-      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
+      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg flex flex-col ${
         isSelected 
           ? 'border-teal-500 ring-2 ring-teal-200 transform scale-105' 
           : 'border-gray-200 hover:border-gray-300'
@@ -138,7 +138,7 @@ const ActivityCard: React.FC<{
       </div>
       
       {/* Activity Content */}
-      <div className="p-4 flex flex-col h-full">
+      <div className="p-4 flex flex-col flex-grow">
         <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
           {activity.name}
         </h3>
@@ -192,23 +192,25 @@ const ActivityCard: React.FC<{
         </div>
         
         {/* Add to Trip Button - Now at the bottom */}
-        <button
-          onClick={onToggle}
-          className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-            isSelected
-              ? 'bg-teal-500 text-white shadow-lg hover:bg-teal-600'
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
-          }`}
-        >
-          {isSelected ? (
-            <span className="flex items-center justify-center gap-2">
-              <Check size={16} />
-              Added to Trip
-            </span>
-          ) : (
-            'Add to Trip'
-          )}
-        </button>
+        <div className="mt-auto">
+          <button
+            onClick={onToggle}
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+              isSelected
+                ? 'bg-teal-500 text-white shadow-lg hover:bg-teal-600'
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
+            }`}
+          >
+            {isSelected ? (
+              <span className="flex items-center justify-center gap-2">
+                <Check size={16} />
+                Added to Trip
+              </span>
+            ) : (
+              'Add to Trip'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
