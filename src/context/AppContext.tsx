@@ -126,11 +126,21 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const [forecasts, setForecasts] = useState<Record<string, WeatherData[]>>({});
   const [preferences, setPreferences] = useState<string[]>(initialData?.preferences || []);
 
+  // Track which cities we've already fetched weather for to prevent loops
+  const [fetchedWeatherCities, setFetchedWeatherCities] = useState<Set<string>>(new Set());
+
   // Fetch real weather data from API
-  const fetchWeatherForCity = async (cityName: string): Promise<WeatherData | null> => {
+  const fetchWeatherForCity = useCallback(async (cityName: string): Promise<WeatherData | null> => {
+    // Prevent duplicate requests
+    if (fetchedWeatherCities.has(cityName)) {
+      return weatherData[cityName] || null;
+    }
+
     try {
       const apiKey = '37781fb79e564cf493f112949250706';
       const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&aqi=no`;
+      
+      console.log(`🌤️ Fetching weather for ${cityName}...`);
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -148,24 +158,33 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         isRainy: (data.current.precip_mm || 0) > 0.1
       };
       
+      console.log(`✅ Weather fetched for ${cityName}:`, weatherInfo);
+      
       // Update weather data in state
       setWeatherData(prev => ({
         ...prev,
         [cityName]: weatherInfo
       }));
+
+      // Mark this city as fetched
+      setFetchedWeatherCities(prev => new Set([...prev, cityName]));
       
       return weatherInfo;
     } catch (error) {
       console.error('Failed to fetch weather for', cityName, ':', error);
+      // Mark as fetched even on error to prevent retry loops
+      setFetchedWeatherCities(prev => new Set([...prev, cityName]));
       return null;
     }
-  };
+  }, [weatherData, fetchedWeatherCities]);
 
   // Fetch multi-day forecast data from API
-  const fetchForecastForCity = async (cityName: string, days: number): Promise<WeatherData[] | null> => {
+  const fetchForecastForCity = useCallback(async (cityName: string, days: number): Promise<WeatherData[] | null> => {
     try {
       const apiKey = '37781fb79e564cf493f112949250706';
       const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&days=${days}`;
+      
+      console.log(`🌤️ Fetching ${days}-day forecast for ${cityName}...`);
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -183,6 +202,8 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         isRainy: (day.day.totalprecip_mm || 0) > 0.1
       }));
       
+      console.log(`✅ Forecast fetched for ${cityName}:`, forecastArray);
+      
       // Update forecasts state
       setForecasts(prev => ({
         ...prev,
@@ -194,7 +215,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       console.error('Failed to fetch forecast for', cityName, ':', error);
       return null;
     }
-  };
+  }, []);
 
   // Update itinerary when activities or dates change
   useEffect(() => {
@@ -293,11 +314,23 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       ...prev,
       [destination.id]: []
     }));
-    // Fetch weather for new destination
-    fetchWeatherForCity(destination.name);
+    // Only fetch weather if we haven't already fetched it for this city
+    if (!fetchedWeatherCities.has(destination.name)) {
+      fetchWeatherForCity(destination.name);
+    }
   };
 
   const removeDestination = (destinationId: string) => {
+    const destination = destinations.find(d => d.id === destinationId);
+    if (destination) {
+      // Remove from fetched cities set when destination is removed
+      setFetchedWeatherCities(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(destination.name);
+        return newSet;
+      });
+    }
+    
     setDestinations(prev => prev.filter(d => d.id !== destinationId));
     setSelectedActivities(prev => {
       const updated = { ...prev };
@@ -351,6 +384,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     setWeatherData({});
     setForecasts({});
     setPreferences([]);
+    setFetchedWeatherCities(new Set());
     localStorage.removeItem('travelPlanner');
   };
 
