@@ -54,6 +54,12 @@ const WeatherCard: React.FC<{ weather: WeatherData; location: string }> = ({ wea
           <div className="text-sm text-gray-600 mb-1">Travel Advice</div>
           <div className="text-sm font-medium text-gray-800 max-w-48">
             {getWeatherAdvice()}
+            <button 
+  onClick={() => fetchForecastForCity('Auckland', 5)} 
+  className="bg-red-500 text-white p-2 rounded m-4"
+>
+  Test Fetch Auckland 5-Day Forecast
+</button>
           </div>
         </div>
       </div>
