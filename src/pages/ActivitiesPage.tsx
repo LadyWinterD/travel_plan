@@ -392,106 +392,23 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Filter Sections */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-2 mb-6">
-          <Filter size={20} className="text-teal-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Customize Your Experience</h2>
+      {/* 1. Destination Information - Moved to Top */}
+      <div className="mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin className="text-teal-600" size={20} />
+          <h2 className="text-lg font-semibold text-teal-800">
+            {currentDestination.name}, {currentDestination.country}
+          </h2>
         </div>
-        
-        {/* Section A: Interest Categories */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Interest Categories</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-            {interestCategories.map((interest) => (
-              <label
-                key={interest}
-                className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                  selectedInterests.includes(interest)
-                    ? 'border-teal-500 bg-teal-50 text-teal-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedInterests.includes(interest)}
-                  onChange={() => handleInterestToggle(interest)}
-                  className="sr-only"
-                />
-                <span className="text-sm font-medium text-center">{interest}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        
-        {/* Section B & C: Budget and Traveler Info - Compact Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Section B: Daily Budget Per Person - Compact */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Budget Per Person</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {budgetOptions.map((budget) => (
-                <button
-                  key={budget.id}
-                  onClick={() => handleBudgetClick(budget.id)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${
-                    selectedBudget === budget.id
-                      ? 'border-teal-500 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <span className="text-xl mb-1">{budget.icon}</span>
-                  <span className="text-sm font-medium">{budget.label}</span>
-                  <span className="text-xs opacity-75">
-                    ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]}
-                  </span>
-                  {selectedBudget === budget.id && (
-                    <Check size={16} className="text-teal-600 mt-1" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-          </div>
-          
-          {/* Section C: Traveler Information - Compact */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Traveler Type</h3>
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {travelerOptions.map((traveler) => (
-                <button
-                  key={traveler.id}
-                  onClick={() => handleTravelerClick(traveler.id)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${
-                    selectedTravelerType === traveler.id
-                      ? 'border-teal-500 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <span className="text-xl mb-1">{traveler.icon}</span>
-                  <span className="text-sm font-medium text-center">{traveler.label}</span>
-                  {selectedTravelerType === traveler.id && (
-                    <Check size={16} className="text-teal-600 mt-1" />
-                  )}
-                </button>
-              ))}
-            </div>
-            
-            {/* Group Activities Checkbox - Compact */}
-            <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={showGroupActivitiesOnly}
-                onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
-                className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Group activities only</span>
-            </label>
-          </div>
-        </div>
+        <p className="text-teal-700 text-sm">
+          Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
+          Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
+          Available Activities: {activities.length}
+          {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.join(', ')}`}
+        </p>
       </div>
-      
-      {/* Weather Forecast Card */}
+
+      {/* 2. Weather Recommendation - Second */}
       {isWeatherLoading && (
         <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
@@ -505,8 +422,8 @@ const ActivitiesPage: React.FC = () => {
           location={`${currentDestination.name}, ${currentDestination.country}`}
         />
       )}
-      
-      {/* Smart Recommendations Toggle */}
+
+      {/* Smart Weather Filtering Toggle */}
       <div className="mb-6 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
         <div className="flex items-center justify-between">
           <div>
@@ -525,6 +442,105 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
+      {/* 3. Interest Categories - Third */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Filter size={20} className="text-teal-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Interest Categories</h2>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {interestCategories.map((interest) => (
+            <label
+              key={interest}
+              className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                selectedInterests.includes(interest)
+                  ? 'border-teal-500 bg-teal-50 text-teal-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedInterests.includes(interest)}
+                onChange={() => handleInterestToggle(interest)}
+                className="sr-only"
+              />
+              <span className="text-sm font-medium text-center">{interest}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Daily Budget Per Person - Fourth */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-6">
+          <DollarSign size={20} className="text-teal-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Daily Budget Per Person</h2>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4">
+          {budgetOptions.map((budget) => (
+            <button
+              key={budget.id}
+              onClick={() => handleBudgetClick(budget.id)}
+              className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all duration-200 ${
+                selectedBudget === budget.id
+                  ? 'border-teal-500 bg-teal-50 text-teal-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              }`}
+            >
+              <span className="text-2xl mb-2">{budget.icon}</span>
+              <span className="text-sm font-medium">{budget.label}</span>
+              <span className="text-xs opacity-75 mt-1">
+                ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]}
+              </span>
+              {selectedBudget === budget.id && (
+                <Check size={16} className="text-teal-600 mt-2" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Traveler Information - Fifth */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Users size={20} className="text-teal-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Traveler Information</h2>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {travelerOptions.map((traveler) => (
+            <button
+              key={traveler.id}
+              onClick={() => handleTravelerClick(traveler.id)}
+              className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all duration-200 ${
+                selectedTravelerType === traveler.id
+                  ? 'border-teal-500 bg-teal-50 text-teal-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              }`}
+            >
+              <span className="text-2xl mb-2">{traveler.icon}</span>
+              <span className="text-sm font-medium text-center">{traveler.label}</span>
+              {selectedTravelerType === traveler.id && (
+                <Check size={16} className="text-teal-600 mt-2" />
+              )}
+            </button>
+          ))}
+        </div>
+        
+        {/* Group Activities Checkbox */}
+        <label className="flex items-center justify-center gap-2 p-4 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
+          <input
+            type="checkbox"
+            checked={showGroupActivitiesOnly}
+            onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
+            className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+          />
+          <span className="text-sm font-medium text-gray-700">Group activities only</span>
+        </label>
+      </div>
+      
       {/* Activity Cards Grid */}
       {loadingActivities ? (
         <div className="text-center py-12">
@@ -533,22 +549,6 @@ const ActivitiesPage: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Selected Activities Summary */}
-          <div className="mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="text-teal-600" size={20} />
-              <h2 className="text-lg font-semibold text-teal-800">
-                {currentDestination.name}, {currentDestination.country}
-              </h2>
-            </div>
-            <p className="text-teal-700 text-sm">
-              Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
-              Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
-              Available Activities: {activities.length}
-              {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.join(', ')}`}
-            </p>
-          </div>
-
           {/* Activity Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activities.map((activity) => (
