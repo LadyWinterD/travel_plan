@@ -25,9 +25,9 @@ const budgetOptions = [
 
 // Traveler options
 const travelerOptions = [
-  { id: 'solo', label: 'Solo Traveler' },
-  { id: 'couple', label: 'Couple / Duo' },
-  { id: 'group', label: 'Group (3+)' }
+  { id: 'solo', label: 'Solo', icon: '👤' },
+  { id: 'couple', label: 'Couple', icon: '👫' },
+  { id: 'group', label: 'Group 3+', icon: '👥' }
 ];
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
@@ -239,7 +239,7 @@ const ActivitiesPage: React.FC = () => {
   
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [selectedBudget, setSelectedBudget] = useState<string>('standard');
+  const [selectedBudget, setSelectedBudget] = useState<string>('');
   const [selectedTravelerType, setSelectedTravelerType] = useState<string>('couple');
   const [showGroupActivitiesOnly, setShowGroupActivitiesOnly] = useState<boolean>(false);
   
@@ -279,11 +279,13 @@ const ActivitiesPage: React.FC = () => {
     }
     
     // Apply budget filters
-    const budgetRange = budgetOptions.find(b => b.id === selectedBudget)?.range || [0, 999];
-    allDestinationActivities = allDestinationActivities.filter(activity => {
-      const price = activity.price?.amount || 0;
-      return price >= budgetRange[0] && price <= budgetRange[1];
-    });
+    if (selectedBudget) {
+      const budgetRange = budgetOptions.find(b => b.id === selectedBudget)?.range || [0, 999];
+      allDestinationActivities = allDestinationActivities.filter(activity => {
+        const price = activity.price?.amount || 0;
+        return price >= budgetRange[0] && price <= budgetRange[1];
+      });
+    }
     
     // Apply group activity filter
     if (showGroupActivitiesOnly) {
@@ -334,6 +336,15 @@ const ActivitiesPage: React.FC = () => {
       setSelectedBudget(''); // Deselect
     } else {
       setSelectedBudget(budgetId); // Select new budget
+    }
+  };
+
+  const handleTravelerClick = (travelerId: string) => {
+    // Allow deselection by clicking the same traveler type again
+    if (selectedTravelerType === travelerId) {
+      setSelectedTravelerType(''); // Deselect
+    } else {
+      setSelectedTravelerType(travelerId); // Select new traveler type
     }
   };
   
@@ -389,7 +400,7 @@ const ActivitiesPage: React.FC = () => {
         </div>
         
         {/* Section A: Interest Categories */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Interest Categories</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {interestCategories.map((interest) => (
@@ -413,80 +424,73 @@ const ActivitiesPage: React.FC = () => {
           </div>
         </div>
         
-        {/* Section B & C: Budget and Traveler Info on Same Line */}
+        {/* Section B & C: Budget and Traveler Info - Compact Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Section B: Daily Budget Per Person */}
+          {/* Section B: Daily Budget Per Person - Compact */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Budget Per Person</h3>
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {budgetOptions.map((budget) => (
                 <button
                   key={budget.id}
                   onClick={() => handleBudgetClick(budget.id)}
-                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all duration-200 ${
+                  className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${
                     selectedBudget === budget.id
-                      ? 'border-teal-500 bg-teal-50 text-teal-700 shadow-md'
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
                       : 'border-gray-200 hover:border-gray-300 text-gray-700'
                   }`}
                 >
-                  <span className="text-2xl">{budget.icon}</span>
-                  <div className="text-left flex-1">
-                    <div className="font-semibold">{budget.label}</div>
-                    <div className="text-sm opacity-75">
-                      ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]} per day
-                    </div>
-                  </div>
+                  <span className="text-xl mb-1">{budget.icon}</span>
+                  <span className="text-sm font-medium">{budget.label}</span>
+                  <span className="text-xs opacity-75">
+                    ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]}
+                  </span>
                   {selectedBudget === budget.id && (
-                    <Check size={20} className="text-teal-600" />
+                    <Check size={16} className="text-teal-600 mt-1" />
                   )}
                 </button>
               ))}
             </div>
             {selectedBudget && (
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Click again to deselect and show all price ranges
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                💡 Click again to deselect
               </p>
             )}
           </div>
           
-          {/* Section C: Traveler Information */}
+          {/* Section C: Traveler Information - Compact */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Traveler Information</h3>
-            <div className="space-y-4">
-              {/* Number of Travelers Dropdown */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of Travelers
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedTravelerType}
-                    onChange={(e) => setSelectedTravelerType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none bg-white"
-                  >
-                    {travelerOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <Users size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-              
-              {/* Group Activities Checkbox */}
-              <div>
-                <label className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showGroupActivitiesOnly}
-                    onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
-                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Show group activities only</span>
-                </label>
-              </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Traveler Type</h3>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {travelerOptions.map((traveler) => (
+                <button
+                  key={traveler.id}
+                  onClick={() => handleTravelerClick(traveler.id)}
+                  className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200 ${
+                    selectedTravelerType === traveler.id
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <span className="text-xl mb-1">{traveler.icon}</span>
+                  <span className="text-sm font-medium text-center">{traveler.label}</span>
+                  {selectedTravelerType === traveler.id && (
+                    <Check size={16} className="text-teal-600 mt-1" />
+                  )}
+                </button>
+              ))}
             </div>
+            
+            {/* Group Activities Checkbox - Compact */}
+            <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                checked={showGroupActivitiesOnly}
+                onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
+                className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Group activities only</span>
+            </label>
           </div>
         </div>
       </div>
