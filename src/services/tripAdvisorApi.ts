@@ -25,6 +25,8 @@ interface TripAdvisorLocation {
     photo?: {
       photoSizeDynamic?: {
         urlTemplate: string;
+        maxHeight: number;
+        maxWidth: number;
       };
       photoSizes?: Array<{
         url: string;
@@ -43,40 +45,6 @@ interface TripAdvisorSearchResponse {
   };
 }
 
-interface TripAdvisorAttraction {
-  locationId: number;
-  name: string;
-  description?: string;
-  rating?: number;
-  photo?: {
-    images?: {
-      large?: {
-        url: string;
-      };
-      medium?: {
-        url: string;
-      };
-      small?: {
-        url: string;
-      };
-    };
-  };
-  category?: {
-    name: string;
-  };
-  subcategory?: Array<{
-    name: string;
-  }>;
-  location_string?: string;
-  ranking?: string;
-  price_level?: string;
-  address?: string;
-}
-
-interface TripAdvisorAttractionsResponse {
-  data: TripAdvisorAttraction[];
-}
-
 export class TripAdvisorApiError extends Error {
   constructor(message: string, public statusCode?: number) {
     super(message);
@@ -85,11 +53,12 @@ export class TripAdvisorApiError extends Error {
 }
 
 /**
- * Step A: Search for a city and get its geoId
+ * Search for attractions in a city using TripAdvisor API
+ * This is a single API call that returns attractions directly
  */
-export async function searchCityLocation(cityName: string): Promise<number | null> {
+export async function searchCityAttractions(cityName: string): Promise<TripAdvisorLocation[]> {
   try {
-    console.log(`🔍 Searching for city: ${cityName}`);
+    console.log(`🔍 Searching for attractions in: ${cityName}`);
     
     const response = await fetch(`${BASE_URL}/locations/v2/search?currency=USD&units=km&lang=en_US`, {
       method: 'POST',
@@ -106,145 +75,115 @@ export async function searchCityLocation(cityName: string): Promise<number | nul
 
     if (!response.ok) {
       throw new TripAdvisorApiError(
-        `Failed to search for city: ${response.status} ${response.statusText}`,
+        `Failed to search for attractions: ${response.status} ${response.statusText}`,
         response.status
       );
     }
 
     const data: TripAdvisorSearchResponse = await response.json();
-    console.log('🏙️ City search response:', data);
+    console.log('🎪 TripAdvisor search response:', data);
 
-    // Find the best matching location (preferably a city/geo location)
     const results = data.data?.Typeahead_autocomplete?.results || [];
     
-    // Filter for geographic locations (cities, regions) and attractions
-    const geoLocations = results.filter(result => 
-      result.detailsV2?.isGeo === true || 
-      result.detailsV2?.placeType === 'GEO' ||
-      result.detailsV2?.placeType === 'CITY' ||
-      result.detailsV2?.placeType === 'ATTRACTION'
+    // Filter for attractions and activities (not just geo locations)
+    const attractions = results.filter(result => 
+      result.__typename === 'Typeahead_LocationItem' &&
+      (result.detailsV2?.placeType === 'ATTRACTION' || 
+       result.detailsV2?.placeType === 'ACTIVITY' ||
+       result.detailsV2?.placeType === 'RESTAURANT' ||
+       result.detailsV2?.placeType === 'HOTEL') &&
+      result.detailsV2?.names?.name
     );
 
-    if (geoLocations.length === 0) {
-      // If no geo locations, try any location
-      const anyLocation = results.find(result => 
-        result.detailsV2?.locationId && 
-        result.__typename === 'Typeahead_LocationItem'
-      );
-      
-      if (anyLocation) {
-        console.log(`✅ Found location ID: ${anyLocation.detailsV2.locationId} for ${cityName}`);
-        return anyLocation.detailsV2.locationId;
-      }
-      
-      console.log(`❌ No location found for: ${cityName}`);
-      return null;
-    }
-
-    // Return the first geo location's ID
-    const locationId = geoLocations[0].detailsV2.locationId;
-    console.log(`✅ Found geo location ID: ${locationId} for ${cityName}`);
-    return locationId;
+    console.log(`✅ Found ${attractions.length} attractions for ${cityName}`);
+    return attractions;
 
   } catch (error) {
-    console.error('Error searching for city:', error);
+    console.error('Error searching for attractions:', error);
     if (error instanceof TripAdvisorApiError) {
       throw error;
     }
-    throw new TripAdvisorApiError(`Failed to search for city: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-/**
- * Step B: Fetch attractions using geoId
- */
-export async function fetchAttractionsByGeoId(geoId: number): Promise<TripAdvisorAttraction[]> {
-  try {
-    console.log(`🎯 Fetching attractions for geoId: ${geoId}`);
-    
-    const response = await fetch(`${BASE_URL}/attraction-product-filters/v2/list`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-rapidapi-host': RAPIDAPI_HOST,
-        'x-rapidapi-key': RAPIDAPI_KEY,
-      },
-      body: JSON.stringify({
-        geoId: geoId
-      })
-    });
-
-    if (!response.ok) {
-      throw new TripAdvisorApiError(
-        `Failed to fetch attractions: ${response.status} ${response.statusText}`,
-        response.status
-      );
-    }
-
-    const data: TripAdvisorAttractionsResponse = await response.json();
-    console.log('🎪 Attractions response:', data);
-
-    return data.data || [];
-
-  } catch (error) {
-    console.error('Error fetching attractions:', error);
-    if (error instanceof TripAdvisorApiError) {
-      throw error;
-    }
-    throw new TripAdvisorApiError(`Failed to fetch attractions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new TripAdvisorApiError(`Failed to search for attractions: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 /**
  * Helper function to get the best image URL from TripAdvisor photo data
  */
-export function getBestImageUrl(photo?: TripAdvisorAttraction['photo']): string {
+export function getBestImageUrl(photo?: TripAdvisorLocation['image']): string {
   const fallbackImage = 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
   
-  if (!photo?.images) {
+  if (!photo?.photo) {
     return fallbackImage;
   }
 
-  // Prefer large, then medium, then small images
-  return photo.images.large?.url || 
-         photo.images.medium?.url || 
-         photo.images.small?.url || 
-         fallbackImage;
+  // Try to get a good sized image from photoSizes array
+  if (photo.photo.photoSizes && photo.photo.photoSizes.length > 0) {
+    // Find the largest image that's reasonable for our UI (prefer 400-800px width)
+    const sortedSizes = photo.photo.photoSizes
+      .filter(size => size.width > 200) // Filter out very small images
+      .sort((a, b) => b.width - a.width); // Sort by width descending
+    
+    if (sortedSizes.length > 0) {
+      return sortedSizes[0].url;
+    }
+  }
+
+  // Fallback to dynamic URL template with reasonable dimensions
+  if (photo.photo.photoSizeDynamic?.urlTemplate) {
+    return photo.photo.photoSizeDynamic.urlTemplate
+      .replace('{width}', '400')
+      .replace('{height}', '300');
+  }
+
+  return fallbackImage;
 }
 
 /**
  * Helper function to extract categories from TripAdvisor data
  */
-export function extractCategories(attraction: TripAdvisorAttraction): string[] {
+export function extractCategories(attraction: TripAdvisorLocation): string[] {
   const categories: string[] = [];
+  const placeType = attraction.detailsV2?.placeType?.toLowerCase();
   
-  if (attraction.category?.name) {
-    categories.push(attraction.category.name);
-  }
-  
-  if (attraction.subcategory) {
-    attraction.subcategory.forEach(sub => {
-      if (sub.name) {
-        categories.push(sub.name);
-      }
-    });
+  // Map TripAdvisor place types to our categories
+  switch (placeType) {
+    case 'attraction':
+      categories.push('Entertainment', 'Cultural');
+      break;
+    case 'activity':
+      categories.push('Adventure', 'Entertainment');
+      break;
+    case 'restaurant':
+      categories.push('Food & Dining');
+      break;
+    case 'hotel':
+      categories.push('Accommodation');
+      break;
+    default:
+      categories.push('Entertainment');
   }
 
-  // If no categories found, provide default based on common attraction types
-  if (categories.length === 0) {
-    categories.push('Entertainment');
-  }
+  // Add category based on name keywords
+  const name = attraction.detailsV2?.names?.name?.toLowerCase() || '';
+  
+  if (name.includes('museum')) categories.push('Museums');
+  if (name.includes('park') || name.includes('garden')) categories.push('Outdoor', 'Nature');
+  if (name.includes('tower') || name.includes('bridge')) categories.push('Historical Sites');
+  if (name.includes('market') || name.includes('shopping')) categories.push('Shopping');
+  if (name.includes('church') || name.includes('cathedral') || name.includes('temple')) categories.push('Cultural', 'Historical Sites');
+  if (name.includes('palace') || name.includes('castle')) categories.push('Historical Sites', 'Cultural');
 
-  return categories;
+  // Remove duplicates
+  return [...new Set(categories)];
 }
 
 /**
  * Helper function to determine if an attraction is likely indoor
  */
-export function isLikelyIndoor(attraction: TripAdvisorAttraction): boolean {
-  const name = attraction.name?.toLowerCase() || '';
-  const description = attraction.description?.toLowerCase() || '';
-  const category = attraction.category?.name?.toLowerCase() || '';
+export function isLikelyIndoor(attraction: TripAdvisorLocation): boolean {
+  const name = attraction.detailsV2?.names?.name?.toLowerCase() || '';
+  const placeType = attraction.detailsV2?.placeType?.toLowerCase() || '';
   
   const indoorKeywords = [
     'museum', 'gallery', 'theater', 'theatre', 'mall', 'shopping', 'restaurant',
@@ -257,10 +196,13 @@ export function isLikelyIndoor(attraction: TripAdvisorAttraction): boolean {
     'tower', 'monument', 'square', 'market', 'street', 'viewpoint'
   ];
   
-  const text = `${name} ${description} ${category}`;
+  // Restaurant and hotel types are typically indoor
+  if (placeType === 'restaurant' || placeType === 'hotel') {
+    return true;
+  }
   
-  const hasIndoorKeyword = indoorKeywords.some(keyword => text.includes(keyword));
-  const hasOutdoorKeyword = outdoorKeywords.some(keyword => text.includes(keyword));
+  const hasIndoorKeyword = indoorKeywords.some(keyword => name.includes(keyword));
+  const hasOutdoorKeyword = outdoorKeywords.some(keyword => name.includes(keyword));
   
   // If both or neither, default to indoor (safer for weather)
   if (hasIndoorKeyword && !hasOutdoorKeyword) return true;

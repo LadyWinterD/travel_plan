@@ -1,5 +1,5 @@
 import { Activity, Destination, WeatherData } from '../types';
-import { searchCityLocation, fetchAttractionsByGeoId, getBestImageUrl, extractCategories, isLikelyIndoor, TripAdvisorApiError } from '../services/tripAdvisorApi';
+import { searchCityAttractions, getBestImageUrl, extractCategories, isLikelyIndoor, TripAdvisorApiError } from '../services/tripAdvisorApi';
 
 // Enhanced Mock Weather Data with more realistic patterns
 export const getMockWeather = (destinationId: string, date: string): WeatherData => {
@@ -43,8 +43,8 @@ export const getMockWeather = (destinationId: string, date: string): WeatherData
 };
 
 /**
- * NEW: Fetch real activities from TripAdvisor API
- * This replaces the old mock data generation
+ * CORRECTED: Fetch real activities from TripAdvisor API
+ * Now uses the correct API structure and single endpoint
  */
 export const getMockActivities = async (destinationId: string, cityName?: string): Promise<Activity[]> => {
   // If no city name provided, fall back to mock data
@@ -54,18 +54,10 @@ export const getMockActivities = async (destinationId: string, cityName?: string
   }
 
   try {
-    console.log(`🚀 Fetching real activities for: ${cityName}`);
+    console.log(`🚀 Fetching real attractions for: ${cityName}`);
     
-    // Step A: Get location geoId
-    const geoId = await searchCityLocation(cityName);
-    
-    if (!geoId) {
-      console.log(`❌ City not found: ${cityName}, using fallback mock data`);
-      return generateFallbackMockActivities(destinationId);
-    }
-
-    // Step B: Fetch attractions using geoId
-    const attractions = await fetchAttractionsByGeoId(geoId);
+    // CORRECTED: Single API call to get attractions directly
+    const attractions = await searchCityAttractions(cityName);
     
     if (!attractions || attractions.length === 0) {
       console.log(`❌ No attractions found for: ${cityName}, using fallback mock data`);
@@ -78,12 +70,12 @@ export const getMockActivities = async (destinationId: string, cityName?: string
       const isIndoor = isLikelyIndoor(attraction);
       
       return {
-        id: `tripadvisor-${attraction.locationId || index}`,
-        name: attraction.name || `Attraction ${index + 1}`,
-        description: attraction.description || `Experience ${attraction.name || 'this amazing attraction'} in ${cityName}`,
-        image: getBestImageUrl(attraction.photo),
+        id: `tripadvisor-${attraction.detailsV2.locationId || index}`,
+        name: attraction.detailsV2.names.name || `Attraction ${index + 1}`,
+        description: `Experience ${attraction.detailsV2.names.name || 'this amazing attraction'} in ${cityName}. ${attraction.detailsV2.names.longOnlyHierarchyTypeaheadV2 || ''}`,
+        image: getBestImageUrl(attraction.image),
         duration: 60 + (index * 15), // Vary duration from 60-360 minutes
-        rating: attraction.rating || (4 + Math.random()), // Use API rating or generate 4-5 star
+        rating: 4 + Math.random(), // Generate 4-5 star rating
         price: {
           amount: Math.floor(Math.random() * 50) + 10, // Random price 10-60
           currencyCode: 'USD'
@@ -91,17 +83,17 @@ export const getMockActivities = async (destinationId: string, cityName?: string
         categories: categories.length > 0 ? categories : ['Entertainment'],
         indoor: isIndoor,
         location: {
-          lat: 0, // TripAdvisor doesn't always provide coordinates in this endpoint
-          lng: 0
+          lat: attraction.detailsV2.geocode?.latitude || 0,
+          lng: attraction.detailsV2.geocode?.longitude || 0
         }
       };
     });
 
-    console.log(`✅ Successfully fetched ${activities.length} real activities for ${cityName}`);
+    console.log(`✅ Successfully fetched ${activities.length} real attractions for ${cityName}`);
     return activities;
 
   } catch (error) {
-    console.error(`❌ Error fetching activities for ${cityName}:`, error);
+    console.error(`❌ Error fetching attractions for ${cityName}:`, error);
     
     if (error instanceof TripAdvisorApiError) {
       console.log('🔄 TripAdvisor API error, using fallback mock data');
