@@ -327,6 +327,15 @@ const ActivitiesPage: React.FC = () => {
         : [...prev, interest]
     );
   };
+
+  const handleBudgetClick = (budgetId: string) => {
+    // Allow deselection by clicking the same budget again
+    if (selectedBudget === budgetId) {
+      setSelectedBudget(''); // Deselect
+    } else {
+      setSelectedBudget(budgetId); // Select new budget
+    }
+  };
   
   const currentDestination = destinations.find(d => d.id === activeDestination);
 
@@ -404,68 +413,79 @@ const ActivitiesPage: React.FC = () => {
           </div>
         </div>
         
-        {/* Section B: Daily Budget Per Person */}
-        <div className="mb-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Budget Per Person</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {budgetOptions.map((budget) => (
-              <button
-                key={budget.id}
-                onClick={() => setSelectedBudget(budget.id)}
-                className={`flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-all duration-200 ${
-                  selectedBudget === budget.id
-                    ? 'border-teal-500 bg-teal-50 text-teal-700 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                }`}
-              >
-                <span className="text-2xl">{budget.icon}</span>
-                <div className="text-left">
-                  <div className="font-semibold">{budget.label}</div>
-                  <div className="text-sm opacity-75">
-                    ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]} per day
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Section C: Traveler Information */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Traveler Information</h3>
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Number of Travelers Dropdown */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Number of Travelers
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedTravelerType}
-                  onChange={(e) => setSelectedTravelerType(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none bg-white"
+        {/* Section B & C: Budget and Traveler Info on Same Line */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Section B: Daily Budget Per Person */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Daily Budget Per Person</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {budgetOptions.map((budget) => (
+                <button
+                  key={budget.id}
+                  onClick={() => handleBudgetClick(budget.id)}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all duration-200 ${
+                    selectedBudget === budget.id
+                      ? 'border-teal-500 bg-teal-50 text-teal-700 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
                 >
-                  {travelerOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <Users size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+                  <span className="text-2xl">{budget.icon}</span>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold">{budget.label}</div>
+                    <div className="text-sm opacity-75">
+                      ${budget.range[0]}-{budget.range[1] === 999 ? '200+' : budget.range[1]} per day
+                    </div>
+                  </div>
+                  {selectedBudget === budget.id && (
+                    <Check size={20} className="text-teal-600" />
+                  )}
+                </button>
+              ))}
             </div>
-            
-            {/* Group Activities Checkbox */}
-            <div className="flex items-end">
-              <label className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={showGroupActivitiesOnly}
-                  onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
-                  className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Show group activities only</span>
-              </label>
+            {selectedBudget && (
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Click again to deselect and show all price ranges
+              </p>
+            )}
+          </div>
+          
+          {/* Section C: Traveler Information */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Traveler Information</h3>
+            <div className="space-y-4">
+              {/* Number of Travelers Dropdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Number of Travelers
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedTravelerType}
+                    onChange={(e) => setSelectedTravelerType(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent appearance-none bg-white"
+                  >
+                    {travelerOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Users size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              
+              {/* Group Activities Checkbox */}
+              <div>
+                <label className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gray-300 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showGroupActivitiesOnly}
+                    onChange={(e) => setShowGroupActivitiesOnly(e.target.checked)}
+                    className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Show group activities only</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -557,6 +577,12 @@ const ActivitiesPage: React.FC = () => {
               className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
             >
               Clear interest filters
+            </button>
+            <button
+              onClick={() => setSelectedBudget('')}
+              className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+            >
+              Clear budget filter
             </button>
             <button
               onClick={() => setSmartWeatherFiltering(false)}
