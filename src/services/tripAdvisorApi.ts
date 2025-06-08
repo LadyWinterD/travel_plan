@@ -37,7 +37,7 @@ interface TripAdvisorLocation {
   };
 }
 
-interface TripAdvisorAutoCompleteResponse {
+interface TripAdvisorSearchResponse {
   data: {
     Typeahead_autocomplete: {
       results: TripAdvisorLocation[];
@@ -53,24 +53,27 @@ export class TripAdvisorApiError extends Error {
 }
 
 /**
- * CORRECTED: Search for attractions using the search endpoint
- * Uses /locations/v2/search with the exact request format you provided
+ * CORRECTED: Search for attractions using the exact API format you provided
+ * Uses /locations/v2/search with query parameters and updateToken
  */
 export async function searchCityAttractions(cityName: string): Promise<TripAdvisorLocation[]> {
   try {
     console.log(`🔍 Searching for attractions in: ${cityName} using search API`);
     
-    const response = await fetch(`${BASE_URL}/locations/v2/search`, {
+    // CORRECTED: Use exact URL format with query parameters
+    const url = `${BASE_URL}/locations/v2/search?currency=USD&units=km&lang=en_US`;
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-rapidapi-host': RAPIDAPI_HOST,
         'x-rapidapi-key': RAPIDAPI_KEY,
       },
+      // CORRECTED: Use exact request body format with updateToken
       body: JSON.stringify({
         query: cityName,
-        lang: "en_US",
-        units: "km"
+        updateToken: ""
       })
     });
 
@@ -81,7 +84,7 @@ export async function searchCityAttractions(cityName: string): Promise<TripAdvis
       );
     }
 
-    const data: TripAdvisorAutoCompleteResponse = await response.json();
+    const data: TripAdvisorSearchResponse = await response.json();
     console.log('🎪 TripAdvisor search response:', data);
 
     const results = data.data?.Typeahead_autocomplete?.results || [];
