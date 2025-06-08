@@ -138,7 +138,7 @@ export const AppContextProvider: React.FC<{children: React.Node}> = ({ children 
     setIsWeatherLoading(true);
     setWeatherError(null);
     try {
-      const apiKey = 'YOUR_VALID_API_KEY'; // <--- 请确保这里是你的有效 API Key
+      const apiKey = '37781fb79e564cf493f112949250706'; 
       const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&days=${days}&aqi=no`;
       
       const response = await fetch(url);
