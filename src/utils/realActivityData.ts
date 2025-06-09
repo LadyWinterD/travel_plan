@@ -11,7 +11,7 @@ import {
 import { getCachedApiResponse, cacheApiResponse } from './storage';
 
 /**
- * Fetch real activities for a city using OpenTripMap API
+ * Fetch real activities for a city using OpenTripMap API with two-step pipeline
  * Includes 7-day caching to improve performance
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
@@ -33,14 +33,16 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       throw new OpenTripMapApiError(`Could not find coordinates for city: ${cityName}`);
     }
     
-    // Step 2: Get attractions within 25km radius (increased from 10km for better coverage)
-    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 25);
+    // Step 2: Get filtered attractions using the new pipeline
+    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 30);
     if (attractions.length === 0) {
-      throw new OpenTripMapApiError(`No attractions found near: ${cityName}`);
+      throw new OpenTripMapApiError(`No quality attractions found near: ${cityName}`);
     }
     
-    // Step 3: Get detailed information for top attractions (limit to 20 for performance)
-    const topAttractions = attractions.slice(0, 20);
+    console.log(`🎯 Processing ${attractions.length} filtered attractions for ${cityName}`);
+    
+    // Step 3: Get detailed information for attractions (limit to 25 for performance)
+    const topAttractions = attractions.slice(0, 25);
     const activitiesPromises = topAttractions.map(async (attraction) => {
       try {
         // Get detailed info
@@ -58,14 +60,28 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           imageUrl = details.image;
         }
         
+        // Create description from Wikipedia or address
+        let description = `Discover this amazing attraction in ${cityName}`;
+        if (details?.wikipedia_extracts?.text) {
+          description = details.wikipedia_extracts.text.substring(0, 200) + '...';
+        } else if (details?.address) {
+          const addressParts = [];
+          if (details.address.city && details.address.city !== cityName) {
+            addressParts.push(details.address.city);
+          }
+          if (details.address.country) {
+            addressParts.push(details.address.country);
+          }
+          if (addressParts.length > 0) {
+            description = `Located in ${addressParts.join(', ')}`;
+          }
+        }
+        
         // Create activity object
         const activity: Activity = {
           id: `otm_${attraction.xid}`,
           name: attraction.name,
-          description: details?.wikipedia_extracts?.text?.substring(0, 200) + '...' || 
-                      details?.address ? 
-                      `Located in ${details.address.city || cityName}${details.address.country ? `, ${details.address.country}` : ''}` :
-                      `Discover this amazing attraction in ${cityName}`,
+          description,
           image: imageUrl,
           duration: getDurationFromCategories(categories),
           rating: Math.max(attraction.rate || 4.0, 3.5), // Ensure minimum 3.5 rating
@@ -78,16 +94,18 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           }
         };
         
+        console.log(`✅ Processed activity: ${activity.name} (${categories.join(', ')})`);
         return activity;
+        
       } catch (error) {
         console.warn(`Failed to get details for ${attraction.name}:`, error);
         
         // Return basic activity without detailed info
         const categories = extractCategoriesFromKinds(attraction.kinds);
-        return {
+        const basicActivity: Activity = {
           id: `otm_${attraction.xid}`,
           name: attraction.name,
-          description: `Explore this attraction in ${cityName}`,
+          description: `Explore this ${categories[0]?.toLowerCase() || 'attraction'} in ${cityName}`,
           image: getFallbackImageUrl(categories),
           duration: getDurationFromCategories(categories),
           rating: Math.max(attraction.rate || 4.0, 3.5),
@@ -98,7 +116,10 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
             lat: attraction.point.lat,
             lng: attraction.point.lon
           }
-        } as Activity;
+        };
+        
+        console.log(`⚠️ Created basic activity: ${basicActivity.name}`);
+        return basicActivity;
       }
     });
     

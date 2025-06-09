@@ -60,6 +60,12 @@ export interface CityCoordinates {
   country: string;
 }
 
+export interface AttractionPreview {
+  xid: string;
+  name: string;
+  kinds: string;
+}
+
 export class OpenTripMapApiError extends Error {
   constructor(message: string, public statusCode?: number) {
     super(message);
@@ -112,16 +118,16 @@ export async function getCoordinatesForCity(cityName: string): Promise<CityCoord
 }
 
 /**
- * Get top attractions within radius using OpenTripMap
+ * Get raw attractions within radius using OpenTripMap
  */
-export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
+export async function getRawAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
   try {
-    console.log(`🎯 Getting attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
+    console.log(`🎯 Getting raw attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
     
     const radiusMeters = radiusKm * 1000;
-    const kinds = 'interesting_places,museums,architecture,historic,cultural,religion,sport,amusements,tourist_facilities,urban_environment';
+    const kinds = 'interesting_places,museums,architecture,historic,cultural,religion,sport,amusements,tourist_facilities,urban_environment,natural,gardens_and_parks';
     
-    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&rate=2&format=json&limit=50&apikey=${API_KEY}`;
+    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&rate=2&format=json&limit=100&apikey=${API_KEY}`;
     
     const response = await fetch(url);
     
@@ -154,11 +160,9 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
           lat: feature.geometry.coordinates[1]
         }
       }))
-      .filter((place: OpenTripMapPlace) => place.name && place.name !== 'Unnamed Attraction')
-      .sort((a: OpenTripMapPlace, b: OpenTripMapPlace) => b.rate - a.rate) // Sort by rating
-      .slice(0, 30); // Limit to top 30
+      .filter((place: OpenTripMapPlace) => place.name && place.name !== 'Unnamed Attraction');
     
-    console.log(`✅ Found ${places.length} attractions near: ${lat}, ${lon}`);
+    console.log(`✅ Found ${places.length} raw attractions near: ${lat}, ${lon}`);
     return places;
     
   } catch (error) {
@@ -167,6 +171,78 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
       throw error;
     }
     throw new OpenTripMapApiError(`Failed to get attractions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Step 1: Filter raw attractions based on kinds
+ */
+export function filterAttractionsByKinds(rawAttractions: OpenTripMapPlace[]): AttractionPreview[] {
+  console.log(`🔍 Filtering ${rawAttractions.length} raw attractions...`);
+  
+  // Define allowed and disallowed kinds
+  const allowedKinds = ['architecture', 'historic', 'museums', 'cultural', 'religion', 'natural', 'gardens_and_parks'];
+  const disallowedKinds = ['foods', 'shops', 'banks', 'atm', 'supermarkets', 'tourist_facilities'];
+  
+  const filteredAttractions = rawAttractions.filter(attraction => {
+    const kinds = attraction.kinds.toLowerCase();
+    
+    // Check if it contains any disallowed kinds
+    const hasDisallowedKind = disallowedKinds.some(disallowed => kinds.includes(disallowed));
+    if (hasDisallowedKind) {
+      console.log(`❌ Filtering out "${attraction.name}" - contains disallowed kind: ${attraction.kinds}`);
+      return false;
+    }
+    
+    // Check if it contains any allowed kinds
+    const hasAllowedKind = allowedKinds.some(allowed => kinds.includes(allowed));
+    if (!hasAllowedKind) {
+      console.log(`❌ Filtering out "${attraction.name}" - no allowed kinds: ${attraction.kinds}`);
+      return false;
+    }
+    
+    console.log(`✅ Keeping "${attraction.name}" - kinds: ${attraction.kinds}`);
+    return true;
+  });
+  
+  // Convert to AttractionPreview format
+  const previews: AttractionPreview[] = filteredAttractions.map(attraction => ({
+    xid: attraction.xid,
+    name: attraction.name,
+    kinds: attraction.kinds
+  }));
+  
+  console.log(`✅ Filtered to ${previews.length} quality attractions`);
+  return previews;
+}
+
+/**
+ * Get top attractions within radius using OpenTripMap (legacy function - now uses new pipeline)
+ */
+export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
+  try {
+    // Step 1: Get raw attractions
+    const rawAttractions = await getRawAttractions(lat, lon, radiusKm);
+    
+    // Step 2: Filter by kinds
+    const filteredPreviews = filterAttractionsByKinds(rawAttractions);
+    
+    // Convert back to OpenTripMapPlace format for compatibility
+    const filteredAttractions = rawAttractions.filter(attraction => 
+      filteredPreviews.some(preview => preview.xid === attraction.xid)
+    );
+    
+    // Sort by rating and return top results
+    const sortedAttractions = filteredAttractions
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 30); // Limit to top 30
+    
+    console.log(`🏆 Returning ${sortedAttractions.length} top filtered attractions`);
+    return sortedAttractions;
+    
+  } catch (error) {
+    console.error(`Error in getTopAttractions:`, error);
+    throw error;
   }
 }
 
@@ -231,6 +307,7 @@ export function extractCategoriesFromKinds(kinds: string): string[] {
         break;
       case 'natural':
       case 'geological_formations':
+      case 'gardens_and_parks':
         categories.push('Nature', 'Outdoor');
         break;
       case 'urban_environment':
@@ -266,7 +343,7 @@ export function isLikelyIndoorFromKinds(kinds: string, name: string): boolean {
     return true;
   }
   
-  if (kindsLower.includes('natural') || kindsLower.includes('outdoor')) {
+  if (kindsLower.includes('natural') || kindsLower.includes('outdoor') || kindsLower.includes('gardens_and_parks')) {
     return false;
   }
   
