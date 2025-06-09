@@ -127,7 +127,8 @@ export async function getRawAttractions(lat: number, lon: number, radiusKm: numb
     const radiusMeters = radiusKm * 1000;
     const kinds = 'interesting_places,museums,architecture,historic,cultural,religion,sport,amusements,tourist_facilities,urban_environment,natural,gardens_and_parks';
     
-    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&rate=2&format=json&limit=100&apikey=${API_KEY}`;
+    // Removed &rate=2 to allow attractions of all rating levels
+    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&format=json&limit=100&apikey=${API_KEY}`;
     
     const response = await fetch(url);
     
@@ -177,12 +178,15 @@ export async function getRawAttractions(lat: number, lon: number, radiusKm: numb
 /**
  * Step 1: Filter raw attractions based on kinds
  */
-export function filterAttractionsByKinds(rawAttractions: OpenTripMapPlace[]): AttractionPreview[] {
-  console.log(`🔍 Filtering ${rawAttractions.length} raw attractions...`);
+export function filterAttractionsByKinds(rawAttractions: OpenTripMapPlace[], cityName: string = 'Unknown'): AttractionPreview[] {
+  console.log(`🔍 Filtering ${rawAttractions.length} raw attractions for ${cityName}...`);
   
-  // Define allowed and disallowed kinds
-  const allowedKinds = ['architecture', 'historic', 'museums', 'cultural', 'religion', 'natural', 'gardens_and_parks'];
-  const disallowedKinds = ['foods', 'shops', 'banks', 'atm', 'supermarkets', 'tourist_facilities'];
+  // Define expanded allowed and disallowed kinds
+  const allowedKinds = [
+    'architecture', 'historic', 'museums', 'cultural', 'religion', 'natural', 
+    'gardens_and_parks', 'urban_environment', 'towers', 'castles', 'viewpoints', 'interesting_places'
+  ];
+  const disallowedKinds = ['foods', 'shops', 'banks', 'atm', 'supermarkets'];
   
   const filteredAttractions = rawAttractions.filter(attraction => {
     const kinds = attraction.kinds.toLowerCase();
@@ -206,26 +210,59 @@ export function filterAttractionsByKinds(rawAttractions: OpenTripMapPlace[]): At
   });
   
   // Convert to AttractionPreview format
-  const previews: AttractionPreview[] = filteredAttractions.map(attraction => ({
+  let previews: AttractionPreview[] = filteredAttractions.map(attraction => ({
     xid: attraction.xid,
     name: attraction.name,
     kinds: attraction.kinds
   }));
   
-  console.log(`✅ Filtered to ${previews.length} quality attractions`);
+  console.log(`Found ${previews.length} attractions after filtering for ${cityName}`);
+  
+  // Fallback mechanism: if fewer than 5 attractions, relax filter
+  if (previews.length < 5) {
+    console.log(`⚠️ Only ${previews.length} attractions found for ${cityName}, applying fallback filter...`);
+    
+    const fallbackAllowedKinds = [
+      ...allowedKinds,
+      'tourist_facilities', 'amusements'
+    ];
+    
+    const fallbackFiltered = rawAttractions.filter(attraction => {
+      const kinds = attraction.kinds.toLowerCase();
+      
+      // Check if it contains any disallowed kinds (excluding tourist_facilities and amusements now)
+      const hasDisallowedKind = ['foods', 'shops', 'banks', 'atm', 'supermarkets'].some(disallowed => kinds.includes(disallowed));
+      if (hasDisallowedKind) {
+        return false;
+      }
+      
+      // Check if it contains any fallback allowed kinds
+      const hasAllowedKind = fallbackAllowedKinds.some(allowed => kinds.includes(allowed));
+      return hasAllowedKind;
+    });
+    
+    previews = fallbackFiltered.map(attraction => ({
+      xid: attraction.xid,
+      name: attraction.name,
+      kinds: attraction.kinds
+    }));
+    
+    console.log(`✅ Fallback filter applied: ${previews.length} attractions found for ${cityName}`);
+  }
+  
   return previews;
 }
 
 /**
  * Get top attractions within radius using OpenTripMap (legacy function - now uses new pipeline)
  */
-export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
+export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 30, cityName: string = 'Unknown'): Promise<OpenTripMapPlace[]> {
   try {
     // Step 1: Get raw attractions
     const rawAttractions = await getRawAttractions(lat, lon, radiusKm);
     
-    // Step 2: Filter by kinds
-    const filteredPreviews = filterAttractionsByKinds(rawAttractions);
+    // Step 2: Filter by kinds with city name for logging
+    const filteredPreviews = filterAttractionsByKinds(rawAttractions, cityName);
     
     // Convert back to OpenTripMapPlace format for compatibility
     const filteredAttractions = rawAttractions.filter(attraction => 
@@ -237,11 +274,11 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
       .sort((a, b) => b.rate - a.rate)
       .slice(0, 30); // Limit to top 30
     
-    console.log(`🏆 Returning ${sortedAttractions.length} top filtered attractions`);
+    console.log(`🏆 Returning ${sortedAttractions.length} top filtered attractions for ${cityName}`);
     return sortedAttractions;
     
   } catch (error) {
-    console.error(`Error in getTopAttractions:`, error);
+    console.error(`Error in getTopAttractions for ${cityName}:`, error);
     throw error;
   }
 }
@@ -311,6 +348,9 @@ export function extractCategoriesFromKinds(kinds: string): string[] {
         categories.push('Nature', 'Outdoor');
         break;
       case 'urban_environment':
+      case 'towers':
+      case 'castles':
+      case 'viewpoints':
         categories.push('Entertainment', 'Cultural');
         break;
       default:
