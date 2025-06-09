@@ -11,7 +11,7 @@ import {
 import { getCachedApiResponse, cacheApiResponse } from './storage';
 
 /**
- * Fetch real activities for a city using OpenTripMap API with two-step pipeline
+ * Fetch real activities for a city using OpenTripMap API - Based on working HTML implementation
  * Includes 7-day caching to improve performance
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
@@ -34,7 +34,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       return [];
     }
     
-    // Step 2: Get filtered attractions using the new pipeline (now passing cityName)
+    // Step 2: Get filtered attractions using the working pipeline (30km radius)
     const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 30, cityName);
     if (attractions.length === 0) {
       console.warn(`🟡 No quality attractions found near: ${cityName}`);
@@ -43,9 +43,8 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     
     console.log(`🎯 Processing ${attractions.length} filtered attractions for ${cityName}`);
     
-    // Step 3: Get detailed information for attractions (limit to 25 for performance)
-    const topAttractions = attractions.slice(0, 25);
-    const activitiesPromises = topAttractions.map(async (attraction) => {
+    // Step 3: Get detailed information for attractions (limit to 20 like working code)
+    const activitiesPromises = attractions.map(async (attraction) => {
       try {
         // Get detailed info
         const details = await getPlaceDetails(attraction.xid);
@@ -62,21 +61,10 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           imageUrl = details.image;
         }
         
-        // Create description from Wikipedia or address
-        let description = `Discover this amazing attraction in ${cityName}`;
+        // Create description from Wikipedia or fallback like working code
+        let description = 'No detailed description available.';
         if (details?.wikipedia_extracts?.text) {
-          description = details.wikipedia_extracts.text.substring(0, 200) + '...';
-        } else if (details?.address) {
-          const addressParts = [];
-          if (details.address.city && details.address.city !== cityName) {
-            addressParts.push(details.address.city);
-          }
-          if (details.address.country) {
-            addressParts.push(details.address.country);
-          }
-          if (addressParts.length > 0) {
-            description = `Located in ${addressParts.join(', ')}`;
-          }
+          description = details.wikipedia_extracts.text.substring(0, 120) + '...';
         }
         
         // Create activity object
@@ -133,7 +121,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       .filter(activity => activity !== null)
       .sort((a, b) => b.rating - a.rating);
     
-    // Handle case where no valid activities could be processed
+    // Handle case where no valid activities could be processed - return empty array instead of throwing
     if (validActivities.length === 0) {
       console.warn(`🟡 No detailed activities could be fetched after filtering for ${cityName}. Possibly due to missing images or descriptions.`);
       return [];
@@ -148,6 +136,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     
   } catch (error) {
     console.error(`❌ Error fetching real activities for ${cityName}:`, error);
+    // Return empty array instead of throwing error
     return [];
   }
 }
