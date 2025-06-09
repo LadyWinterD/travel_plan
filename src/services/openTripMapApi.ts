@@ -114,13 +114,13 @@ export async function getCoordinatesForCity(cityName: string): Promise<CityCoord
 
 /**
  * Get raw attractions within radius using OpenTripMap (Step 1)
+ * CORRECTED VERSION - Fixed API response parsing
  */
 export async function getRawAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
   try {
     console.log(`🎯 Getting raw attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
     
     const radiusMeters = radiusKm * 1000;
-    // Use the same kinds as your working code
     const kinds = 'interesting_places,natural,cultural,architecture,historic,religion,museums,amusements,sport';
     
     const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&limit=500&format=json&apikey=${API_KEY}`;
@@ -132,32 +132,20 @@ export async function getRawAttractions(lat: number, lon: number, radiusKm: numb
       return [];
     }
     
-    const data = await response.json();
+    // --- THIS IS THE FIX ---
+    // The response itself is the array of places, not a GeoJSON object
+    const places: OpenTripMapPlace[] = await response.json();
     
-    if (!Array.isArray(data.features)) {
-      console.log(`❌ No attractions found near: ${lat}, ${lon}`);
+    if (!Array.isArray(places)) {
+      console.log(`❌ API did not return an array for: ${lat}, ${lon}`);
       return [];
     }
     
-    // Convert GeoJSON features to our format
-    const places: OpenTripMapPlace[] = data.features
-      .map((feature: any) => ({
-        xid: feature.properties.xid,
-        name: feature.properties.name || 'Unnamed Attraction',
-        dist: feature.properties.dist || 0,
-        rate: feature.properties.rate || 0,
-        osm: feature.properties.osm || '',
-        wikidata: feature.properties.wikidata || '',
-        kinds: feature.properties.kinds || '',
-        point: {
-          lon: feature.geometry.coordinates[0],
-          lat: feature.geometry.coordinates[1]
-        }
-      }))
-      .filter((place: OpenTripMapPlace) => place.name && place.name !== 'Unnamed Attraction');
+    // Filter out unnamed places as good practice
+    const namedPlaces = places.filter(p => p.name);
     
-    console.log(`✅ Found ${places.length} raw attractions near: ${lat}, ${lon}`);
-    return places;
+    console.log(`✅ Found ${namedPlaces.length} raw attractions near: ${lat}, ${lon}`);
+    return namedPlaces;
     
   } catch (error) {
     console.error(`Error getting attractions near ${lat}, ${lon}:`, error);
