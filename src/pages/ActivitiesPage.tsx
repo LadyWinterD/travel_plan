@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
+import { getFallbackImageUrl } from '../services/openTripMapApi';
 
 // Interest categories for filtering
 const interestCategories = [
@@ -118,11 +119,19 @@ const ActivityCard: React.FC<{
       {/* Weather Badge */}
       {getWeatherBadge()}
       
-      {/* Activity Image */}
-      <div 
-        className="h-48 bg-center bg-cover relative"
-        style={{ backgroundImage: `url(${activity.image})` }}
-      >
+      {/* Activity Image - UPDATED WITH IMG TAG AND ERROR HANDLING */}
+      <div className="h-48 relative">
+        <img
+          src={activity.image}
+          alt={`Photo of ${activity.name}`}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            // If the image fails to load, replace it with a placeholder
+            const target = e.target as HTMLImageElement;
+            target.onerror = null; // Prevent infinite loops
+            target.src = getFallbackImageUrl(activity.categories); // We can reuse our existing fallback function
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
       </div>
       
