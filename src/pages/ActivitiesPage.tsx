@@ -11,16 +11,19 @@ const interestCategories = [
   'Outdoor', 
   'Food & Dining',
   'Shopping',
-  'History',
+  'Historical Sites',
   'Nightlife',
-  'Adventure'
+  'Adventure',
+  'Cultural',
+  'Nature',
+  'Entertainment'
 ];
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500\" size={32} />;
-    return <Cloud className="text-gray-500\" size={32} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
+    return <Cloud className="text-gray-500" size={32} />;
   };
 
   const getWeatherAdvice = () => {
@@ -101,7 +104,7 @@ const ActivityCard: React.FC<{
 
   const formatPrice = () => {
     if (!activity.price || activity.price.amount === 0) return 'Free';
-    return `${activity.price.amount} ${activity.price.currencyCode}`;
+    return `$${activity.price.amount}`;
   };
 
   return (
@@ -246,7 +249,7 @@ const ActivitiesPage: React.FC = () => {
     }
   }, [activeDestination, destinations, fetchWeatherForCity]);
 
-  // Load and filter activities - NOW WITH REAL API DATA
+  // Load and filter activities - NOW WITH REAL OPENTRIPMAP DATA
   useEffect(() => {
     if (!activeDestination) return;
 
@@ -257,8 +260,14 @@ const ActivitiesPage: React.FC = () => {
       try {
         const destination = destinations.find(d => d.id === activeDestination);
         
-        // NEW: Pass city name to get real TripAdvisor data
+        // NEW: Pass city name to get real OpenTripMap data
         const allDestinationActivities = await getMockActivities(activeDestination, destination?.name);
+        
+        if (allDestinationActivities.length === 0) {
+          setApiError(`No attractions found for ${destination?.name}. This could be due to API limits or the city not being in the OpenTripMap database.`);
+          setActivities([]);
+          return;
+        }
         
         // Apply interest category filters
         let filteredActivities = allDestinationActivities;
@@ -283,12 +292,13 @@ const ActivitiesPage: React.FC = () => {
         
         // Show success message for real data
         if (destination?.name && finalActivities.length > 0) {
-          console.log(`✅ Successfully loaded ${finalActivities.length} real activities for ${destination.name}`);
+          console.log(`✅ Successfully loaded ${finalActivities.length} real activities for ${destination.name} from OpenTripMap`);
         }
         
       } catch (error) {
         console.error('Error loading activities:', error);
-        setApiError('Failed to load activities. Please try again.');
+        setApiError('Failed to load attractions from OpenTripMap. Please try again or select a different city.');
+        setActivities([]);
       } finally {
         setLoadingActivities(false);
       }
@@ -329,7 +339,7 @@ const ActivitiesPage: React.FC = () => {
       {/* Page Title */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
-        <p className="text-gray-600">Powered by TripAdvisor - Select activities that match your travel style</p>
+        <p className="text-gray-600">Powered by OpenTripMap - Real attractions from around the world</p>
       </div>
       
       {/* API Error Message */}
@@ -452,7 +462,7 @@ const ActivitiesPage: React.FC = () => {
       {loadingActivities ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading real attractions from TripAdvisor...</p>
+          <p className="text-gray-500">Loading real attractions from OpenTripMap...</p>
         </div>
       ) : (
         <>
@@ -479,7 +489,7 @@ const ActivitiesPage: React.FC = () => {
           </div>
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
           <p className="text-gray-500 mb-4">
-            {apiError ? 'There was an error loading attractions.' : 'No activities found for your current filters.'}
+            {apiError ? 'There was an error loading attractions from OpenTripMap.' : 'No activities found for your current filters.'}
           </p>
           <div className="space-y-2">
             <button
@@ -491,8 +501,6 @@ const ActivitiesPage: React.FC = () => {
             <button
               onClick={() => setSmartWeatherFiltering(false)}
               className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
-            >
-              Disable weather filtering
             </button>
           </div>
         </div>

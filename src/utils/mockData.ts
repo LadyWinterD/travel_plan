@@ -1,5 +1,6 @@
-import { Activity, Destination, WeatherData } from '../types';
-import { searchCityAttractions, getBestImageUrl, extractCategories, isLikelyIndoor, TripAdvisorApiError } from '../services/tripAdvisorApi';
+import { Activity, WeatherData } from '../types';
+import { getRealActivitiesForCity, getWeatherBasedRecommendations } from './realActivityData';
+import { OpenTripMapApiError } from '../services/openTripMapApi';
 
 // Enhanced Mock Weather Data with more realistic patterns
 export const getMockWeather = (destinationId: string, date: string): WeatherData => {
@@ -43,174 +44,41 @@ export const getMockWeather = (destinationId: string, date: string): WeatherData
 };
 
 /**
- * CORRECTED: Fetch real activities from TripAdvisor auto-complete API
- * Now uses the exact endpoint and mapping you specified
+ * UPDATED: Now uses real OpenTripMap API data instead of mock data
+ * This function completely replaces the old mock data system
  */
 export const getMockActivities = async (destinationId: string, cityName?: string): Promise<Activity[]> => {
-  // If no city name provided, fall back to mock data
+  // If no city name provided, return empty array (no more fallback mock data)
   if (!cityName) {
-    console.log('⚠️ No city name provided, using fallback mock data');
-    return generateFallbackMockActivities(destinationId);
+    console.log('⚠️ No city name provided, cannot fetch real activities');
+    return [];
   }
 
   try {
-    console.log(`🚀 Fetching real attractions for: ${cityName} using auto-complete API`);
+    console.log(`🚀 Fetching REAL activities for: ${cityName} using OpenTripMap API`);
     
-    // Use the auto-complete API as specified
-    const attractions = await searchCityAttractions(cityName);
+    // Use the new real activity data function
+    const realActivities = await getRealActivitiesForCity(cityName);
     
-    if (!attractions || attractions.length === 0) {
-      console.log(`❌ No attractions found for: ${cityName}, using fallback mock data`);
-      return generateFallbackMockActivities(destinationId);
+    if (!realActivities || realActivities.length === 0) {
+      console.log(`❌ No real activities found for: ${cityName}`);
+      return [];
     }
 
-    // CORRECTED: Map TripAdvisor data exactly as specified in requirements
-    const activities: Activity[] = attractions.slice(0, 20).map((attraction, index) => {
-      const categories = extractCategories(attraction);
-      const isIndoor = isLikelyIndoor(attraction);
-      
-      return {
-        // Use locationId as specified
-        id: `tripadvisor-${attraction.detailsV2.locationId}`,
-        
-        // Use name from detailsV2.names.name as specified
-        name: attraction.detailsV2.names.name,
-        
-        // Use longOnlyHierarchyTypeaheadV2 as description as specified
-        description: attraction.detailsV2.names.longOnlyHierarchyTypeaheadV2 || `Experience ${attraction.detailsV2.names.name} in ${cityName}`,
-        
-        // Use urlTemplate with w=800 replacement as specified
-        image: getBestImageUrl(attraction.image),
-        
-        // Default values as specified
-        rating: 4.5,
-        price: {
-          amount: 25,
-          currencyCode: 'USD'
-        },
-        duration: 120, // Default 120 minutes as specified
-        
-        categories: categories.length > 0 ? categories : ['Entertainment'],
-        indoor: isIndoor,
-        location: {
-          lat: attraction.detailsV2.geocode?.latitude || 0,
-          lng: attraction.detailsV2.geocode?.longitude || 0
-        }
-      };
-    });
-
-    console.log(`✅ Successfully fetched ${activities.length} real attractions for ${cityName}`);
-    return activities;
+    console.log(`✅ Successfully fetched ${realActivities.length} REAL activities for ${cityName}`);
+    return realActivities;
 
   } catch (error) {
-    console.error(`❌ Error fetching attractions for ${cityName}:`, error);
+    console.error(`❌ Error fetching real activities for ${cityName}:`, error);
     
-    if (error instanceof TripAdvisorApiError) {
-      console.log('🔄 TripAdvisor API error, using fallback mock data');
+    if (error instanceof OpenTripMapApiError) {
+      console.log('🔄 OpenTripMap API error, returning empty array');
     }
     
-    return generateFallbackMockActivities(destinationId);
+    // No more fallback to mock data - return empty array
+    return [];
   }
 };
 
-/**
- * Fallback mock data generator (used when API fails or no city name provided)
- */
-const generateFallbackMockActivities = (destinationId: string): Activity[] => {
-  console.log(`🎭 Generating fallback mock activities for destination: ${destinationId}`);
-  
-  const categories = [
-    'Museums',
-    'Outdoor',
-    'Food & Dining',
-    'Shopping',
-    'Historical Sites',
-    'Adventure',
-    'Nightlife',
-    'Cultural',
-    'Nature',
-    'Entertainment'
-  ];
-  
-  const activityNames = [
-    'Local Museum', 'City Park', 'Food Market', 'Shopping Center', 'Historic Monument',
-    'Adventure Tour', 'Nightlife District', 'Cultural Center', 'Nature Reserve', 'Entertainment Complex'
-  ];
-  
-  return Array.from({ length: 10 }, (_, i) => ({
-    id: `fallback-${destinationId}-${String(i + 1).padStart(3, '0')}`,
-    name: activityNames[i] || `Activity ${i + 1}`,
-    description: `Experience the best of ${activityNames[i] || `Activity ${i + 1}`} with unique local insights`,
-    image: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-    duration: 60 + (i * 30),
-    rating: 4 + (Math.random() * 1),
-    price: { amount: 10 + (i * 5), currencyCode: 'USD' },
-    categories: [
-      categories[i % categories.length],
-      categories[(i + 1) % categories.length]
-    ],
-    indoor: i % 3 !== 0, // 2/3 indoor activities
-    location: { lat: 0, lng: 0 }
-  }));
-};
-
-// Get weather-appropriate activity recommendations
-export const getWeatherBasedRecommendations = (
-  activities: Activity[], 
-  weather: WeatherData,
-  preferences: string[] = []
-): Activity[] => {
-  console.log('🌤️ Weather-based filtering:', {
-    totalActivities: activities.length,
-    weather: weather.condition,
-    temperature: weather.temperature,
-    isRainy: weather.isRainy,
-    preferences: preferences.length
-  });
-
-  // Filter activities based on weather
-  let weatherAppropriate = activities.filter(activity => {
-    if (weather.isRainy && !activity.indoor) {
-      console.log(`❌ Filtering out outdoor activity "${activity.name}" due to rain`);
-      return false; // Avoid outdoor activities when raining
-    }
-    if (weather.temperature < 5 && !activity.indoor) {
-      console.log(`❌ Filtering out outdoor activity "${activity.name}" due to cold weather`);
-      return false; // Avoid outdoor activities when very cold
-    }
-    return true;
-  });
-
-  console.log(`✅ Weather-appropriate activities: ${weatherAppropriate.length}`);
-
-  // Apply preference filtering if preferences exist
-  if (preferences.length > 0) {
-    const beforePreferenceFilter = weatherAppropriate.length;
-    weatherAppropriate = weatherAppropriate.filter(activity =>
-      activity.categories.some(category => preferences.includes(category))
-    );
-    console.log(`🎯 After preference filtering: ${weatherAppropriate.length} (was ${beforePreferenceFilter})`);
-  }
-
-  // Sort by rating and weather appropriateness
-  const sortedActivities = weatherAppropriate.sort((a, b) => {
-    // Prioritize indoor activities during bad weather
-    if (weather.isRainy || weather.temperature < 10) {
-      if (a.indoor && !b.indoor) return -1;
-      if (!a.indoor && b.indoor) return 1;
-    }
-    
-    // Prioritize outdoor activities during good weather
-    if (!weather.isRainy && weather.temperature > 20) {
-      if (!a.indoor && b.indoor) return -1;
-      if (a.indoor && !b.indoor) return 1;
-    }
-    
-    // Then sort by rating
-    return b.rating - a.rating;
-  });
-
-  console.log(`🏆 Final sorted activities: ${sortedActivities.length}`);
-  
-  return sortedActivities;
-};
+// Export the real weather-based recommendations function
+export { getWeatherBasedRecommendations };
