@@ -21,7 +21,7 @@ const interestCategories = [
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
     if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
     return <Cloud className="text-gray-500" size={32} />;
   };
@@ -501,6 +501,8 @@ const ActivitiesPage: React.FC = () => {
             <button
               onClick={() => setSmartWeatherFiltering(false)}
               className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+            >
+              Disable smart weather filtering
             </button>
           </div>
         </div>
