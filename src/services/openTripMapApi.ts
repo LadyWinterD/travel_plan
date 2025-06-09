@@ -114,12 +114,12 @@ export async function getCoordinatesForCity(cityName: string): Promise<CityCoord
 /**
  * Get top attractions within radius using OpenTripMap
  */
-export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 25): Promise<OpenTripMapPlace[]> {
+export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
   try {
     console.log(`🎯 Getting attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
     
     const radiusMeters = radiusKm * 1000;
-    const kinds = 'interesting_places,museums,architecture,historic,cultural,religion,sport,amusements,tourist_facilities';
+    const kinds = 'interesting_places,museums,architecture,historic,cultural,religion,sport,amusements,tourist_facilities,urban_environment';
     
     const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&rate=2&format=json&limit=50&apikey=${API_KEY}`;
     
@@ -232,6 +232,9 @@ export function extractCategoriesFromKinds(kinds: string): string[] {
       case 'natural':
       case 'geological_formations':
         categories.push('Nature', 'Outdoor');
+        break;
+      case 'urban_environment':
+        categories.push('Entertainment', 'Cultural');
         break;
       default:
         if (kind.includes('outdoor') || kind.includes('natural')) {
