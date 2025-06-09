@@ -30,13 +30,15 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     // Step 1: Get coordinates for the city
     const coordinates = await getCoordinatesForCity(cityName);
     if (!coordinates) {
-      throw new OpenTripMapApiError(`Could not find coordinates for city: ${cityName}`);
+      console.warn(`🟡 Could not find coordinates for city: ${cityName}`);
+      return [];
     }
     
     // Step 2: Get filtered attractions using the new pipeline (now passing cityName)
     const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 30, cityName);
     if (attractions.length === 0) {
-      throw new OpenTripMapApiError(`No quality attractions found near: ${cityName}`);
+      console.warn(`🟡 No quality attractions found near: ${cityName}`);
+      return [];
     }
     
     console.log(`🎯 Processing ${attractions.length} filtered attractions for ${cityName}`);
@@ -131,6 +133,12 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       .filter(activity => activity !== null)
       .sort((a, b) => b.rating - a.rating);
     
+    // Handle case where no valid activities could be processed
+    if (validActivities.length === 0) {
+      console.warn(`🟡 No detailed activities could be fetched after filtering for ${cityName}. Possibly due to missing images or descriptions.`);
+      return [];
+    }
+    
     console.log(`✅ Successfully fetched ${validActivities.length} real activities for ${cityName}`);
     
     // Cache the results for 7 days
@@ -140,7 +148,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     
   } catch (error) {
     console.error(`❌ Error fetching real activities for ${cityName}:`, error);
-    throw error;
+    return [];
   }
 }
 

@@ -263,11 +263,15 @@ const ActivitiesPage: React.FC = () => {
         // NEW: Pass city name to get real OpenTripMap data
         const allDestinationActivities = await getRealActivitiesForCity(destination?.name || '');
         
+        // Handle empty results gracefully
         if (allDestinationActivities.length === 0) {
-          setApiError(`No attractions found for ${destination?.name}. This could be due to API limits or the city not being in the OpenTripMap database.`);
+          setApiError(`No attractions found for ${destination?.name}. This could be due to API limits, the city not being in the OpenTripMap database, or no activities matching your current filters.`);
           setActivities([]);
           return;
         }
+        
+        // Clear any previous errors since we have activities
+        setApiError(null);
         
         // Apply interest category filters
         let filteredActivities = allDestinationActivities;
@@ -286,6 +290,11 @@ const ActivitiesPage: React.FC = () => {
           finalActivities = filteredActivities.filter(activity =>
             (activity.categories || []).some(category => preferences.includes(category))
           );
+        }
+        
+        // Handle case where filtering results in empty list
+        if (finalActivities.length === 0 && filteredActivities.length > 0) {
+          setApiError(`No activities found after applying your current filters for ${destination?.name}. Try clearing some filters to see more options.`);
         }
         
         setActivities(finalActivities);
