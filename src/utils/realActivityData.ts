@@ -33,8 +33,8 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       throw new OpenTripMapApiError(`Could not find coordinates for city: ${cityName}`);
     }
     
-    // Step 2: Get attractions within 10km radius
-    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 10);
+    // Step 2: Get attractions within 25km radius (increased from 10km for better coverage)
+    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 25);
     if (attractions.length === 0) {
       throw new OpenTripMapApiError(`No attractions found near: ${cityName}`);
     }
