@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter } from 'lucide-react';
-import { getMockActivities, getWeatherBasedRecommendations } from '../utils/mockData';
+import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 
 // Interest categories for filtering
 const interestCategories = [
@@ -21,8 +21,8 @@ const interestCategories = [
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500\" size={32} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
     return <Cloud className="text-gray-500" size={32} />;
   };
 
@@ -261,7 +261,7 @@ const ActivitiesPage: React.FC = () => {
         const destination = destinations.find(d => d.id === activeDestination);
         
         // NEW: Pass city name to get real OpenTripMap data
-        const allDestinationActivities = await getMockActivities(activeDestination, destination?.name);
+        const allDestinationActivities = await getRealActivitiesForCity(destination?.name || '');
         
         if (allDestinationActivities.length === 0) {
           setApiError(`No attractions found for ${destination?.name}. This could be due to API limits or the city not being in the OpenTripMap database.`);

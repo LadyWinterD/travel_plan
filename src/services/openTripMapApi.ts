@@ -1,7 +1,7 @@
 // OpenTripMap API Service for real attraction data
 // API Documentation: https://opentripmap.io/docs
 
-const API_KEY = '5ae2e3f221c38a28845f05b613c6bd060fbfa46746435156427f8f3d';
+const API_KEY = import.meta.env.VITE_OPENTRIPMAP_KEY || '5ae2e3f221c38a28845f05b613c6bd060fbfa46746435156427f8f3d';
 const BASE_URL = 'https://api.opentripmap.com/0.1/en/places';
 
 export interface OpenTripMapPlace {
@@ -114,14 +114,14 @@ export async function getCoordinatesForCity(cityName: string): Promise<CityCoord
 /**
  * Get top attractions within radius using OpenTripMap
  */
-export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 10): Promise<OpenTripMapPlace[]> {
+export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 25): Promise<OpenTripMapPlace[]> {
   try {
     console.log(`🎯 Getting attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
     
     const radiusMeters = radiusKm * 1000;
     const kinds = 'interesting_places,museums,architecture,historic,cultural,religion,sport,amusements,tourist_facilities';
     
-    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&format=json&limit=50&apikey=${API_KEY}`;
+    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&rate=2&format=json&limit=50&apikey=${API_KEY}`;
     
     const response = await fetch(url);
     
