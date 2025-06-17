@@ -8,6 +8,7 @@ import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
 
 
+
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
