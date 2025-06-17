@@ -1,3 +1,26 @@
+export const activityCategories = [
+  "interesting_places",
+  "architecture",
+  "historic",
+  "historic_architecture",
+  "museums",
+  "cultural",
+  "religion",
+  "churches",
+  "cathedrals",
+  "castles",
+  "towers",
+  "viewpoints",
+  "monuments_and_memorials",
+  "natural",
+  "gardens_and_parks",
+  "urban_environment",
+  "amusements",
+  "sport"
+] as const;
+
+export type ActivityCategory = typeof activityCategories[number];
+
 export const activityCategoryLabels: Record<ActivityCategory, string> = {
   interesting_places: "Interesting Places",
   architecture: "Architecture",
