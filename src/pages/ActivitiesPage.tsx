@@ -5,7 +5,7 @@ import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
-import { activityCategories } from '../data/activityCategories';
+import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
 
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
@@ -437,32 +437,35 @@ const ActivitiesPage: React.FC = () => {
       )}
       
       {/* 3. Interest Categories */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter size={18} className="text-teal-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {activityCategories.map((interest) => (
-            <label
-              key={interest}
-              className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
-                selectedInterests.includes(interest)
-                  ? 'border-teal-500 bg-teal-50 text-teal-700'
-                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={selectedInterests.includes(interest)}
-                onChange={() => handleInterestToggle(interest)}
-                className="sr-only"
-              />
-              <span className="font-medium text-center">{interest}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+  <div className="flex items-center gap-2 mb-4">
+    <Filter size={18} className="text-teal-600" />
+    <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
+  </div>
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+    {activityCategories.map((interest) => (
+      <label
+        key={interest}
+        className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
+          selectedInterests.includes(interest)
+            ? 'border-teal-500 bg-teal-50 text-teal-700'
+            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={selectedInterests.includes(interest)}
+          onChange={() => handleInterestToggle(interest)}
+          className="sr-only"
+        />
+        <span className="font-medium text-center">
+          {activityCategoryLabels[interest]}
+        </span>
+      </label>
+    ))}
+  </div>
+</div>
+
       
       {/* Activity Cards Grid */}
       {loadingActivities ? (
