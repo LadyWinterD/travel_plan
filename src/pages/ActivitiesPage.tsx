@@ -5,28 +5,8 @@ import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
+import { activityCategories } from '../data/activityCategories';
 
-// Interest categories for filtering
-const interestCategories = [
-"interesting_places",          // 基础分类，包含多数景点
-  "architecture",                // 建筑
-  "historic",                    // 历史遗迹
-  "historic_architecture",       // 历史建筑
-  "museums",                     // 博物馆
-  "cultural",                    // 文化
-  "religion",                    // 宗教
-  "churches",                    // 教堂
-  "cathedrals",                  // 大教堂
-  "castles",                     // 城堡
-  "towers",                      // 塔
-  "viewpoints",                  // 观景点
-  "monuments_and_memorials",     // 纪念碑
-  "natural",                     // 自然景观
-  "gardens_and_parks",          // 公园和花园
-  "urban_environment",           // 城市环境/广场
-  "amusements",                  // 娱乐活动
-  "sport"                        // 运动相关活动
-];
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
@@ -463,7 +443,7 @@ const ActivitiesPage: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-          {interestCategories.map((interest) => (
+          {activityCategories.map((interest) => (
             <label
               key={interest}
               className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
