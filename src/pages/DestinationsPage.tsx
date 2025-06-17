@@ -259,7 +259,6 @@ const DestinationsPage: React.FC = () => {
         {!canProceed && (
           <div className="mt-3 text-sm text-gray-500">
             {!startDate || !endDate ? (
-              <p>📅 Please select both start and end dates</p>
             ) : destinations.length === 0 ? (
               <p>📍 Add at least one destination to continue</p>
             ) : (
