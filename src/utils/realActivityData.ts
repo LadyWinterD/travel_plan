@@ -9,6 +9,7 @@ import {
   OpenTripMapApiError 
 } from '../services/openTripMapApi';
 import { getCachedApiResponse, cacheApiResponse } from './storage';
+import { ActivityCategory } from '../data/activityCategories';
 
 /**
  * Fetch real activities for a city using OpenTripMap API - Based on working HTML implementation
@@ -144,19 +145,35 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 /**
  * Get estimated duration based on activity categories
  */
-function getDurationFromCategories(categories: string[]): number {
-  // Duration in minutes
-  const durationMap: Record<string, number> = {
-    'Museums': 120,
-    'Historical Sites': 90,
-    'Cultural': 90,
-    'Nature': 180,
-    'Outdoor': 180,
-    'Adventure': 240,
-    'Entertainment': 120,
-    'Shopping': 90,
-    'Food & Dining': 90
+function getDurationFromCategories(categories: ActivityCategory[]): number {
+  const durationMap: Record<ActivityCategory, number> = {
+    interesting_places: 90,
+    architecture: 60,
+    historic: 90,
+    historic_architecture: 90,
+    museums: 120,
+    cultural: 75,
+    religion: 60,
+    churches: 45,
+    cathedrals: 60,
+    castles: 90,
+    towers: 45,
+    viewpoints: 30,
+    monuments_and_memorials: 30,
+    natural: 120,
+    gardens_and_parks: 90,
+    urban_environment: 60,
+    amusements: 120,
+    sport: 90
   };
+
+  for (const cat of categories) {
+    if (durationMap[cat]) return durationMap[cat];
+  }
+
+  return 60; // default
+}
+
   
   // Use the longest duration from categories, or default to 120 minutes
   let maxDuration = 120;
@@ -172,18 +189,35 @@ function getDurationFromCategories(categories: string[]): number {
 /**
  * Get estimated price based on activity categories
  */
-function getPriceFromCategories(categories: string[]): { amount: number; currencyCode: string } {
-  const priceMap: Record<string, number> = {
-    'Museums': 15,
-    'Historical Sites': 10,
-    'Cultural': 12,
-    'Nature': 0, // Often free
-    'Outdoor': 5,
-    'Adventure': 35,
-    'Entertainment': 25,
-    'Shopping': 0, // Window shopping is free
-    'Food & Dining': 30
+function getPriceFromCategories(categories: ActivityCategory[]): { amount: number; currencyCode: string } {
+  const priceMap: Record<ActivityCategory, number> = {
+    interesting_places: 0,
+    architecture: 5,
+    historic: 10,
+    historic_architecture: 10,
+    museums: 20,
+    cultural: 10,
+    religion: 0,
+    churches: 0,
+    cathedrals: 5,
+    castles: 15,
+    towers: 5,
+    viewpoints: 0,
+    monuments_and_memorials: 0,
+    natural: 0,
+    gardens_and_parks: 0,
+    urban_environment: 0,
+    amusements: 25,
+    sport: 15
   };
+
+  for (const cat of categories) {
+    if (priceMap[cat] !== undefined) return { amount: priceMap[cat], currencyCode: 'USD' };
+  }
+
+  return { amount: 10, currencyCode: 'USD' }; // default
+}
+
   
   // Use the highest price from categories, or default to $10
   let maxPrice = 10;
@@ -205,7 +239,8 @@ function getPriceFromCategories(categories: string[]): { amount: number; currenc
 export function getWeatherBasedRecommendations(
   activities: Activity[], 
   weather: any,
-  preferences: string[] = []
+preferences: ActivityCategory[] = []
+
 ): Activity[] {
   console.log('🌤️ Weather-based filtering with real data:', {
     totalActivities: activities.length,
