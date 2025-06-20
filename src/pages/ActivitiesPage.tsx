@@ -21,7 +21,7 @@ const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> 
     if (weather.temperature > 30) return "Perfect for air-conditioned venues";
     if (weather.temperature < 5) return "Indoor activities recommended";
     if (weather.temperature > 20) return "Ideal weather for outdoor adventures";
-    return "Good weather for both indoor and outdoor activities";
+    return "Good weather for both indoor and outdoor activities";       
   };
 
   return (
