@@ -248,7 +248,7 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
 /**
  * Helper function to extract categories from OpenTripMap kinds
  */
-import { activityCategories, ActivityCategory } from '../data/activityCategories';
+
 
 /**
  * Extract categories from OpenTripMap kinds that match our defined ActivityCategory
