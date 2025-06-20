@@ -254,18 +254,19 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
  * Extract categories from OpenTripMap kinds that match our defined ActivityCategory
  */
 export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
-  const kindsArray = kinds.split(',');
+  const kindsArray = kinds.split(',').map(k => k.trim());
+
   const matchedCategories: ActivityCategory[] = [];
 
-  kindsArray.forEach(kind => {
-    if (activityCategories.includes(kind as ActivityCategory)) {
-      matchedCategories.push(kind as ActivityCategory);
+  for (const kind of kindsArray) {
+    const match = activityCategories.find(cat => kind.includes(cat));
+    if (match && !matchedCategories.includes(match)) {
+      matchedCategories.push(match);
     }
-  });
+  }
 
-  return [...new Set(matchedCategories)];
+  return matchedCategories.length > 0 ? matchedCategories : ['interesting_places'];
 }
-
 
 /**
  * Helper function to determine if attraction is likely indoor
@@ -303,29 +304,29 @@ export function isLikelyIndoorFromKinds(kinds: string, name: string): boolean {
  */
 export function getFallbackImageUrl(categories: ActivityCategory[]): string {
   const imageMap: Record<ActivityCategory, string> = {
-    interesting_places: 'https://example.com/a.jpg',
-    architecture: 'https://example.com/b.jpg',
-    historic: 'https://example.com/c.jpg',
-    historic_architecture: 'https://example.com/d.jpg',
-    museums: 'https://example.com/e.jpg',
-    cultural: 'https://example.com/f.jpg',
-    religion: 'https://example.com/g.jpg',
-    churches: 'https://example.com/h.jpg',
-    cathedrals: 'https://example.com/i.jpg',
-    castles: 'https://example.com/j.jpg',
-    towers: 'https://example.com/k.jpg',
-    viewpoints: 'https://example.com/l.jpg',
-    monuments_and_memorials: 'https://example.com/m.jpg',
-    natural: 'https://example.com/n.jpg',
-    gardens_and_parks: 'https://example.com/o.jpg',
-    urban_environment: 'https://example.com/p.jpg',
-    amusements: 'https://example.com/q.jpg',
-    sport: 'https://example.com/r.jpg'
+    interesting_places: 'https://...',
+    architecture: 'https://...',
+    historic: 'https://...',
+    historic_architecture: 'https://...',
+    museums: 'https://...',
+    cultural: 'https://...',
+    religion: 'https://...',
+    churches: 'https://...',
+    cathedrals: 'https://...',
+    castles: 'https://...',
+    towers: 'https://...',
+    viewpoints: 'https://...',
+    monuments_and_memorials: 'https://...',
+    natural: 'https://...',
+    gardens_and_parks: 'https://...',
+    urban_environment: 'https://...',
+    amusements: 'https://...',
+    sport: 'https://...'
   };
 
   for (const category of categories) {
     if (imageMap[category]) return imageMap[category];
   }
 
-  return 'https://example.com/default.jpg';
+  return 'https://default-image-url.com';
 }
