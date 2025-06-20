@@ -6,7 +6,7 @@ import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
-
+import type { ActivityCategory } from '../data/activityCategories';
 
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
@@ -226,7 +226,7 @@ const ActivitiesPage: React.FC = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   
   // Filter states
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   
   // Fetch real weather data when destination changes
   useEffect(() => {
