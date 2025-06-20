@@ -1,5 +1,6 @@
 // OpenTripMap API Service for real attraction data
 // API Documentation: https://opentripmap.io/docs
+import { activityCategories, ActivityCategory } from '../data/activityCategories';
 
 const API_KEY = import.meta.env.VITE_OPENTRIPMAP_KEY || '5ae2e3f221c38a28845f05b613c6bd060fbfa46746435156427f8f3d';
 const BASE_URL = 'https://api.opentripmap.com/0.1/en/places';
@@ -247,52 +248,24 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
 /**
  * Helper function to extract categories from OpenTripMap kinds
  */
-export function extractCategoriesFromKinds(kinds: string): string[] {
-  const categories: string[] = [];
+import { activityCategories, ActivityCategory } from '../data/activityCategories';
+
+/**
+ * Extract categories from OpenTripMap kinds that match our defined ActivityCategory
+ */
+export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
   const kindsArray = kinds.split(',');
-  
+  const matchedCategories: ActivityCategory[] = [];
+
   kindsArray.forEach(kind => {
-    switch (kind.toLowerCase()) {
-      case 'museums':
-        categories.push('Museums');
-        break;
-      case 'architecture':
-      case 'historic':
-        categories.push('Historical Sites');
-        break;
-      case 'cultural':
-      case 'religion':
-        categories.push('Cultural');
-        break;
-      case 'sport':
-      case 'amusements':
-        categories.push('Adventure', 'Entertainment');
-        break;
-      case 'tourist_facilities':
-        categories.push('Entertainment');
-        break;
-      case 'natural':
-      case 'geological_formations':
-      case 'gardens_and_parks':
-        categories.push('Nature', 'Outdoor');
-        break;
-      case 'urban_environment':
-      case 'towers':
-      case 'castles':
-      case 'viewpoints':
-      case 'view_points':
-      case 'bridges':
-        categories.push('Entertainment', 'Cultural');
-        break;
-      default:
-        if (kind.includes('outdoor') || kind.includes('natural')) {
-          categories.push('Outdoor', 'Nature');
-        } else {
-          categories.push('Entertainment');
-        }
+    if (activityCategories.includes(kind as ActivityCategory)) {
+      matchedCategories.push(kind as ActivityCategory);
     }
   });
-  
+
+  return [...new Set(matchedCategories)];
+}
+
   // Remove duplicates and ensure at least one category
   const uniqueCategories = [...new Set(categories)];
   return uniqueCategories.length > 0 ? uniqueCategories : ['Entertainment'];
