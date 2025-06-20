@@ -301,23 +301,31 @@ export function isLikelyIndoorFromKinds(kinds: string, name: string): boolean {
 /**
  * Get fallback image URL based on category
  */
-export function getFallbackImageUrl(categories: string[]): string {
-  const imageMap: Record<string, string> = {
-    'Museums': 'https://images.pexels.com/photos/1707820/pexels-photo-1707820.jpeg',
-    'Historical Sites': 'https://images.pexels.com/photos/161758/governor-s-mansion-montgomery-alabama-grand-staircase-161758.jpeg',
-    'Cultural': 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-    'Nature': 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg',
-    'Outdoor': 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg',
-    'Adventure': 'https://images.pexels.com/photos/1365425/pexels-photo-1365425.jpeg',
-    'Entertainment': 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg'
+export function getFallbackImageUrl(categories: ActivityCategory[]): string {
+  const imageMap: Record<ActivityCategory, string> = {
+    interesting_places: 'https://example.com/a.jpg',
+    architecture: 'https://example.com/b.jpg',
+    historic: 'https://example.com/c.jpg',
+    historic_architecture: 'https://example.com/d.jpg',
+    museums: 'https://example.com/e.jpg',
+    cultural: 'https://example.com/f.jpg',
+    religion: 'https://example.com/g.jpg',
+    churches: 'https://example.com/h.jpg',
+    cathedrals: 'https://example.com/i.jpg',
+    castles: 'https://example.com/j.jpg',
+    towers: 'https://example.com/k.jpg',
+    viewpoints: 'https://example.com/l.jpg',
+    monuments_and_memorials: 'https://example.com/m.jpg',
+    natural: 'https://example.com/n.jpg',
+    gardens_and_parks: 'https://example.com/o.jpg',
+    urban_environment: 'https://example.com/p.jpg',
+    amusements: 'https://example.com/q.jpg',
+    sport: 'https://example.com/r.jpg'
   };
-  
-  // Use the first matching category or default
+
   for (const category of categories) {
-    if (imageMap[category]) {
-      return imageMap[category];
-    }
+    if (imageMap[category]) return imageMap[category];
   }
-  
-  return 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
+
+  return 'https://example.com/default.jpg';
 }
