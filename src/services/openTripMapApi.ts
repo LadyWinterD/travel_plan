@@ -266,10 +266,6 @@ export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
   return [...new Set(matchedCategories)];
 }
 
-  // Remove duplicates and ensure at least one category
-  const uniqueCategories = [...new Set(categories)];
-  return uniqueCategories.length > 0 ? uniqueCategories : ['Entertainment'];
-}
 
 /**
  * Helper function to determine if attraction is likely indoor
