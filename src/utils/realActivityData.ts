@@ -10,8 +10,158 @@ import {
 import { getCachedApiResponse, cacheApiResponse } from './storage';
 import { ActivityCategory } from '../data/activityCategories';
 
+// Enhanced mapping from OpenTripMap kinds to our ActivityCategory types
+const kindsToCategories: Record<string, ActivityCategory[]> = {
+  // Museums and cultural
+  'museums': ['museums'],
+  'museum': ['museums'],
+  'cultural': ['cultural'],
+  'galleries': ['cultural', 'museums'],
+  'art_galleries': ['cultural', 'museums'],
+  
+  // Historic and architecture
+  'historic': ['historic'],
+  'historical': ['historic'],
+  'architecture': ['architecture'],
+  'historic_architecture': ['historic_architecture'],
+  'archaeological_sites': ['historic'],
+  'fortifications': ['historic', 'castles'],
+  
+  // Religious sites
+  'religion': ['religion'],
+  'religious': ['religion'],
+  'churches': ['churches', 'religion'],
+  'cathedrals': ['cathedrals', 'religion'],
+  'temples': ['religion'],
+  'monasteries': ['religion'],
+  'synagogues': ['religion'],
+  'mosques': ['religion'],
+  
+  // Castles and towers
+  'castles': ['castles', 'historic'],
+  'castle': ['castles', 'historic'],
+  'towers': ['towers', 'architecture'],
+  'tower': ['towers', 'architecture'],
+  'palaces': ['historic_architecture', 'historic'],
+  'palace': ['historic_architecture', 'historic'],
+  
+  // Natural and parks
+  'natural': ['natural'],
+  'nature': ['natural'],
+  'gardens': ['gardens_and_parks'],
+  'parks': ['gardens_and_parks'],
+  'gardens_and_parks': ['gardens_and_parks'],
+  'botanical_gardens': ['gardens_and_parks', 'natural'],
+  'national_parks': ['natural', 'gardens_and_parks'],
+  'beaches': ['natural'],
+  'mountains': ['natural'],
+  'lakes': ['natural'],
+  'rivers': ['natural'],
+  'forests': ['natural'],
+  
+  // Monuments and memorials
+  'monuments_and_memorials': ['monuments_and_memorials'],
+  'monuments': ['monuments_and_memorials'],
+  'memorials': ['monuments_and_memorials'],
+  'statues': ['monuments_and_memorials'],
+  'sculptures': ['monuments_and_memorials'],
+  
+  // Viewpoints and observation
+  'viewpoints': ['viewpoints'],
+  'view_points': ['viewpoints'],
+  'observation_decks': ['viewpoints'],
+  'lookouts': ['viewpoints'],
+  
+  // Urban and interesting places
+  'urban_environment': ['urban_environment'],
+  'urban': ['urban_environment'],
+  'city_center': ['urban_environment'],
+  'squares': ['urban_environment'],
+  'streets': ['urban_environment'],
+  'bridges': ['architecture', 'urban_environment'],
+  'interesting_places': ['interesting_places'],
+  'tourist_facilities': ['interesting_places'],
+  'tourist_attraction': ['interesting_places'],
+  
+  // Amusements and entertainment
+  'amusements': ['amusements'],
+  'entertainment': ['amusements'],
+  'theme_parks': ['amusements'],
+  'zoos': ['amusements'],
+  'aquariums': ['amusements'],
+  'cinemas': ['amusements'],
+  'theaters': ['cultural', 'amusements'],
+  'theatres': ['cultural', 'amusements'],
+  
+  // Sports
+  'sport': ['sport'],
+  'sports': ['sport'],
+  'stadiums': ['sport'],
+  'sports_centres': ['sport'],
+  'golf_courses': ['sport'],
+  'swimming_pools': ['sport'],
+  
+  // Fallback categories
+  'other': ['interesting_places'],
+  'unspecified': ['interesting_places']
+};
+
 /**
- * Fetch real activities for a city using OpenTripMap API - Based on working HTML implementation
+ * Enhanced category extraction with comprehensive mapping
+ */
+function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
+  const kindsArray = kinds.toLowerCase().split(',').map(k => k.trim());
+  const matchedCategories = new Set<ActivityCategory>();
+
+  // First pass: exact matches
+  for (const kind of kindsArray) {
+    if (kindsToCategories[kind]) {
+      kindsToCategories[kind].forEach(cat => matchedCategories.add(cat));
+    }
+  }
+
+  // Second pass: partial matches for compound kinds
+  if (matchedCategories.size === 0) {
+    for (const kind of kindsArray) {
+      for (const [mappedKind, categories] of Object.entries(kindsToCategories)) {
+        if (kind.includes(mappedKind) || mappedKind.includes(kind)) {
+          categories.forEach(cat => matchedCategories.add(cat));
+        }
+      }
+    }
+  }
+
+  // Third pass: keyword-based fallbacks
+  if (matchedCategories.size === 0) {
+    for (const kind of kindsArray) {
+      if (kind.includes('museum') || kind.includes('gallery')) {
+        matchedCategories.add('museums');
+      } else if (kind.includes('church') || kind.includes('cathedral')) {
+        matchedCategories.add('churches');
+      } else if (kind.includes('castle') || kind.includes('fort')) {
+        matchedCategories.add('castles');
+      } else if (kind.includes('park') || kind.includes('garden')) {
+        matchedCategories.add('gardens_and_parks');
+      } else if (kind.includes('historic') || kind.includes('ancient')) {
+        matchedCategories.add('historic');
+      } else if (kind.includes('tower') || kind.includes('building')) {
+        matchedCategories.add('architecture');
+      } else if (kind.includes('natural') || kind.includes('nature')) {
+        matchedCategories.add('natural');
+      }
+    }
+  }
+
+  // Final fallback
+  if (matchedCategories.size === 0) {
+    matchedCategories.add('interesting_places');
+  }
+
+  return Array.from(matchedCategories);
+}
+
+/**
+ * Fetch real activities for a city using OpenTripMap API - Enhanced version
  * Includes 7-day caching to improve performance
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
@@ -40,7 +190,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     const activitiesPromises = attractions.map(async (attraction) => {
       try {
         const details = await getPlaceDetails(attraction.xid);
-        const categories = extractCategoriesFromKinds(attraction.kinds);
+        const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
         const isIndoor = isLikelyIndoorFromKinds(attraction.kinds, attraction.name);
         
         let imageUrl = getFallbackImageUrl(categories);
@@ -52,7 +202,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 
         const description = details?.wikipedia_extracts?.text 
           ? details.wikipedia_extracts.text.substring(0, 120) + '...'
-          : 'No detailed description available.';
+          : `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`;
 
         return {
           id: `otm_${attraction.xid}`,
@@ -70,11 +220,11 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           }
         };
       } catch {
-        const categories = extractCategoriesFromKinds(attraction.kinds);
+        const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
         return {
           id: `otm_${attraction.xid}`,
           name: attraction.name,
-          description: `Explore this ${categories[0]?.toLowerCase() || 'attraction'} in ${cityName}`,
+          description: `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`,
           image: getFallbackImageUrl(categories),
           duration: getDurationFromCategories(categories),
           rating: Math.max(attraction.rate || 4.0, 3.5),

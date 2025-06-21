@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
@@ -8,11 +8,29 @@ import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
 import type { ActivityCategory } from '../data/activityCategories';
 
+// Utility function for category validation
+const validateCategory = (cat: string): ActivityCategory => {
+  return activityCategories.includes(cat as ActivityCategory) 
+    ? cat as ActivityCategory 
+    : 'interesting_places';
+};
+
+// Loading skeleton component for categories
+const CategorySkeleton: React.FC = () => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+    {Array.from({ length: 8 }).map((_, index) => (
+      <div
+        key={index}
+        className="h-10 bg-gray-200 rounded-lg animate-pulse"
+      />
+    ))}
+  </div>
+);
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500\" size={32} />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500\" size={32} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
     return <Cloud className="text-gray-500" size={32} />;
   };
 
@@ -108,17 +126,16 @@ const ActivityCard: React.FC<{
       {/* Weather Badge */}
       {getWeatherBadge()}
       
-      {/* Activity Image - UPDATED WITH IMG TAG AND ERROR HANDLING */}
+      {/* Activity Image */}
       <div className="h-48 relative">
         <img
           src={activity.image}
           alt={`Photo of ${activity.name}`}
           className="w-full h-full object-cover"
           onError={(e) => {
-            // If the image fails to load, replace it with a placeholder
             const target = e.target as HTMLImageElement;
-            target.onerror = null; // Prevent infinite loops
-            target.src = getFallbackImageUrl(activity.categories); // We can reuse our existing fallback function
+            target.onerror = null;
+            target.src = getFallbackImageUrl(activity.categories);
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
@@ -157,7 +174,7 @@ const ActivityCard: React.FC<{
               key={category}
               className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
             >
-              {category}
+              {activityCategoryLabels[category] || category}
             </span>
           ))}
           {activity.categories.length > 3 && (
@@ -178,7 +195,7 @@ const ActivityCard: React.FC<{
           </span>
         </div>
         
-        {/* Add to Trip Button - Now at the bottom */}
+        {/* Add to Trip Button */}
         <div className="mt-auto">
           <button
             onClick={onToggle}
@@ -219,14 +236,41 @@ const ActivitiesPage: React.FC = () => {
     destinations.length > 0 ? destinations[0].id : null
   );
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [allActivitiesForCity, setAllActivitiesForCity] = useState<Activity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState<boolean>(false);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
   const [smartWeatherFiltering, setSmartWeatherFiltering] = useState<boolean>(true);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
   
   // Filter states
-const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
+  const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
+  
+  // Memoized available categories - performance optimized
+  const availableCategories = useMemo(() => {
+    if (allActivitiesForCity.length === 0) return [];
+    
+    const uniqueCategories = new Set<ActivityCategory>();
+    allActivitiesForCity.forEach(activity => {
+      activity.categories.forEach(category => {
+        const validatedCategory = validateCategory(category);
+        uniqueCategories.add(validatedCategory);
+      });
+    });
+    
+    // Convert Set to Array and sort alphabetically by display name
+    return Array.from(uniqueCategories).sort((a, b) => {
+      const labelA = activityCategoryLabels[a] || a;
+      const labelB = activityCategoryLabels[b] || b;
+      return labelA.localeCompare(labelB);
+    });
+  }, [allActivitiesForCity]);
+
+  // Clear selected interests when switching destinations
+  useEffect(() => {
+    setSelectedInterests([]);
+  }, [activeDestination]);
   
   // Fetch real weather data when destination changes
   useEffect(() => {
@@ -247,7 +291,7 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
     }
   }, [activeDestination, destinations, fetchWeatherForCity]);
 
-  // Load and filter activities - NOW WITH REAL OPENTRIPMAP DATA
+  // Load activities from API
   useEffect(() => {
     if (!activeDestination) return;
 
@@ -258,61 +302,56 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
       try {
         const destination = destinations.find(d => d.id === activeDestination);
         
-        // Use the corrected function that returns empty array instead of throwing
         const allDestinationActivities = await getRealActivitiesForCity(destination?.name || '');
         
-        // Handle empty results gracefully
         if (allDestinationActivities.length === 0) {
           setApiError(`No attractions found for ${destination?.name}. This could be due to API limits, the city not being in the OpenTripMap database, or no activities matching your current filters.`);
+          setAllActivitiesForCity([]);
           setActivities([]);
           return;
         }
         
-        // Clear any previous errors since we have activities
         setApiError(null);
+        setAllActivitiesForCity(allDestinationActivities);
         
-        // Apply interest category filters
-        let filteredActivities = allDestinationActivities;
-        if (selectedInterests.length > 0) {
-          filteredActivities = allDestinationActivities.filter(activity =>
-            activity.categories.some(category => selectedInterests.includes(category))
-          );
-        }
-        
-        let finalActivities = filteredActivities;
-
-        // Apply weather-based filtering if enabled and weather data is available
-        if (smartWeatherFiltering && weatherData) {
-          finalActivities = getWeatherBasedRecommendations(filteredActivities, weatherData, preferences);
-        } else if (preferences.length > 0) {
-          finalActivities = filteredActivities.filter(activity =>
-            (activity.categories || []).some(category => preferences.includes(category))
-          );
-        }
-        
-        // Handle case where filtering results in empty list
-        if (finalActivities.length === 0 && filteredActivities.length > 0) {
-          setApiError(`No activities found after applying your current filters for ${destination?.name}. Try clearing some filters to see more options.`);
-        }
-        
-        setActivities(finalActivities);
-        
-        // Show success message for real data
-        if (destination?.name && finalActivities.length > 0) {
-          console.log(`✅ Successfully loaded ${finalActivities.length} real activities for ${destination.name} from OpenTripMap`);
-        }
+        console.log(`✅ Successfully loaded ${allDestinationActivities.length} real activities for ${destination?.name} from OpenTripMap`);
         
       } catch (error) {
         console.error('Error loading activities:', error);
         setApiError('Failed to load attractions from OpenTripMap. Please try again or select a different city.');
+        setAllActivitiesForCity([]);
         setActivities([]);
       } finally {
         setLoadingActivities(false);
+        setIsInitialLoad(false);
       }
     };
 
     loadActivities();
-  }, [activeDestination, preferences, smartWeatherFiltering, weatherData, selectedInterests, destinations]);
+  }, [activeDestination, destinations]);
+
+  // Apply filters to activities
+  useEffect(() => {
+    let filteredActivities = [...allActivitiesForCity];
+
+    // Apply interest category filters
+    if (selectedInterests.length > 0) {
+      filteredActivities = filteredActivities.filter(activity =>
+        activity.categories.some(category => selectedInterests.includes(category))
+      );
+    }
+
+    // Apply weather-based filtering if enabled and weather data is available
+    if (smartWeatherFiltering && weatherData) {
+      filteredActivities = getWeatherBasedRecommendations(filteredActivities, weatherData, preferences);
+    } else if (preferences.length > 0) {
+      filteredActivities = filteredActivities.filter(activity =>
+        (activity.categories || []).some(category => preferences.includes(category))
+      );
+    }
+
+    setActivities(filteredActivities);
+  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -323,12 +362,28 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
     return activeDestination ? selectedActivities[activeDestination]?.some(a => a.id === activityId) || false : false; 
   };
   
-  const handleInterestToggle = (interest: string) => {
+  const handleInterestToggle = (interest: ActivityCategory) => {
     setSelectedInterests(prev => 
       prev.includes(interest) 
         ? prev.filter(i => i !== interest)
         : [...prev, interest]
     );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedInterests([]);
+    setSmartWeatherFiltering(false);
+  };
+
+  // Determine empty state message
+  const getEmptyStateMessage = () => {
+    if (loadingActivities) return null;
+    if (allActivitiesForCity.length === 0) return apiError || 'No attractions found for this city.';
+    if (selectedInterests.length > 0 && activities.length === 0) {
+      return `No activities found matching your selected interests: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}.`;
+    }
+    if (activities.length === 0) return 'No activities found for your current filters.';
+    return null;
   };
   
   const currentDestination = destinations.find(d => d.id === activeDestination);
@@ -385,7 +440,7 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
         </div>
       </div>
       
-      {/* 1. Destination Information with Smart Weather Filtering */}
+      {/* Destination Information with Smart Weather Filtering */}
       <div className="mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -398,7 +453,7 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
                 Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
                 Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
                 Available Activities: {activities.length}
-                {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.join(', ')}`}
+                {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}`}
               </p>
             </div>
           </div>
@@ -422,7 +477,7 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
         </div>
       </div>
 
-      {/* 2. Weather Recommendation */}
+      {/* Weather Recommendation */}
       {isWeatherLoading && (
         <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
@@ -437,36 +492,60 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
         />
       )}
       
-      {/* 3. Interest Categories */}
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-  <div className="flex items-center gap-2 mb-4">
-    <Filter size={18} className="text-teal-600" />
-    <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
-  </div>
-  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-    {activityCategories.map((interest) => (
-      <label
-        key={interest}
-        className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
-          selectedInterests.includes(interest)
-            ? 'border-teal-500 bg-teal-50 text-teal-700'
-            : 'border-gray-200 hover:border-gray-300 text-gray-700'
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={selectedInterests.includes(interest)}
-          onChange={() => handleInterestToggle(interest)}
-          className="sr-only"
-        />
-        <span className="font-medium text-center">
-          {activityCategoryLabels[interest]}
-        </span>
-      </label>
-    ))}
-  </div>
-</div>
-
+      {/* Dynamic Interest Categories */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-teal-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
+            {availableCategories.length > 0 && (
+              <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
+            )}
+          </div>
+          {selectedInterests.length > 0 && (
+            <button
+              onClick={() => setSelectedInterests([])}
+              className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+        
+        {/* Loading state for categories */}
+        {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+        
+        {/* Dynamic categories grid */}
+        {!loadingActivities && !isInitialLoad && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {availableCategories.map((interest) => (
+              <label
+                key={interest}
+                className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
+                  selectedInterests.includes(interest)
+                    ? 'border-teal-500 bg-teal-50 text-teal-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedInterests.includes(interest)}
+                  onChange={() => handleInterestToggle(interest)}
+                  className="sr-only"
+                />
+                <span className="font-medium text-center">
+                  {activityCategoryLabels[interest] || interest}
+                </span>
+              </label>
+            ))}
+            {availableCategories.length === 0 && !loadingActivities && (
+              <p className="text-gray-500 col-span-full text-center py-4">
+                No categories available for this city.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
       
       {/* Activity Cards Grid */}
       {loadingActivities ? (
@@ -491,29 +570,33 @@ const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([
         </>
       )}
 
-      {/* No Activities Message */}
-      {activities.length === 0 && !loadingActivities && (
+      {/* Enhanced No Activities Message */}
+      {getEmptyStateMessage() && (
         <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="text-gray-400 mb-4">
             <Sun size={48} className="mx-auto" />
           </div>
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
-          <p className="text-gray-500 mb-4">
-            {apiError ? 'There was an error loading attractions from OpenTripMap.' : 'No activities found for your current filters.'}
+          <p className="text-gray-500 mb-4 max-w-md mx-auto">
+            {getEmptyStateMessage()}
           </p>
           <div className="space-y-2">
-            <button
-              onClick={() => setSelectedInterests([])}
-              className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
-            >
-              Clear interest filters
-            </button>
-            <button
-              onClick={() => setSmartWeatherFiltering(false)}
-              className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
-            >
-              Disable smart weather filtering
-            </button>
+            {selectedInterests.length > 0 && (
+              <button
+                onClick={() => setSelectedInterests([])}
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+              >
+                Clear interest filters
+              </button>
+            )}
+            {(selectedInterests.length > 0 || smartWeatherFiltering) && (
+              <button
+                onClick={clearAllFilters}
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         </div>
       )}
