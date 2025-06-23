@@ -13,7 +13,7 @@ import { getCachedApiResponse, cacheApiResponse } from './storage';
 import { ActivityCategory, detailedCategoryMappings } from '../data/activityCategories';
 
 /**
- * Enhanced category extraction with new tourism-focused categories
+ * Enhanced category extraction with new English category system
  */
 function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
   const kindsArray = kinds.toLowerCase().split(',').map(k => k.trim());
@@ -37,78 +37,56 @@ function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
     }
   }
 
-  // Third pass: keyword-based fallbacks with new categories
+  // Third pass: keyword-based fallbacks with English categories
   if (matchedCategories.size === 0) {
     for (const kind of kindsArray) {
-      // Nature & Outdoors
-      if (kind.includes('mountain') || kind.includes('volcano') || kind.includes('cave') || kind.includes('canyon')) {
-        matchedCategories.add('nature_landscapes');
-      } else if (kind.includes('lake') || kind.includes('river') || kind.includes('waterfall') || kind.includes('island')) {
-        matchedCategories.add('water_features');
-      } else if (kind.includes('beach') || kind.includes('shore') || kind.includes('sand')) {
-        matchedCategories.add('beaches');
-      } else if (kind.includes('park') || kind.includes('reserve') || kind.includes('wildlife') || kind.includes('botanical')) {
-        matchedCategories.add('protected_areas');
-      }
-      
       // Culture & History
-      else if (kind.includes('historic') || kind.includes('ancient') || kind.includes('archaeological') || kind.includes('heritage')) {
+      if (kind.includes('museum') || kind.includes('gallery') || kind.includes('art') || kind.includes('cultural')) {
+        matchedCategories.add('museums_arts');
+      } else if (kind.includes('historic') || kind.includes('ancient') || kind.includes('archaeological') || kind.includes('heritage')) {
         matchedCategories.add('historical_sites');
-      } else if (kind.includes('castle') || kind.includes('fort') || kind.includes('fortress') || kind.includes('citadel')) {
-        matchedCategories.add('fortifications');
-      } else if (kind.includes('monument') || kind.includes('memorial') || kind.includes('statue') || kind.includes('sculpture')) {
-        matchedCategories.add('monuments_archaeology');
-      } else if (kind.includes('church') || kind.includes('cathedral') || kind.includes('temple') || kind.includes('mosque') || kind.includes('synagogue') || kind.includes('religious')) {
+      } else if (kind.includes('church') || kind.includes('cathedral') || kind.includes('temple') || kind.includes('mosque') || kind.includes('religious')) {
         matchedCategories.add('religious_sites');
-      } else if (kind.includes('cemetery') || kind.includes('tomb') || kind.includes('burial') || kind.includes('mausoleum')) {
-        matchedCategories.add('burial_sites');
+      } else if (kind.includes('castle') || kind.includes('palace') || kind.includes('fort') || kind.includes('fortress')) {
+        matchedCategories.add('castles_palaces');
+      } else if (kind.includes('tower') || kind.includes('bridge') || kind.includes('architecture') || kind.includes('building')) {
+        matchedCategories.add('architectural_landmarks');
       }
       
-      // Architecture & Urban
-      else if (kind.includes('palace') || kind.includes('manor') || kind.includes('villa') || kind.includes('amphitheatre')) {
-        matchedCategories.add('historical_buildings');
-      } else if (kind.includes('skyscraper') || kind.includes('modern') || kind.includes('contemporary')) {
-        matchedCategories.add('modern_architecture');
-      } else if (kind.includes('bridge') || kind.includes('viaduct') || kind.includes('aqueduct')) {
-        matchedCategories.add('bridges');
-      } else if (kind.includes('tower') || kind.includes('lighthouse') || kind.includes('spire') || kind.includes('observation')) {
-        matchedCategories.add('towers_lighthouses');
-      } else if (kind.includes('square') || kind.includes('plaza') || kind.includes('street') || kind.includes('district') || kind.includes('urban')) {
-        matchedCategories.add('urban_features');
+      // Nature & Outdoors
+      else if (kind.includes('natural') || kind.includes('mountain') || kind.includes('lake') || kind.includes('beach') || kind.includes('cave')) {
+        matchedCategories.add('natural_landscapes');
+      } else if (kind.includes('park') || kind.includes('garden') || kind.includes('botanical') || kind.includes('fountain')) {
+        matchedCategories.add('parks_gardens');
+      } else if (kind.includes('sport') || kind.includes('skiing') || kind.includes('diving') || kind.includes('golf') || kind.includes('stadium')) {
+        matchedCategories.add('outdoor_sports');
       }
       
-      // Museums & Art
-      else if (kind.includes('museum') || kind.includes('gallery') || kind.includes('exhibition') || kind.includes('cultural')) {
-        matchedCategories.add('museums');
-      } else if (kind.includes('art') || kind.includes('mural') || kind.includes('installation')) {
-        matchedCategories.add('public_art');
-      } else if (kind.includes('garden') || kind.includes('arboretum') || kind.includes('green')) {
-        matchedCategories.add('gardens_parks');
-      } else if (kind.includes('fountain') || kind.includes('water_feature')) {
-        matchedCategories.add('fountains');
+      // Urban Exploration
+      else if (kind.includes('urban') || kind.includes('square') || kind.includes('street') || kind.includes('city')) {
+        matchedCategories.add('city_centers');
+      } else if (kind.includes('viewpoint') || kind.includes('scenic') || kind.includes('observation') || kind.includes('overlook')) {
+        matchedCategories.add('viewpoints_towers');
       }
       
-      // Entertainment & Leisure
+      // Leisure & Entertainment
       else if (kind.includes('amusement') || kind.includes('theme') || kind.includes('zoo') || kind.includes('aquarium')) {
-        matchedCategories.add('amusement_facilities');
-      } else if (kind.includes('spa') || kind.includes('sauna') || kind.includes('thermal') || kind.includes('wellness')) {
-        matchedCategories.add('spa_wellness');
-      } else if (kind.includes('sport') || kind.includes('stadium') || kind.includes('skiing') || kind.includes('diving') || kind.includes('golf')) {
-        matchedCategories.add('sports_activities');
+        matchedCategories.add('theme_parks_zoos');
       } else if (kind.includes('bar') || kind.includes('club') || kind.includes('casino') || kind.includes('nightlife')) {
         matchedCategories.add('nightlife');
-      }
-      
-      // Other Points of Interest
-      else if (kind.includes('viewpoint') || kind.includes('scenic') || kind.includes('panoramic') || kind.includes('overlook')) {
-        matchedCategories.add('viewpoints');
+      } else if (kind.includes('theater') || kind.includes('theatre') || kind.includes('cinema')) {
+        matchedCategories.add('shows_cinema');
+      } else if (kind.includes('shopping') || kind.includes('mall') || kind.includes('market')) {
+        matchedCategories.add('shopping');
+      } else if (kind.includes('restaurant') || kind.includes('cafe') || kind.includes('food') || kind.includes('dining')) {
+        matchedCategories.add('food_dining');
       }
     }
   }
 
   // Final fallback
   if (matchedCategories.size === 0) {
-    matchedCategories.add('uncategorized_attractions');
+    matchedCategories.add('interesting_places');
   }
 
   return Array.from(matchedCategories);
@@ -242,45 +220,35 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 }
 
 /**
- * Get estimated duration based on new activity categories
+ * Get estimated duration based on English activity categories
  */
 function getDurationFromCategories(categories: ActivityCategory[]): number {
   const durationMap: Record<ActivityCategory, number> = {
-    // Nature & Outdoors - typically longer outdoor experiences
-    nature_landscapes: 180,
-    water_features: 120,
-    beaches: 240,
-    protected_areas: 180,
-    
     // Culture & History - moderate to long visits
+    museums_arts: 150,
     historical_sites: 90,
-    fortifications: 120,
-    monuments_archaeology: 60,
     religious_sites: 60,
-    burial_sites: 45,
+    castles_palaces: 120,
+    architectural_landmarks: 60,
     
-    // Architecture & Urban - quick to moderate visits
-    historical_buildings: 90,
-    modern_architecture: 60,
-    bridges: 30,
-    towers_lighthouses: 60,
-    urban_features: 90,
+    // Nature & Outdoors - typically longer outdoor experiences
+    natural_landscapes: 180,
+    parks_gardens: 120,
+    outdoor_sports: 120,
     
-    // Museums & Art - longer indoor experiences
-    museums: 150,
-    public_art: 30,
-    gardens_parks: 120,
-    fountains: 20,
+    // Urban Exploration - quick to moderate visits
+    city_centers: 90,
+    viewpoints_towers: 45,
     
-    // Entertainment & Leisure - varies widely
-    amusement_facilities: 240,
-    spa_wellness: 180,
-    sports_activities: 120,
+    // Leisure & Entertainment - varies widely
+    theme_parks_zoos: 240,
     nightlife: 180,
+    shows_cinema: 120,
+    shopping: 120,
     
-    // Other Points of Interest
-    viewpoints: 45,
-    uncategorized_attractions: 90
+    // Unique Experiences
+    interesting_places: 90,
+    food_dining: 90
   };
 
   let maxDuration = 90; // Default duration
@@ -294,45 +262,35 @@ function getDurationFromCategories(categories: ActivityCategory[]): number {
 }
 
 /**
- * Get estimated price based on new activity categories
+ * Get estimated price based on English activity categories
  */
 function getPriceFromCategories(categories: ActivityCategory[]): { amount: number; currencyCode: string } {
   const priceMap: Record<ActivityCategory, number> = {
-    // Nature & Outdoors - mostly free or low cost
-    nature_landscapes: 0,
-    water_features: 0,
-    beaches: 0,
-    protected_areas: 5,
-    
     // Culture & History - varies, some free, some paid
+    museums_arts: 25,
     historical_sites: 10,
-    fortifications: 15,
-    monuments_archaeology: 5,
     religious_sites: 0,
-    burial_sites: 0,
+    castles_palaces: 15,
+    architectural_landmarks: 5,
     
-    // Architecture & Urban - mostly free
-    historical_buildings: 12,
-    modern_architecture: 0,
-    bridges: 0,
-    towers_lighthouses: 8,
-    urban_features: 0,
+    // Nature & Outdoors - mostly free or low cost
+    natural_landscapes: 0,
+    parks_gardens: 5,
+    outdoor_sports: 20,
     
-    // Museums & Art - typically paid
-    museums: 25,
-    public_art: 0,
-    gardens_parks: 5,
-    fountains: 0,
+    // Urban Exploration - mostly free
+    city_centers: 0,
+    viewpoints_towers: 8,
     
-    // Entertainment & Leisure - typically paid
-    amusement_facilities: 35,
-    spa_wellness: 50,
-    sports_activities: 20,
+    // Leisure & Entertainment - typically paid
+    theme_parks_zoos: 35,
     nightlife: 30,
+    shows_cinema: 15,
+    shopping: 0,
     
-    // Other Points of Interest
-    viewpoints: 0,
-    uncategorized_attractions: 10
+    // Unique Experiences
+    interesting_places: 10,
+    food_dining: 25
   };
 
   let maxPrice = 10; // Default price
