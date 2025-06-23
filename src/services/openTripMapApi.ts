@@ -505,4 +505,3 @@ export function getFallbackImageUrl(categories: ActivityCategory[]): string {
   // Default fallback image
   return 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
 }
-```
