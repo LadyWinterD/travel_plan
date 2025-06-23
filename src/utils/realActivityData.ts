@@ -10,153 +10,105 @@ import {
   fetchOpenTripMapImage,
 } from '../services/openTripMapApi';
 import { getCachedApiResponse, cacheApiResponse } from './storage';
-import { ActivityCategory } from '../data/activityCategories';
-
-// Enhanced mapping from OpenTripMap kinds to our ActivityCategory types
-const kindsToCategories: Record<string, ActivityCategory[]> = {
-  // Museums and cultural
-  'museums': ['museums'],
-  'museum': ['museums'],
-  'cultural': ['cultural'],
-  'galleries': ['cultural', 'museums'],
-  'art_galleries': ['cultural', 'museums'],
-  
-  // Historic and architecture
-  'historic': ['historic'],
-  'historical': ['historic'],
-  'architecture': ['architecture'],
-  'historic_architecture': ['historic_architecture'],
-  'archaeological_sites': ['historic'],
-  'fortifications': ['historic', 'castles'],
-  
-  // Religious sites
-  'religion': ['religion'],
-  'religious': ['religion'],
-  'churches': ['churches', 'religion'],
-  'cathedrals': ['cathedrals', 'religion'],
-  'temples': ['religion'],
-  'monasteries': ['religion'],
-  'synagogues': ['religion'],
-  'mosques': ['religion'],
-  
-  // Castles and towers
-  'castles': ['castles', 'historic'],
-  'castle': ['castles', 'historic'],
-  'towers': ['towers', 'architecture'],
-  'tower': ['towers', 'architecture'],
-  'palaces': ['historic_architecture', 'historic'],
-  'palace': ['historic_architecture', 'historic'],
-  
-  // Natural and parks
-  'natural': ['natural'],
-  'nature': ['natural'],
-  'gardens': ['gardens_and_parks'],
-  'parks': ['gardens_and_parks'],
-  'gardens_and_parks': ['gardens_and_parks'],
-  'botanical_gardens': ['gardens_and_parks', 'natural'],
-  'national_parks': ['natural', 'gardens_and_parks'],
-  'beaches': ['natural'],
-  'mountains': ['natural'],
-  'lakes': ['natural'],
-  'rivers': ['natural'],
-  'forests': ['natural'],
-  
-  // Monuments and memorials
-  'monuments_and_memorials': ['monuments_and_memorials'],
-  'monuments': ['monuments_and_memorials'],
-  'memorials': ['monuments_and_memorials'],
-  'statues': ['monuments_and_memorials'],
-  'sculptures': ['monuments_and_memorials'],
-  
-  // Viewpoints and observation
-  'viewpoints': ['viewpoints'],
-  'view_points': ['viewpoints'],
-  'observation_decks': ['viewpoints'],
-  'lookouts': ['viewpoints'],
-  
-  // Urban and interesting places
-  'urban_environment': ['urban_environment'],
-  'urban': ['urban_environment'],
-  'city_center': ['urban_environment'],
-  'squares': ['urban_environment'],
-  'streets': ['urban_environment'],
-  'bridges': ['architecture', 'urban_environment'],
-  'interesting_places': ['interesting_places'],
-  'tourist_facilities': ['interesting_places'],
-  'tourist_attraction': ['interesting_places'],
-  
-  // Amusements and entertainment
-  'amusements': ['amusements'],
-  'entertainment': ['amusements'],
-  'theme_parks': ['amusements'],
-  'zoos': ['amusements'],
-  'aquariums': ['amusements'],
-  'cinemas': ['amusements'],
-  'theaters': ['cultural', 'amusements'],
-  'theatres': ['cultural', 'amusements'],
-  
-  // Sports
-  'sport': ['sport'],
-  'sports': ['sport'],
-  'stadiums': ['sport'],
-  'sports_centres': ['sport'],
-  'golf_courses': ['sport'],
-  'swimming_pools': ['sport'],
-  
-  // Fallback categories
-  'other': ['interesting_places'],
-  'unspecified': ['interesting_places']
-};
+import { ActivityCategory, detailedCategoryMappings } from '../data/activityCategories';
 
 /**
- * Enhanced category extraction with comprehensive mapping
+ * Enhanced category extraction with new tourism-focused categories
  */
 function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
   const kindsArray = kinds.toLowerCase().split(',').map(k => k.trim());
   const matchedCategories = new Set<ActivityCategory>();
 
-  // First pass: exact matches
+  // First pass: exact matches using detailed mappings
   for (const kind of kindsArray) {
-    if (kindsToCategories[kind]) {
-      kindsToCategories[kind].forEach(cat => matchedCategories.add(cat));
+    if (detailedCategoryMappings[kind]) {
+      matchedCategories.add(detailedCategoryMappings[kind]);
     }
   }
 
   // Second pass: partial matches for compound kinds
   if (matchedCategories.size === 0) {
     for (const kind of kindsArray) {
-      for (const [mappedKind, categories] of Object.entries(kindsToCategories)) {
+      for (const [mappedKind, category] of Object.entries(detailedCategoryMappings)) {
         if (kind.includes(mappedKind) || mappedKind.includes(kind)) {
-          categories.forEach(cat => matchedCategories.add(cat));
+          matchedCategories.add(category);
         }
       }
     }
   }
 
-  // Third pass: keyword-based fallbacks
+  // Third pass: keyword-based fallbacks with new categories
   if (matchedCategories.size === 0) {
     for (const kind of kindsArray) {
-      if (kind.includes('museum') || kind.includes('gallery')) {
+      // Nature & Outdoors
+      if (kind.includes('mountain') || kind.includes('volcano') || kind.includes('cave') || kind.includes('canyon')) {
+        matchedCategories.add('nature_landscapes');
+      } else if (kind.includes('lake') || kind.includes('river') || kind.includes('waterfall') || kind.includes('island')) {
+        matchedCategories.add('water_features');
+      } else if (kind.includes('beach') || kind.includes('shore') || kind.includes('sand')) {
+        matchedCategories.add('beaches');
+      } else if (kind.includes('park') || kind.includes('reserve') || kind.includes('wildlife') || kind.includes('botanical')) {
+        matchedCategories.add('protected_areas');
+      }
+      
+      // Culture & History
+      else if (kind.includes('historic') || kind.includes('ancient') || kind.includes('archaeological') || kind.includes('heritage')) {
+        matchedCategories.add('historical_sites');
+      } else if (kind.includes('castle') || kind.includes('fort') || kind.includes('fortress') || kind.includes('citadel')) {
+        matchedCategories.add('fortifications');
+      } else if (kind.includes('monument') || kind.includes('memorial') || kind.includes('statue') || kind.includes('sculpture')) {
+        matchedCategories.add('monuments_archaeology');
+      } else if (kind.includes('church') || kind.includes('cathedral') || kind.includes('temple') || kind.includes('mosque') || kind.includes('synagogue') || kind.includes('religious')) {
+        matchedCategories.add('religious_sites');
+      } else if (kind.includes('cemetery') || kind.includes('tomb') || kind.includes('burial') || kind.includes('mausoleum')) {
+        matchedCategories.add('burial_sites');
+      }
+      
+      // Architecture & Urban
+      else if (kind.includes('palace') || kind.includes('manor') || kind.includes('villa') || kind.includes('amphitheatre')) {
+        matchedCategories.add('historical_buildings');
+      } else if (kind.includes('skyscraper') || kind.includes('modern') || kind.includes('contemporary')) {
+        matchedCategories.add('modern_architecture');
+      } else if (kind.includes('bridge') || kind.includes('viaduct') || kind.includes('aqueduct')) {
+        matchedCategories.add('bridges');
+      } else if (kind.includes('tower') || kind.includes('lighthouse') || kind.includes('spire') || kind.includes('observation')) {
+        matchedCategories.add('towers_lighthouses');
+      } else if (kind.includes('square') || kind.includes('plaza') || kind.includes('street') || kind.includes('district') || kind.includes('urban')) {
+        matchedCategories.add('urban_features');
+      }
+      
+      // Museums & Art
+      else if (kind.includes('museum') || kind.includes('gallery') || kind.includes('exhibition') || kind.includes('cultural')) {
         matchedCategories.add('museums');
-      } else if (kind.includes('church') || kind.includes('cathedral')) {
-        matchedCategories.add('churches');
-      } else if (kind.includes('castle') || kind.includes('fort')) {
-        matchedCategories.add('castles');
-      } else if (kind.includes('park') || kind.includes('garden')) {
-        matchedCategories.add('gardens_and_parks');
-      } else if (kind.includes('historic') || kind.includes('ancient')) {
-        matchedCategories.add('historic');
-      } else if (kind.includes('tower') || kind.includes('building')) {
-        matchedCategories.add('architecture');
-      } else if (kind.includes('natural') || kind.includes('nature')) {
-        matchedCategories.add('natural');
+      } else if (kind.includes('art') || kind.includes('mural') || kind.includes('installation')) {
+        matchedCategories.add('public_art');
+      } else if (kind.includes('garden') || kind.includes('arboretum') || kind.includes('green')) {
+        matchedCategories.add('gardens_parks');
+      } else if (kind.includes('fountain') || kind.includes('water_feature')) {
+        matchedCategories.add('fountains');
+      }
+      
+      // Entertainment & Leisure
+      else if (kind.includes('amusement') || kind.includes('theme') || kind.includes('zoo') || kind.includes('aquarium')) {
+        matchedCategories.add('amusement_facilities');
+      } else if (kind.includes('spa') || kind.includes('sauna') || kind.includes('thermal') || kind.includes('wellness')) {
+        matchedCategories.add('spa_wellness');
+      } else if (kind.includes('sport') || kind.includes('stadium') || kind.includes('skiing') || kind.includes('diving') || kind.includes('golf')) {
+        matchedCategories.add('sports_activities');
+      } else if (kind.includes('bar') || kind.includes('club') || kind.includes('casino') || kind.includes('nightlife')) {
+        matchedCategories.add('nightlife');
+      }
+      
+      // Other Points of Interest
+      else if (kind.includes('viewpoint') || kind.includes('scenic') || kind.includes('panoramic') || kind.includes('overlook')) {
+        matchedCategories.add('viewpoints');
       }
     }
   }
 
   // Final fallback
   if (matchedCategories.size === 0) {
-    matchedCategories.add('interesting_places');
+    matchedCategories.add('uncategorized_attractions');
   }
 
   return Array.from(matchedCategories);
@@ -290,31 +242,48 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 }
 
 /**
- * Get estimated duration based on activity categories
+ * Get estimated duration based on new activity categories
  */
 function getDurationFromCategories(categories: ActivityCategory[]): number {
   const durationMap: Record<ActivityCategory, number> = {
-    interesting_places: 90,
-    architecture: 60,
-    historic: 90,
-    historic_architecture: 90,
-    museums: 120,
-    cultural: 75,
-    religion: 60,
-    churches: 45,
-    cathedrals: 60,
-    castles: 90,
-    towers: 45,
-    viewpoints: 30,
-    monuments_and_memorials: 30,
-    natural: 120,
-    gardens_and_parks: 90,
-    urban_environment: 60,
-    amusements: 120,
-    sport: 90
+    // Nature & Outdoors - typically longer outdoor experiences
+    nature_landscapes: 180,
+    water_features: 120,
+    beaches: 240,
+    protected_areas: 180,
+    
+    // Culture & History - moderate to long visits
+    historical_sites: 90,
+    fortifications: 120,
+    monuments_archaeology: 60,
+    religious_sites: 60,
+    burial_sites: 45,
+    
+    // Architecture & Urban - quick to moderate visits
+    historical_buildings: 90,
+    modern_architecture: 60,
+    bridges: 30,
+    towers_lighthouses: 60,
+    urban_features: 90,
+    
+    // Museums & Art - longer indoor experiences
+    museums: 150,
+    public_art: 30,
+    gardens_parks: 120,
+    fountains: 20,
+    
+    // Entertainment & Leisure - varies widely
+    amusement_facilities: 240,
+    spa_wellness: 180,
+    sports_activities: 120,
+    nightlife: 180,
+    
+    // Other Points of Interest
+    viewpoints: 45,
+    uncategorized_attractions: 90
   };
 
-  let maxDuration = 60;
+  let maxDuration = 90; // Default duration
   for (const category of categories) {
     if (durationMap[category] && durationMap[category] > maxDuration) {
       maxDuration = durationMap[category];
@@ -325,31 +294,48 @@ function getDurationFromCategories(categories: ActivityCategory[]): number {
 }
 
 /**
- * Get estimated price based on activity categories
+ * Get estimated price based on new activity categories
  */
 function getPriceFromCategories(categories: ActivityCategory[]): { amount: number; currencyCode: string } {
   const priceMap: Record<ActivityCategory, number> = {
-    interesting_places: 0,
-    architecture: 5,
-    historic: 10,
-    historic_architecture: 10,
-    museums: 20,
-    cultural: 10,
-    religion: 0,
-    churches: 0,
-    cathedrals: 5,
-    castles: 15,
-    towers: 5,
+    // Nature & Outdoors - mostly free or low cost
+    nature_landscapes: 0,
+    water_features: 0,
+    beaches: 0,
+    protected_areas: 5,
+    
+    // Culture & History - varies, some free, some paid
+    historical_sites: 10,
+    fortifications: 15,
+    monuments_archaeology: 5,
+    religious_sites: 0,
+    burial_sites: 0,
+    
+    // Architecture & Urban - mostly free
+    historical_buildings: 12,
+    modern_architecture: 0,
+    bridges: 0,
+    towers_lighthouses: 8,
+    urban_features: 0,
+    
+    // Museums & Art - typically paid
+    museums: 25,
+    public_art: 0,
+    gardens_parks: 5,
+    fountains: 0,
+    
+    // Entertainment & Leisure - typically paid
+    amusement_facilities: 35,
+    spa_wellness: 50,
+    sports_activities: 20,
+    nightlife: 30,
+    
+    // Other Points of Interest
     viewpoints: 0,
-    monuments_and_memorials: 0,
-    natural: 0,
-    gardens_and_parks: 0,
-    urban_environment: 0,
-    amusements: 25,
-    sport: 15
+    uncategorized_attractions: 10
   };
 
-  let maxPrice = 10;
+  let maxPrice = 10; // Default price
   for (const category of categories) {
     if (priceMap[category] !== undefined && priceMap[category] > maxPrice) {
       maxPrice = priceMap[category];

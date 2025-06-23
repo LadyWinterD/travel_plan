@@ -1,6 +1,6 @@
 // OpenTripMap API Service for real attraction data
 // API Documentation: https://opentripmap.io/docs
-import { activityCategories, ActivityCategory } from '../data/activityCategories';
+import { activityCategories, ActivityCategory, detailedCategoryMappings } from '../data/activityCategories';
 
 const API_KEY = import.meta.env.VITE_OPENTRIPMAP_KEY || '5ae2e3f221c38a28845f05b613c6bd060fbfa46746435156427f8f3d';
 const BASE_URL = 'https://api.opentripmap.com/0.1/en/places';
@@ -248,17 +248,35 @@ export async function getRawAttractions(lat: number, lon: number, radiusKm: numb
 }
 
 /**
- * Filter raw attractions based on kinds (Step 2) - Based on your working logic
+ * Filter raw attractions based on kinds (Step 2) - Updated for new categories
  */
 export function filterAttractionsByKinds(rawAttractions: OpenTripMapPlace[], cityName: string = 'Unknown'): AttractionPreview[] {
   console.log(`🔍 Filtering ${rawAttractions.length} raw attractions for ${cityName}...`);
   
-  // Use the same allowed kinds as your working code
+  // Updated allowed kinds based on new category system
   const allowedKinds = [
-    'museums', 'historic', 'architecture', 'cultural', 'natural', 
-    'gardens_and_parks', 'religion', 'monuments_and_memorials', 
-    'towers', 'bridges', 'view_points', 'interesting_places', 
-    'cathedrals', 'castles'
+    // Nature & Outdoors
+    'natural', 'mountains', 'lakes', 'rivers', 'beaches', 'islands', 'parks', 'gardens',
+    'national_parks', 'nature_reserves', 'wildlife', 'botanical_gardens',
+    
+    // Culture & History
+    'historic', 'historical', 'ancient', 'archaeological', 'heritage', 'monuments',
+    'memorials', 'castles', 'fortifications', 'religion', 'churches', 'cathedrals',
+    'temples', 'monasteries', 'cemeteries', 'tombs',
+    
+    // Architecture & Urban
+    'architecture', 'palaces', 'buildings', 'towers', 'bridges', 'urban_environment',
+    'squares', 'streets', 'lighthouses', 'modern_architecture',
+    
+    // Museums & Art
+    'museums', 'galleries', 'cultural', 'art', 'exhibitions', 'fountains',
+    
+    // Entertainment & Leisure
+    'amusements', 'entertainment', 'sport', 'recreation', 'zoos', 'aquariums',
+    'theme_parks', 'stadiums', 'spa', 'wellness',
+    
+    // Other
+    'interesting_places', 'tourist_attraction', 'viewpoints', 'scenic'
   ];
   
   const filteredAttractions = rawAttractions.filter(place => {
@@ -266,7 +284,7 @@ export function filterAttractionsByKinds(rawAttractions: OpenTripMapPlace[], cit
     
     const placeKinds = place.kinds.split(',');
     return placeKinds.some(kind => allowedKinds.includes(kind));
-  }).sort((a, b) => b.rate - a.rate); // Sort by rating like your code
+  }).sort((a, b) => b.rate - a.rate); // Sort by rating
   
   // Convert to AttractionPreview format
   const previews: AttractionPreview[] = filteredAttractions.map(attraction => ({
@@ -339,26 +357,36 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
 }
 
 /**
- * Helper function to extract categories from OpenTripMap kinds
- */
-
-
-/**
- * Extract categories from OpenTripMap kinds that match our defined ActivityCategory
+ * Extract categories from OpenTripMap kinds that match our new ActivityCategory system
  */
 export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
-  const kindsArray = kinds.split(',').map(k => k.trim());
-
+  const kindsArray = kinds.split(',').map(k => k.trim().toLowerCase());
   const matchedCategories: ActivityCategory[] = [];
 
   for (const kind of kindsArray) {
-    const match = activityCategories.find(cat => kind.includes(cat));
-    if (match && !matchedCategories.includes(match)) {
-      matchedCategories.push(match);
+    // Check direct mapping first
+    if (detailedCategoryMappings[kind]) {
+      const category = detailedCategoryMappings[kind];
+      if (!matchedCategories.includes(category)) {
+        matchedCategories.push(category);
+      }
     }
   }
 
-  return matchedCategories.length > 0 ? matchedCategories : ['interesting_places'];
+  // If no direct matches, try partial matching
+  if (matchedCategories.length === 0) {
+    for (const kind of kindsArray) {
+      for (const [mappedKind, category] of Object.entries(detailedCategoryMappings)) {
+        if (kind.includes(mappedKind) || mappedKind.includes(kind)) {
+          if (!matchedCategories.includes(category)) {
+            matchedCategories.push(category);
+          }
+        }
+      }
+    }
+  }
+
+  return matchedCategories.length > 0 ? matchedCategories : ['uncategorized_attractions'];
 }
 
 /**
@@ -397,24 +425,41 @@ export function isLikelyIndoorFromKinds(kinds: string, name: string): boolean {
  */
 export function getFallbackImageUrl(categories: ActivityCategory[]): string {
   const imageMap: Record<ActivityCategory, string> = {
-    interesting_places: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-    architecture: 'https://images.pexels.com/photos/161758/governor-s-mansion-montgomery-alabama-grand-staircase-161758.jpeg',
-    historic: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
-    historic_architecture: 'https://images.pexels.com/photos/1680247/pexels-photo-1680247.jpeg',
+    // Nature & Outdoors
+    nature_landscapes: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    water_features: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    beaches: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    protected_areas: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    
+    // Culture & History
+    historical_sites: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    fortifications: 'https://images.pexels.com/photos/1680247/pexels-photo-1680247.jpeg',
+    monuments_archaeology: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    religious_sites: 'https://images.pexels.com/photos/208733/pexels-photo-208733.jpeg',
+    burial_sites: 'https://images.pexels.com/photos/208733/pexels-photo-208733.jpeg',
+    
+    // Architecture & Urban
+    historical_buildings: 'https://images.pexels.com/photos/161758/governor-s-mansion-montgomery-alabama-grand-staircase-161758.jpeg',
+    modern_architecture: 'https://images.pexels.com/photos/161758/governor-s-mansion-montgomery-alabama-grand-staircase-161758.jpeg',
+    bridges: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    towers_lighthouses: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    urban_features: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
+    
+    // Museums & Art
     museums: 'https://images.pexels.com/photos/1707820/pexels-photo-1707820.jpeg',
-    cultural: 'https://images.pexels.com/photos/1707820/pexels-photo-1707820.jpeg',
-    religion: 'https://images.pexels.com/photos/208733/pexels-photo-208733.jpeg',
-    churches: 'https://images.pexels.com/photos/208733/pexels-photo-208733.jpeg',
-    cathedrals: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-    castles: 'https://images.pexels.com/photos/1680247/pexels-photo-1680247.jpeg',
-    towers: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    public_art: 'https://images.pexels.com/photos/1707820/pexels-photo-1707820.jpeg',
+    gardens_parks: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    fountains: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    
+    // Entertainment & Leisure
+    amusement_facilities: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    spa_wellness: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    sports_activities: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    nightlife: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    
+    // Other Points of Interest
     viewpoints: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-    monuments_and_memorials: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
-    natural: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
-    gardens_and_parks: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
-    urban_environment: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
-    amusements: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
-    sport: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg'
+    uncategorized_attractions: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg'
   };
 
   // 尝试找到匹配的类别图片
