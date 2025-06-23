@@ -362,19 +362,17 @@ export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
 
   // First pass: direct and specific keyword matches
   for (const kind of kindsArray) {
-    // Use detailedCategoryMappings here
     if (detailedCategoryMappings[kind]) { 
       const category = detailedCategoryMappings[kind];
-      if (!matchedCategories.includes(category)) {
+      if (!matchedCategories.has(category)) {
         matchedCategories.add(category);
       }
     }
   }
 
   // Second pass: general keyword matches for broader categories if no specific match
-  if (matchedCategories.size === 0) { // Only run second pass if no matches found in first pass
+  if (matchedCategories.size === 0) {
     for (const kind of kindsArray) {
-      // General keywords that might indicate a category
       if (kind.includes('museum') || kind.includes('gallery')) {
         matchedCategories.add('museums_arts');
       } else if (kind.includes('church') || kind.includes('cathedral') || kind.includes('temple') || kind.includes('mosque') || kind.includes('religion') || kind.includes('shrine')) {
@@ -409,10 +407,13 @@ export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
     }
   }
 
-  // Final fallback if no specific or general keyword match
+  // Final fallback if nothing matched
   if (matchedCategories.size === 0) {
     matchedCategories.add('interesting_places');
   }
+
+  return Array.from(matchedCategories);
+}
 
   // Ensure all matched categories are indeed present in the activityCategories master list
   // This is a safety net in case a mapping produces an invalid category string
