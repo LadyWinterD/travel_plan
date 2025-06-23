@@ -300,33 +300,37 @@ export function isLikelyIndoorFromKinds(kinds: string, name: string): boolean {
 }
 
 /**
- * Get fallback image URL based on category
+ * Get fallback image URL based on category - 使用真实的 Pexels 图片链接
  */
 export function getFallbackImageUrl(categories: ActivityCategory[]): string {
   const imageMap: Record<ActivityCategory, string> = {
-    interesting_places: 'https://...',
-    architecture: 'https://...',
-    historic: 'https://...',
-    historic_architecture: 'https://...',
-    museums: 'https://...',
-    cultural: 'https://...',
-    religion: 'https://...',
-    churches: 'https://...',
-    cathedrals: 'https://...',
-    castles: 'https://...',
-    towers: 'https://...',
-    viewpoints: 'https://...',
-    monuments_and_memorials: 'https://...',
-    natural: 'https://...',
-    gardens_and_parks: 'https://...',
-    urban_environment: 'https://...',
-    amusements: 'https://...',
-    sport: 'https://...'
+    interesting_places: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
+    architecture: 'https://images.pexels.com/photos/161758/governor-s-mansion-montgomery-alabama-grand-staircase-161758.jpeg',
+    historic: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    historic_architecture: 'https://images.pexels.com/photos/1680247/pexels-photo-1680247.jpeg',
+    museums: 'https://images.pexels.com/photos/1707820/pexels-photo-1707820.jpeg',
+    cultural: 'https://images.pexels.com/photos/1707820/pexels-photo-1707820.jpeg',
+    religion: 'https://images.pexels.com/photos/208733/pexels-photo-208733.jpeg',
+    churches: 'https://images.pexels.com/photos/208733/pexels-photo-208733.jpeg',
+    cathedrals: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
+    castles: 'https://images.pexels.com/photos/1680247/pexels-photo-1680247.jpeg',
+    towers: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    viewpoints: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
+    monuments_and_memorials: 'https://images.pexels.com/photos/2363/france-landmark-lights-night.jpg',
+    natural: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    gardens_and_parks: 'https://images.pexels.com/photos/1591447/pexels-photo-1591447.jpeg',
+    urban_environment: 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg',
+    amusements: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg',
+    sport: 'https://images.pexels.com/photos/163064/play-stone-network-networked-interactive-163064.jpeg'
   };
 
+  // 尝试找到匹配的类别图片
   for (const category of categories) {
-    if (imageMap[category]) return imageMap[category];
+    if (imageMap[category]) {
+      return imageMap[category];
+    }
   }
 
-  return 'https://default-image-url.com';
+  // 默认回退图片
+  return 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
 }
