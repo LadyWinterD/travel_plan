@@ -75,6 +75,99 @@ export class OpenTripMapApiError extends Error {
 }
 
 /**
+ * Fetch image from Wikimedia Commons using Wikidata ID
+ */
+export async function fetchWikimediaImage(wikidataId: string): Promise<string | null> {
+  if (!wikidataId || wikidataId.trim() === '') {
+    return null;
+  }
+
+  try {
+    console.log(`🖼️ Fetching Wikimedia image for Wikidata ID: ${wikidataId}`);
+    
+    // Step 1: Query Wikidata API to get the P18 (image) property
+    const wikidataUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${wikidataId}&props=claims&format=json&languages=en&languagefallback=1&origin=*`;
+    
+    const response = await fetch(wikidataUrl);
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch Wikidata for ${wikidataId}: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    // Check if the entity exists
+    if (!data.entities || !data.entities[wikidataId]) {
+      console.log(`❌ No Wikidata entity found for ID: ${wikidataId}`);
+      return null;
+    }
+    
+    const entity = data.entities[wikidataId];
+    
+    // Check if P18 (image) property exists
+    if (!entity.claims || !entity.claims.P18) {
+      console.log(`❌ No image (P18) property found for Wikidata ID: ${wikidataId}`);
+      return null;
+    }
+    
+    // Get the first image from P18 claims
+    const imageClaims = entity.claims.P18;
+    if (!imageClaims || imageClaims.length === 0) {
+      console.log(`❌ No image claims found for Wikidata ID: ${wikidataId}`);
+      return null;
+    }
+    
+    const firstImageClaim = imageClaims[0];
+    if (!firstImageClaim.mainsnak || !firstImageClaim.mainsnak.datavalue) {
+      console.log(`❌ Invalid image claim structure for Wikidata ID: ${wikidataId}`);
+      return null;
+    }
+    
+    // Extract the filename
+    const filename = firstImageClaim.mainsnak.datavalue.value;
+    if (!filename || typeof filename !== 'string') {
+      console.log(`❌ Invalid filename for Wikidata ID: ${wikidataId}`);
+      return null;
+    }
+    
+    // Step 2: Construct Wikimedia Commons Special:FilePath URL
+    // This automatically serves the image at the requested size
+    const encodedFilename = encodeURIComponent(filename);
+    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodedFilename}?width=800`;
+    
+    console.log(`✅ Found Wikimedia image for ${wikidataId}: ${filename}`);
+    return imageUrl;
+    
+  } catch (error) {
+    console.error(`Error fetching Wikimedia image for ${wikidataId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Alternative method: Fetch image from OpenTripMap details.image field
+ */
+export async function fetchOpenTripMapImage(imageFilename: string): Promise<string | null> {
+  if (!imageFilename || imageFilename.trim() === '') {
+    return null;
+  }
+
+  try {
+    // OpenTripMap sometimes provides just the filename, we need to construct the full URL
+    const encodedFilename = encodeURIComponent(imageFilename);
+    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodedFilename}?width=800`;
+    
+    console.log(`🖼️ Constructed OpenTripMap image URL: ${imageUrl}`);
+    return imageUrl;
+    
+  } catch (error) {
+    console.error(`Error constructing OpenTripMap image URL for ${imageFilename}:`, error);
+    return null;
+  }
+}
+
+/**
  * Get coordinates for a city using OpenTripMap geoname endpoint
  */
 export async function getCoordinatesForCity(cityName: string): Promise<CityCoordinates | null> {

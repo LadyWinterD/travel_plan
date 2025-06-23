@@ -6,6 +6,8 @@ import {
   extractCategoriesFromKinds,
   isLikelyIndoorFromKinds,
   getFallbackImageUrl,
+  fetchWikimediaImage,
+  fetchOpenTripMapImage,
 } from '../services/openTripMapApi';
 import { getCachedApiResponse, cacheApiResponse } from './storage';
 import { ActivityCategory } from '../data/activityCategories';
@@ -161,7 +163,7 @@ function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
 }
 
 /**
- * Fetch real activities for a city using OpenTripMap API - Enhanced version
+ * Fetch real activities for a city using OpenTripMap API - Enhanced version with Wikimedia images
  * Includes 7-day caching to improve performance
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
@@ -193,11 +195,42 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
         const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
         const isIndoor = isLikelyIndoorFromKinds(attraction.kinds, attraction.name);
         
-        let imageUrl = getFallbackImageUrl(categories);
-        if (details?.preview?.source) {
+        // Enhanced image fetching with priority order:
+        // 1. Wikimedia Commons (from wikidata ID)
+        // 2. OpenTripMap preview image
+        // 3. OpenTripMap image field (construct Wikimedia URL)
+        // 4. Fallback Pexels image
+        let imageUrl = getFallbackImageUrl(categories); // Default fallback
+        
+        // Priority 1: Try Wikimedia Commons if wikidata ID exists
+        if (attraction.wikidata) {
+          console.log(`🔍 Trying Wikimedia for ${attraction.name} (Wikidata: ${attraction.wikidata})`);
+          const wikimediaImageUrl = await fetchWikimediaImage(attraction.wikidata);
+          if (wikimediaImageUrl) {
+            imageUrl = wikimediaImageUrl;
+            console.log(`✅ Using Wikimedia image for ${attraction.name}`);
+          }
+        }
+        
+        // Priority 2: Try OpenTripMap preview if no Wikimedia image found
+        if (imageUrl === getFallbackImageUrl(categories) && details?.preview?.source) {
           imageUrl = details.preview.source;
-        } else if (details?.image) {
-          imageUrl = details.image;
+          console.log(`✅ Using OpenTripMap preview for ${attraction.name}`);
+        }
+        
+        // Priority 3: Try OpenTripMap image field (construct Wikimedia URL)
+        if (imageUrl === getFallbackImageUrl(categories) && details?.image) {
+          console.log(`🔍 Trying OpenTripMap image field for ${attraction.name} (${details.image})`);
+          const openTripMapImageUrl = await fetchOpenTripMapImage(details.image);
+          if (openTripMapImageUrl) {
+            imageUrl = openTripMapImageUrl;
+            console.log(`✅ Using OpenTripMap image field for ${attraction.name}`);
+          }
+        }
+        
+        // If still using fallback, log it
+        if (imageUrl === getFallbackImageUrl(categories)) {
+          console.log(`⚠️ Using fallback image for ${attraction.name}`);
         }
 
         const description = details?.wikipedia_extracts?.text 
@@ -219,7 +252,8 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
             lng: attraction.point.lon
           }
         };
-      } catch {
+      } catch (error) {
+        console.error(`Error processing attraction ${attraction.name}:`, error);
         const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
         return {
           id: `otm_${attraction.xid}`,
@@ -246,6 +280,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 
     if (validActivities.length === 0) return [];
 
+    console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName}`);
     cacheApiResponse(cacheKey, validActivities, 7);
     return validActivities;
   } catch (error) {
