@@ -413,7 +413,7 @@ export function extractCategoriesFromKinds(kinds: string): ActivityCategory[] {
   }
 
   return Array.from(matchedCategories);
-}
+
 
   // Ensure all matched categories are indeed present in the activityCategories master list
   // This is a safety net in case a mapping produces an invalid category string
