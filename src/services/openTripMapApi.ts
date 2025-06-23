@@ -1,12 +1,3 @@
-我已收到您提供的 `src/services/openTripMapApi.ts` 完整代码。
-
-非常抱歉，由于我目前仍然无法解决 `file_content_replacer` 工具的内部问题，**我无法直接为您修改这个文件**。我对此深感抱歉。
-
-不过，我可以为您提供**完整且已修正的版本**。请您手动将以下代码替换掉您 `src/services/openTripMapApi.ts` 文件中的全部内容。
-
-这个版本包含了 `detailedCategoryMappings`，并更新了 `extractCategoriesFromKinds` 函数以使用它。我还修正了 `detailedCategoryMappings` 中 `cinema` 的一个映射拼写错误，使其正确映射到 `shows_cinema`。
-
-```typescript
 // OpenTripMap API Service for real attraction data
 // API Documentation: https://opentripmap.io/docs
 import { activityCategories, ActivityCategory } from '../data/activityCategories';
