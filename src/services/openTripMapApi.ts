@@ -75,6 +75,43 @@ export class OpenTripMapApiError extends Error {
 }
 
 /**
+ * Extract filename from Special:FilePath URLs
+ * Converts URLs like "https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg?width=800"
+ * to just "Example.jpg" for use with direct Wikimedia APIs
+ */
+export function extractFilenameFromSpecialFilePath(url: string): string | null {
+  try {
+    // Handle Special:FilePath URLs
+    if (url.includes('Special:FilePath/')) {
+      const match = url.match(/Special:FilePath\/([^?]+)/);
+      if (match && match[1]) {
+        return decodeURIComponent(match[1]);
+      }
+    }
+    
+    // Handle direct file URLs
+    if (url.includes('/File:')) {
+      const match = url.match(/\/File:([^?]+)/);
+      if (match && match[1]) {
+        return decodeURIComponent(match[1]);
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting filename from URL:', url, error);
+    return null;
+  }
+}
+
+/**
+ * Validate if a URL is a direct upload.wikimedia.org URL
+ */
+export function isDirectWikimediaUrl(url: string): boolean {
+  return url.includes('upload.wikimedia.org') && !url.includes('Special:FilePath');
+}
+
+/**
  * Fetch image from Wikimedia Commons using Wikidata ID
  * Returns direct image URL instead of Special:FilePath redirect
  */
@@ -151,6 +188,7 @@ export async function fetchWikimediaImage(wikidataId: string): Promise<string | 
 
 /**
  * Get direct image URL from Wikimedia Commons API
+ * Enhanced to ensure we get upload.wikimedia.org URLs
  */
 async function getDirectWikimediaImageUrl(filename: string): Promise<string | null> {
   try {
@@ -183,11 +221,22 @@ async function getDirectWikimediaImageUrl(filename: string): Promise<string | nu
     const imageInfo = page.imageinfo[0];
     
     // Prefer thumburl (resized) over url (original) for better performance
-    const directUrl = imageInfo.thumburl || imageInfo.url;
+    let directUrl = imageInfo.thumburl || imageInfo.url;
     
     if (!directUrl) {
       console.log(`❌ No direct URL found for: ${filename}`);
       return null;
+    }
+    
+    // Ensure we have a direct upload.wikimedia.org URL
+    if (!isDirectWikimediaUrl(directUrl)) {
+      console.log(`⚠️ URL is not a direct Wikimedia URL: ${directUrl}`);
+      // Try to get the original URL instead
+      directUrl = imageInfo.url;
+      if (!directUrl || !isDirectWikimediaUrl(directUrl)) {
+        console.log(`❌ Could not get direct Wikimedia URL for: ${filename}`);
+        return null;
+      }
     }
     
     console.log(`✅ Got direct image URL for ${filename}: ${directUrl}`);
@@ -226,6 +275,28 @@ export async function fetchOpenTripMapImage(imageFilename: string): Promise<stri
     console.error(`Error getting direct OpenTripMap image URL for ${imageFilename}:`, error);
     return null;
   }
+}
+
+/**
+ * Process potentially problematic image URLs to get direct Wikimedia URLs
+ */
+export async function processImageUrl(url: string): Promise<string | null> {
+  if (!url) return null;
+  
+  // If it's already a direct Wikimedia URL, return as-is
+  if (isDirectWikimediaUrl(url)) {
+    return url;
+  }
+  
+  // If it's a Special:FilePath URL, extract filename and get direct URL
+  const filename = extractFilenameFromSpecialFilePath(url);
+  if (filename) {
+    console.log(`🔄 Processing Special:FilePath URL: ${url} -> ${filename}`);
+    return await getDirectWikimediaImageUrl(filename);
+  }
+  
+  // If it's not a Wikimedia URL at all, return as-is (might be Pexels or other)
+  return url;
 }
 
 /**

@@ -160,6 +160,59 @@ const formatDate = (dateString: string) => {
   });
 };
 
+/**
+ * Preload all images in the itinerary content before PDF export
+ * This ensures images are fully loaded and prevents blank areas in the PDF
+ */
+const preloadImages = async (element: HTMLElement): Promise<void> => {
+  const images = element.querySelectorAll('img, [style*="background-image"]');
+  const imagePromises: Promise<void>[] = [];
+
+  images.forEach((img) => {
+    let imageUrl: string | null = null;
+
+    if (img instanceof HTMLImageElement) {
+      imageUrl = img.src;
+    } else {
+      // Handle background images
+      const style = window.getComputedStyle(img);
+      const backgroundImage = style.backgroundImage;
+      const match = backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+      if (match && match[1]) {
+        imageUrl = match[1];
+      }
+    }
+
+    if (imageUrl) {
+      const promise = new Promise<void>((resolve) => {
+        const testImg = new Image();
+        testImg.crossOrigin = 'anonymous';
+        
+        testImg.onload = () => {
+          console.log(`✅ Image preloaded successfully: ${imageUrl}`);
+          resolve();
+        };
+        
+        testImg.onerror = () => {
+          console.warn(`⚠️ Failed to preload image: ${imageUrl}`);
+          // Don't reject, just resolve to continue with other images
+          resolve();
+        };
+        
+        testImg.src = imageUrl;
+      });
+      
+      imagePromises.push(promise);
+    }
+  });
+
+  if (imagePromises.length > 0) {
+    console.log(`🔄 Preloading ${imagePromises.length} images...`);
+    await Promise.all(imagePromises);
+    console.log(`✅ All images preloaded successfully`);
+  }
+};
+
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
   const { dailyItinerary, updateItinerary, destinations, weatherData } = useAppContext();
@@ -168,6 +221,7 @@ const ItineraryPage: React.FC = () => {
   const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
   const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isPreloadingImages, setIsPreloadingImages] = useState(false);
   
   // Ref for the content to be exported as PDF
   const itineraryContentRef = useRef<HTMLDivElement>(null);
@@ -330,7 +384,7 @@ const ItineraryPage: React.FC = () => {
     updateItinerary(newItinerary);
   };
 
-  // PDF Export functionality
+  // Enhanced PDF Export functionality with image preloading
   const handleExportPDF = async () => {
     if (!itineraryContentRef.current) {
       console.error('Itinerary content ref is not available');
@@ -338,19 +392,36 @@ const ItineraryPage: React.FC = () => {
     }
 
     setIsExporting(true);
+    setIsPreloadingImages(true);
 
     try {
       const element = itineraryContentRef.current;
       
+      // Step 1: Preload all images to prevent blank areas in PDF
+      console.log('🔄 Starting image preloading...');
+      await preloadImages(element);
+      setIsPreloadingImages(false);
+      
+      // Step 2: Wait a bit more to ensure all images are rendered
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Step 3: Generate PDF with high quality settings
+      console.log('🔄 Starting PDF generation...');
       const options = {
         margin: [0.5, 0.5, 0.5, 0.5],
         filename: 'travel_itinerary.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { 
+          type: 'jpeg', 
+          quality: 0.98 
+        },
         html2canvas: { 
-          scale: 2,
+          scale: 2, // High quality scaling
           useCORS: true,
           allowTaint: true,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          logging: false, // Reduce console noise
+          imageTimeout: 15000, // Longer timeout for images
+          removeContainer: true
         },
         jsPDF: { 
           unit: 'in', 
@@ -361,12 +432,13 @@ const ItineraryPage: React.FC = () => {
 
       await html2pdf().set(options).from(element).save();
       
-      console.log('PDF exported successfully');
+      console.log('✅ PDF exported successfully');
     } catch (error) {
-      console.error('Error exporting PDF:', error);
+      console.error('❌ Error exporting PDF:', error);
       alert('Failed to export PDF. Please try again.');
     } finally {
       setIsExporting(false);
+      setIsPreloadingImages(false);
     }
   };
 
@@ -379,6 +451,13 @@ const ItineraryPage: React.FC = () => {
     return acc;
   }, {} as Record<string, TripDay[]>);
 
+  // Get export button text based on current state
+  const getExportButtonText = () => {
+    if (isPreloadingImages) return 'Preparing Images...';
+    if (isExporting) return 'Generating PDF...';
+    return 'Export as PDF';
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -388,21 +467,21 @@ const ItineraryPage: React.FC = () => {
         {dailyItinerary.length > 0 && (
           <button
             onClick={handleExportPDF}
-            disabled={isExporting}
+            disabled={isExporting || isPreloadingImages}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
-              isExporting
+              isExporting || isPreloadingImages
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-teal-500 text-white hover:bg-teal-600 shadow-lg hover:shadow-xl'
             }`}
           >
             <Download size={20} />
-            {isExporting ? 'Exporting...' : 'Export as PDF'}
+            {getExportButtonText()}
           </button>
         )}
       </div>
       
       {/* Main content container for PDF export */}
-      <div ref={itineraryContentRef}>
+      <div ref={itineraryContentRef} id="pdf-preview">
         {dailyItinerary.length > 0 ? (
           <DndContext
             sensors={sensors}
