@@ -76,6 +76,7 @@ export class OpenTripMapApiError extends Error {
 
 /**
  * Fetch image from Wikimedia Commons using Wikidata ID
+ * Returns direct image URL instead of Special:FilePath redirect
  */
 export async function fetchWikimediaImage(wikidataId: string): Promise<string | null> {
   if (!wikidataId || wikidataId.trim() === '') {
@@ -131,13 +132,16 @@ export async function fetchWikimediaImage(wikidataId: string): Promise<string | 
       return null;
     }
     
-    // Step 2: Construct Wikimedia Commons Special:FilePath URL
-    // This automatically serves the image at the requested size
-    const encodedFilename = encodeURIComponent(filename);
-    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodedFilename}?width=800`;
+    // Step 2: Get direct image URL from Wikimedia Commons API
+    const directImageUrl = await getDirectWikimediaImageUrl(filename);
     
-    console.log(`✅ Found Wikimedia image for ${wikidataId}: ${filename}`);
-    return imageUrl;
+    if (directImageUrl) {
+      console.log(`✅ Found direct Wikimedia image for ${wikidataId}: ${filename}`);
+      return directImageUrl;
+    } else {
+      console.log(`❌ Could not get direct image URL for ${filename}`);
+      return null;
+    }
     
   } catch (error) {
     console.error(`Error fetching Wikimedia image for ${wikidataId}:`, error);
@@ -146,7 +150,58 @@ export async function fetchWikimediaImage(wikidataId: string): Promise<string | 
 }
 
 /**
+ * Get direct image URL from Wikimedia Commons API
+ */
+async function getDirectWikimediaImageUrl(filename: string): Promise<string | null> {
+  try {
+    // Use Wikimedia Commons API to get image info with direct URL
+    const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(filename)}&prop=imageinfo&iiprop=url&iiurlwidth=800&format=json&origin=*`;
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch image info for ${filename}: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (!data.query || !data.query.pages) {
+      console.log(`❌ No pages found for image: ${filename}`);
+      return null;
+    }
+    
+    // Get the first (and should be only) page
+    const pages = Object.values(data.query.pages) as any[];
+    const page = pages[0];
+    
+    if (!page || !page.imageinfo || page.imageinfo.length === 0) {
+      console.log(`❌ No image info found for: ${filename}`);
+      return null;
+    }
+    
+    const imageInfo = page.imageinfo[0];
+    
+    // Prefer thumburl (resized) over url (original) for better performance
+    const directUrl = imageInfo.thumburl || imageInfo.url;
+    
+    if (!directUrl) {
+      console.log(`❌ No direct URL found for: ${filename}`);
+      return null;
+    }
+    
+    console.log(`✅ Got direct image URL for ${filename}: ${directUrl}`);
+    return directUrl;
+    
+  } catch (error) {
+    console.error(`Error getting direct image URL for ${filename}:`, error);
+    return null;
+  }
+}
+
+/**
  * Alternative method: Fetch image from OpenTripMap details.image field
+ * Returns direct image URL instead of Special:FilePath redirect
  */
 export async function fetchOpenTripMapImage(imageFilename: string): Promise<string | null> {
   if (!imageFilename || imageFilename.trim() === '') {
@@ -154,15 +209,21 @@ export async function fetchOpenTripMapImage(imageFilename: string): Promise<stri
   }
 
   try {
-    // OpenTripMap sometimes provides just the filename, we need to construct the full URL
-    const encodedFilename = encodeURIComponent(imageFilename);
-    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodedFilename}?width=800`;
+    console.log(`🖼️ Getting direct image URL for OpenTripMap image: ${imageFilename}`);
     
-    console.log(`🖼️ Constructed OpenTripMap image URL: ${imageUrl}`);
-    return imageUrl;
+    // Get direct image URL instead of Special:FilePath redirect
+    const directImageUrl = await getDirectWikimediaImageUrl(imageFilename);
+    
+    if (directImageUrl) {
+      console.log(`✅ Got direct OpenTripMap image URL: ${directImageUrl}`);
+      return directImageUrl;
+    } else {
+      console.log(`❌ Could not get direct image URL for: ${imageFilename}`);
+      return null;
+    }
     
   } catch (error) {
-    console.error(`Error constructing OpenTripMap image URL for ${imageFilename}:`, error);
+    console.error(`Error getting direct OpenTripMap image URL for ${imageFilename}:`, error);
     return null;
   }
 }
@@ -497,3 +558,123 @@ export function getFallbackImageUrl(categories: ActivityCategory[]): string {
   // Default fallback image
   return 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
 }
+
+// Missing detailedCategoryMappings object that's referenced in extractCategoriesFromKinds
+const detailedCategoryMappings: Record<string, ActivityCategory> = {
+  // Museums & Arts
+  'museums': 'museums_arts',
+  'galleries': 'museums_arts',
+  'art_galleries': 'museums_arts',
+  'cultural': 'museums_arts',
+  
+  // Historical Sites
+  'historic': 'historical_sites',
+  'historical': 'historical_sites',
+  'ancient': 'historical_sites',
+  'archaeological': 'historical_sites',
+  'heritage': 'historical_sites',
+  'monuments': 'historical_sites',
+  'memorials': 'historical_sites',
+  'ruins': 'historical_sites',
+  'battlefield': 'historical_sites',
+  
+  // Religious Sites
+  'religion': 'religious_sites',
+  'churches': 'religious_sites',
+  'cathedrals': 'religious_sites',
+  'temples': 'religious_sites',
+  'monasteries': 'religious_sites',
+  'mosques': 'religious_sites',
+  'shrines': 'religious_sites',
+  
+  // Castles & Palaces
+  'castles': 'castles_palaces',
+  'palaces': 'castles_palaces',
+  'fortifications': 'castles_palaces',
+  'forts': 'castles_palaces',
+  
+  // Architectural Landmarks
+  'architecture': 'architectural_landmarks',
+  'towers': 'architectural_landmarks',
+  'bridges': 'architectural_landmarks',
+  'buildings': 'architectural_landmarks',
+  
+  // Natural Landscapes
+  'natural': 'natural_landscapes',
+  'mountains': 'natural_landscapes',
+  'lakes': 'natural_landscapes',
+  'rivers': 'natural_landscapes',
+  'beaches': 'natural_landscapes',
+  'islands': 'natural_landscapes',
+  'forests': 'natural_landscapes',
+  'geological': 'natural_landscapes',
+  
+  // Parks & Gardens
+  'parks': 'parks_gardens',
+  'gardens': 'parks_gardens',
+  'national_parks': 'parks_gardens',
+  'nature_reserves': 'parks_gardens',
+  'wildlife': 'parks_gardens',
+  'botanical_gardens': 'parks_gardens',
+  
+  // Outdoor Sports
+  'sport': 'outdoor_sports',
+  'recreation': 'outdoor_sports',
+  'stadium': 'outdoor_sports',
+  'golf': 'outdoor_sports',
+  'ski': 'outdoor_sports',
+  'diving': 'outdoor_sports',
+  'surfing': 'outdoor_sports',
+  'climbing': 'outdoor_sports',
+  'swimming': 'outdoor_sports',
+  
+  // City Centers
+  'urban_environment': 'city_centers',
+  'city_center': 'city_centers',
+  'squares': 'city_centers',
+  'streets': 'city_centers',
+  'districts': 'city_centers',
+  
+  // Viewpoints & Towers
+  'viewpoints': 'viewpoints_towers',
+  'observation_decks': 'viewpoints_towers',
+  'lookouts': 'viewpoints_towers',
+  'scenic': 'viewpoints_towers',
+  
+  // Theme Parks & Zoos
+  'amusements': 'theme_parks_zoos',
+  'theme_parks': 'theme_parks_zoos',
+  'zoos': 'theme_parks_zoos',
+  'aquariums': 'theme_parks_zoos',
+  'water_parks': 'theme_parks_zoos',
+  
+  // Nightlife
+  'nightlife': 'nightlife',
+  'bars': 'nightlife',
+  'clubs': 'nightlife',
+  'casinos': 'nightlife',
+  
+  // Shows & Cinema
+  'theaters': 'shows_cinema',
+  'cinemas': 'shows_cinema',
+  'shows': 'shows_cinema',
+  'opera': 'shows_cinema',
+  
+  // Shopping
+  'shopping': 'shopping',
+  'malls': 'shopping',
+  'markets': 'shopping',
+  
+  // Food & Dining
+  'restaurants': 'food_dining',
+  'cafes': 'food_dining',
+  'food': 'food_dining',
+  'dining': 'food_dining',
+  'culinary': 'food_dining',
+  
+  // Interesting Places (fallback)
+  'interesting_places': 'interesting_places',
+  'tourist_attraction': 'interesting_places',
+  'tourist_facilities': 'interesting_places',
+  'entertainment': 'interesting_places'
+};
