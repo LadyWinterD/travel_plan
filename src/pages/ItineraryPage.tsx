@@ -5,6 +5,7 @@ import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertic
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import html2pdf from 'html2pdf.js';
+import { getFallbackImageUrl } from '../services/openTripMapApi';
 import {
   DndContext,
   closestCenter,
@@ -103,10 +104,17 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
             <GripVertical size={16} className="text-gray-400" />
           </div>
           
-          <div 
-            className="w-16 h-16 rounded-lg bg-center bg-cover flex-shrink-0"
-            style={{ backgroundImage: `url(${activity.activity.image})` }}
-          ></div>
+          <img
+            src={activity.activity.image}
+            alt={activity.activity.name}
+            crossOrigin="anonymous"
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.onerror = null; // Prevent infinite loop if fallback also fails
+              img.src = getFallbackImageUrl(activity.activity.categories);
+            }}
+            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+          />
           
           <div className="flex-grow min-w-0">
             <h4 className="font-medium text-gray-900 truncate">{activity.activity.name}</h4>
