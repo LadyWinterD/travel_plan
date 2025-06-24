@@ -75,6 +75,19 @@ export class OpenTripMapApiError extends Error {
 }
 
 /**
+ * Process image URL - validates and returns the URL or null if invalid
+ */
+export async function processImageUrl(url: string): Promise<string | null> {
+  if (!url || url.trim() === '') {
+    return null;
+  }
+  
+  // Return the URL as-is for now
+  // This function can be enhanced later with additional processing logic
+  return url;
+}
+
+/**
  * Check if a URL is a direct Wikimedia image URL
  * Enhanced to accept both upload.wikimedia.org and commons.wikimedia.org/static/images/ URLs
  */
