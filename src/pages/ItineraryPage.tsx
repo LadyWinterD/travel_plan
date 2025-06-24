@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella } from 'lucide-react';
+import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella, Download } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import html2pdf from 'html2pdf.js';
 import {
   DndContext,
   closestCenter,
@@ -166,6 +167,10 @@ const ItineraryPage: React.FC = () => {
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
   const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
   const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  
+  // Ref for the content to be exported as PDF
+  const itineraryContentRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -191,7 +196,7 @@ const ItineraryPage: React.FC = () => {
     return days.map(day => {
       const totalDuration = calculateDayDuration(day.activities);
       const destination = destinations.find(d => d.id === day.destinationId);
-      const weatherInfo = destination && weatherData ? weatherData[destination.name]?.[0] : null;
+      const weatherInfo = destination && weatherData ? weatherData[destination.name] : null;
       const hasOutdoorActivitiesInRain = weatherInfo?.isRainy && 
         day.activities.some(activity => !activity.activity.indoor);
 
@@ -325,6 +330,46 @@ const ItineraryPage: React.FC = () => {
     updateItinerary(newItinerary);
   };
 
+  // PDF Export functionality
+  const handleExportPDF = async () => {
+    if (!itineraryContentRef.current) {
+      console.error('Itinerary content ref is not available');
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const element = itineraryContentRef.current;
+      
+      const options = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: 'travel_itinerary.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: { 
+          unit: 'in', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        }
+      };
+
+      await html2pdf().set(options).from(element).save();
+      
+      console.log('PDF exported successfully');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Group days by destination
   const daysByDestination = dailyItinerary.reduce((acc, day) => {
     if (!acc[day.destinationId]) {
@@ -336,108 +381,129 @@ const ItineraryPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">Your Itinerary</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Your Itinerary</h1>
+        
+        {/* Export PDF Button */}
+        {dailyItinerary.length > 0 && (
+          <button
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              isExporting
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : 'bg-teal-500 text-white hover:bg-teal-600 shadow-lg hover:shadow-xl'
+            }`}
+          >
+            <Download size={20} />
+            {isExporting ? 'Exporting...' : 'Export as PDF'}
+          </button>
+        )}
+      </div>
       
-      {dailyItinerary.length > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-          modifiers={[restrictToVerticalAxis]}
-          measuring={{
-            droppable: {
-              strategy: MeasuringStrategy.Always
-            }
-          }}
-        >
-          <div className="space-y-8">
-            {Object.entries(daysByDestination).map(([destinationId, days]) => {
-              const location = getLocationForDay(destinationId);
-              return (
-                <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden">
-                  <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white">
-                    <h2 className="text-xl font-semibold">{location}</h2>
-                    <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
-                  </div>
-                  
-                  <div className="divide-y divide-gray-100">
-                    {days.map((day, index) => (
-                      <div 
-                        key={day.id}
-                        className={`p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
-                      >
-                        <div className="mb-6">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="text-lg font-semibold">Day {index + 1}</h3>
-                              <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+      {/* Main content container for PDF export */}
+      <div ref={itineraryContentRef}>
+        {dailyItinerary.length > 0 ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+            measuring={{
+              droppable: {
+                strategy: MeasuringStrategy.Always
+              }
+            }}
+          >
+            <div className="space-y-8">
+              {Object.entries(daysByDestination).map(([destinationId, days]) => {
+                const location = getLocationForDay(destinationId);
+                return (
+                  <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                    <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white">
+                      <h2 className="text-xl font-semibold">{location}</h2>
+                      <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
+                    </div>
+                    
+                    <div className="divide-y divide-gray-100">
+                      {days.map((day, index) => (
+                        <div 
+                          key={day.id}
+                          className={`p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
+                        >
+                          <div className="mb-6">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="text-lg font-semibold">Day {index + 1}</h3>
+                                <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+                              </div>
+                              {day.weatherData && (
+                                <WeatherDisplay weather={day.weatherData} />
+                              )}
                             </div>
-                            {day.weatherData && (
-                              <WeatherDisplay weather={day.weatherData} />
+                            {day.warning && (
+                              <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
+                                <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
+                                {day.warning}
+                              </div>
                             )}
                           </div>
-                          {day.warning && (
-                            <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
-                              <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
-                              {day.warning}
+                          
+                          <SortableContext 
+                            items={day.activities.map(a => a.activityId)} 
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div>
+                              {day.activities.map((activity) => (
+                                <SortableActivity
+                                  key={activity.activityId}
+                                  activity={activity}
+                                  onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                                  isDragging={activity.activityId === activeId}
+                                  location={location}
+                                  weather={day.weatherData}
+                                />
+                              ))}
                             </div>
-                          )}
+                          </SortableContext>
                         </div>
-                        
-                        <SortableContext 
-                          items={day.activities.map(a => a.activityId)} 
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <div>
-                            {day.activities.map((activity) => (
-                              <SortableActivity
-                                key={activity.activityId}
-                                activity={activity}
-                                onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
-                                isDragging={activity.activityId === activeId}
-                                location={location}
-                                weather={day.weatherData}
-                              />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            
+            <DragOverlay dropAnimation={{
+              duration: 200,
+              easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}>
+              {draggedActivity ? (
+                <DragOverlayContent 
+                  activity={draggedActivity} 
+                  location={draggedLocation}
+                  weather={dailyItinerary.find(day => 
+                    day.activities.some(a => a.activityId === draggedActivity.activityId)
+                  )?.weatherData}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+            <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 mb-4">No activities scheduled yet.</p>
+            <button
+              onClick={() => navigate('/activities')}
+              className="px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
+            >
+              Add Activities
+            </button>
           </div>
-          
-          <DragOverlay dropAnimation={{
-            duration: 200,
-            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
-          }}>
-            {draggedActivity ? (
-              <DragOverlayContent 
-                activity={draggedActivity} 
-                location={draggedLocation}
-                weather={dailyItinerary.find(day => 
-                  day.activities.some(a => a.activityId === draggedActivity.activityId)
-                )?.weatherData}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-          <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
-          <p className="text-gray-600 mb-4">No activities scheduled yet.</p>
-          <button
-            onClick={() => navigate('/activities')}
-            className="px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
-          >
-            Add Activities
-          </button>
-        </div>
-      )}
+        )}
+      </div>
       
       {/* Navigation Buttons */}
       <div className="mt-8 flex justify-between">
