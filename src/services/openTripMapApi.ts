@@ -75,45 +75,18 @@ export class OpenTripMapApiError extends Error {
 }
 
 /**
- * Extract filename from Special:FilePath URLs
- * Converts URLs like "https://commons.wikimedia.org/wiki/Special:FilePath/Example.jpg?width=800"
- * to just "Example.jpg" for use with direct Wikimedia APIs
- */
-export function extractFilenameFromSpecialFilePath(url: string): string | null {
-  try {
-    // Handle Special:FilePath URLs
-    if (url.includes('Special:FilePath/')) {
-      const match = url.match(/Special:FilePath\/([^?]+)/);
-      if (match && match[1]) {
-        return decodeURIComponent(match[1]);
-      }
-    }
-    
-    // Handle direct file URLs
-    if (url.includes('/File:')) {
-      const match = url.match(/\/File:([^?]+)/);
-      if (match && match[1]) {
-        return decodeURIComponent(match[1]);
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error extracting filename from URL:', url, error);
-    return null;
-  }
-}
-
-/**
- * Validate if a URL is a direct upload.wikimedia.org URL
+ * Check if a URL is a direct Wikimedia image URL
+ * Enhanced to accept both upload.wikimedia.org and commons.wikimedia.org/static/images/ URLs
  */
 export function isDirectWikimediaUrl(url: string): boolean {
-  return url.includes('upload.wikimedia.org') && !url.includes('Special:FilePath');
+  return (
+    url.includes('upload.wikimedia.org') || 
+    (url.includes('commons.wikimedia.org') && url.includes('/static/images/'))
+  ) && !url.includes('Special:FilePath');
 }
 
 /**
  * Fetch image from Wikimedia Commons using Wikidata ID
- * Returns direct image URL instead of Special:FilePath redirect
  */
 export async function fetchWikimediaImage(wikidataId: string): Promise<string | null> {
   if (!wikidataId || wikidataId.trim() === '') {
@@ -169,16 +142,13 @@ export async function fetchWikimediaImage(wikidataId: string): Promise<string | 
       return null;
     }
     
-    // Step 2: Get direct image URL from Wikimedia Commons API
-    const directImageUrl = await getDirectWikimediaImageUrl(filename);
+    // Step 2: Construct Wikimedia Commons Special:FilePath URL
+    // This automatically serves the image at the requested size
+    const encodedFilename = encodeURIComponent(filename);
+    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodedFilename}?width=800`;
     
-    if (directImageUrl) {
-      console.log(`✅ Found direct Wikimedia image for ${wikidataId}: ${filename}`);
-      return directImageUrl;
-    } else {
-      console.log(`❌ Could not get direct image URL for ${filename}`);
-      return null;
-    }
+    console.log(`✅ Found Wikimedia image for ${wikidataId}: ${filename}`);
+    return imageUrl;
     
   } catch (error) {
     console.error(`Error fetching Wikimedia image for ${wikidataId}:`, error);
@@ -187,70 +157,7 @@ export async function fetchWikimediaImage(wikidataId: string): Promise<string | 
 }
 
 /**
- * Get direct image URL from Wikimedia Commons API
- * Enhanced to ensure we get upload.wikimedia.org URLs
- */
-async function getDirectWikimediaImageUrl(filename: string): Promise<string | null> {
-  try {
-    // Use Wikimedia Commons API to get image info with direct URL
-    const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(filename)}&prop=imageinfo&iiprop=url&iiurlwidth=800&format=json&origin=*`;
-    
-    const response = await fetch(apiUrl);
-    
-    if (!response.ok) {
-      console.warn(`Failed to fetch image info for ${filename}: ${response.status}`);
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (!data.query || !data.query.pages) {
-      console.log(`❌ No pages found for image: ${filename}`);
-      return null;
-    }
-    
-    // Get the first (and should be only) page
-    const pages = Object.values(data.query.pages) as any[];
-    const page = pages[0];
-    
-    if (!page || !page.imageinfo || page.imageinfo.length === 0) {
-      console.log(`❌ No image info found for: ${filename}`);
-      return null;
-    }
-    
-    const imageInfo = page.imageinfo[0];
-    
-    // Prefer thumburl (resized) over url (original) for better performance
-    let directUrl = imageInfo.thumburl || imageInfo.url;
-    
-    if (!directUrl) {
-      console.log(`❌ No direct URL found for: ${filename}`);
-      return null;
-    }
-    
-    // Ensure we have a direct upload.wikimedia.org URL
-    if (!isDirectWikimediaUrl(directUrl)) {
-      console.log(`⚠️ URL is not a direct Wikimedia URL: ${directUrl}`);
-      // Try to get the original URL instead
-      directUrl = imageInfo.url;
-      if (!directUrl || !isDirectWikimediaUrl(directUrl)) {
-        console.log(`❌ Could not get direct Wikimedia URL for: ${filename}`);
-        return null;
-      }
-    }
-    
-    console.log(`✅ Got direct image URL for ${filename}: ${directUrl}`);
-    return directUrl;
-    
-  } catch (error) {
-    console.error(`Error getting direct image URL for ${filename}:`, error);
-    return null;
-  }
-}
-
-/**
  * Alternative method: Fetch image from OpenTripMap details.image field
- * Returns direct image URL instead of Special:FilePath redirect
  */
 export async function fetchOpenTripMapImage(imageFilename: string): Promise<string | null> {
   if (!imageFilename || imageFilename.trim() === '') {
@@ -258,45 +165,17 @@ export async function fetchOpenTripMapImage(imageFilename: string): Promise<stri
   }
 
   try {
-    console.log(`🖼️ Getting direct image URL for OpenTripMap image: ${imageFilename}`);
+    // OpenTripMap sometimes provides just the filename, we need to construct the full URL
+    const encodedFilename = encodeURIComponent(imageFilename);
+    const imageUrl = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodedFilename}?width=800`;
     
-    // Get direct image URL instead of Special:FilePath redirect
-    const directImageUrl = await getDirectWikimediaImageUrl(imageFilename);
-    
-    if (directImageUrl) {
-      console.log(`✅ Got direct OpenTripMap image URL: ${directImageUrl}`);
-      return directImageUrl;
-    } else {
-      console.log(`❌ Could not get direct image URL for: ${imageFilename}`);
-      return null;
-    }
+    console.log(`🖼️ Constructed OpenTripMap image URL: ${imageUrl}`);
+    return imageUrl;
     
   } catch (error) {
-    console.error(`Error getting direct OpenTripMap image URL for ${imageFilename}:`, error);
+    console.error(`Error constructing OpenTripMap image URL for ${imageFilename}:`, error);
     return null;
   }
-}
-
-/**
- * Process potentially problematic image URLs to get direct Wikimedia URLs
- */
-export async function processImageUrl(url: string): Promise<string | null> {
-  if (!url) return null;
-  
-  // If it's already a direct Wikimedia URL, return as-is
-  if (isDirectWikimediaUrl(url)) {
-    return url;
-  }
-  
-  // If it's a Special:FilePath URL, extract filename and get direct URL
-  const filename = extractFilenameFromSpecialFilePath(url);
-  if (filename) {
-    console.log(`🔄 Processing Special:FilePath URL: ${url} -> ${filename}`);
-    return await getDirectWikimediaImageUrl(filename);
-  }
-  
-  // If it's not a Wikimedia URL at all, return as-is (might be Pexels or other)
-  return url;
 }
 
 /**
@@ -485,6 +364,257 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
   }
 }
 
+// Enhanced mapping from OpenTripMap kinds to our ActivityCategory types
+export const detailedCategoryMappings: Record<string, ActivityCategory> = {
+  // Museums & Arts
+  "museums": "museums_arts",
+  "museum": "museums_arts",
+  "art_galleries": "museums_arts",
+  "galleries": "museums_arts",
+  "gallery": "museums_arts",
+  "expositions": "museums_arts",
+  "exhibition": "museums_arts",
+  "cultural": "museums_arts",
+  "heritage_center": "museums_arts",
+  "visitor_center": "museums_arts",
+  "art": "museums_arts",
+  "artwork": "museums_arts",
+  
+  // Historical Sites & Monuments
+  "historic": "historical_sites",
+  "historical": "historical_sites",
+  "ancient": "historical_sites",
+  "archaeological_sites": "historical_sites",
+  "archaeological": "historical_sites",
+  "ruins": "historical_sites",
+  "monuments_and_memorials": "historical_sites",
+  "monuments": "historical_sites",
+  "monument": "historical_sites",
+  "memorial": "historical_sites",
+  "memorials": "historical_sites",
+  "statues": "historical_sites",
+  "statue": "historical_sites",
+  "sculpture": "historical_sites",
+  "sculptures": "historical_sites",
+  "heritage": "historical_sites",
+  "settlement": "historical_sites",
+  "village": "historical_sites",
+  "battlefield": "historical_sites",
+  
+  // Religious & Spiritual Sites
+  "religion": "religious_sites",
+  "religious": "religious_sites",
+  "churches": "religious_sites",
+  "church": "religious_sites",
+  "cathedrals": "religious_sites",
+  "cathedral": "religious_sites",
+  "temples": "religious_sites",
+  "temple": "religious_sites",
+  "mosques": "religious_sites",
+  "mosque": "religious_sites",
+  "synagogues": "religious_sites",
+  "synagogue": "religious_sites",
+  "monasteries": "religious_sites",
+  "monastery": "religious_sites",
+  "shrine": "religious_sites",
+  "chapel": "religious_sites",
+  "cemetery": "religious_sites",
+  "cemeteries": "religious_sites",
+  "graveyard": "religious_sites",
+  "burial": "religious_sites",
+  "tomb": "religious_sites",
+  "tombs": "religious_sites",
+  "mausoleum": "religious_sites",
+  
+  // Castles & Palaces
+  "castles": "castles_palaces",
+  "castle": "castles_palaces",
+  "palaces": "castles_palaces",
+  "palace": "castles_palaces",
+  "fortifications": "castles_palaces",
+  "fortress": "castles_palaces",
+  "fort": "castles_palaces",
+  "fortification": "castles_palaces",
+  "citadel": "castles_palaces",
+  "kremlin": "castles_palaces",
+  "walls": "castles_palaces",
+  "defensive": "castles_palaces",
+  "manor": "castles_palaces",
+  "mansion": "castles_palaces",
+  "villa": "castles_palaces",
+  "estate": "castles_palaces",
+  
+  // Architectural Landmarks
+  "architecture": "architectural_landmarks",
+  "historic_architecture": "architectural_landmarks",
+  "towers": "architectural_landmarks",
+  "tower": "architectural_landmarks",
+  "bridges": "architectural_landmarks",
+  "bridge": "architectural_landmarks",
+  "suspension": "architectural_landmarks",
+  "drawbridge": "architectural_landmarks",
+  "viaduct": "architectural_landmarks",
+  "aqueduct": "architectural_landmarks",
+  "amphitheatre": "architectural_landmarks",
+  "theatre": "architectural_landmarks",
+  "opera": "architectural_landmarks",
+  "arch": "architectural_landmarks",
+  "triumphal": "architectural_landmarks",
+  "skyscrapers": "architectural_landmarks",
+  "skyscraper": "architectural_landmarks",
+  "modern": "architectural_landmarks",
+  "contemporary": "architectural_landmarks",
+  "lighthouse": "architectural_landmarks",
+  "lighthouses": "architectural_landmarks",
+  "bell_tower": "architectural_landmarks",
+  "clock_tower": "architectural_landmarks",
+  "spire": "architectural_landmarks",
+  
+  // Natural Landscapes
+  "natural": "natural_landscapes",
+  "nature": "natural_landscapes",
+  "mountains": "natural_landscapes",
+  "peaks": "natural_landscapes",
+  "volcanoes": "natural_landscapes",
+  "caves": "natural_landscapes",
+  "canyons": "natural_landscapes",
+  "cliffs": "natural_landscapes",
+  "rocks": "natural_landscapes",
+  "geological": "natural_landscapes",
+  "geological_formations": "natural_landscapes",
+  "lakes": "natural_landscapes",
+  "rivers": "natural_landscapes",
+  "waterfalls": "natural_landscapes",
+  "springs": "natural_landscapes",
+  "beaches": "natural_landscapes",
+  "beach": "natural_landscapes",
+  "sand": "natural_landscapes",
+  "shore": "natural_landscapes",
+  "seaside": "natural_landscapes",
+  "coastal": "natural_landscapes",
+  "marine": "natural_landscapes",
+  "islands": "natural_landscapes",
+  "forests": "natural_landscapes",
+  
+  // Parks & Gardens
+  "gardens_and_parks": "parks_gardens",
+  "gardens": "parks_gardens",
+  "garden": "parks_gardens",
+  "parks": "parks_gardens",
+  "park": "parks_gardens",
+  "botanical_gardens": "parks_gardens",
+  "botanical": "parks_gardens",
+  "national_parks": "parks_gardens",
+  "nature_reserves": "parks_gardens",
+  "wildlife": "parks_gardens",
+  "conservation": "parks_gardens",
+  "arboretum": "parks_gardens",
+  "green_space": "parks_gardens",
+  "fountains": "parks_gardens",
+  "fountain": "parks_gardens",
+  "water_feature": "parks_gardens",
+  
+  // Outdoor Adventures & Sports
+  "sport": "outdoor_sports",
+  "sports": "outdoor_sports",
+  "stadium": "outdoor_sports",
+  "stadiums": "outdoor_sports",
+  "skiing": "outdoor_sports",
+  "ski_resorts": "outdoor_sports",
+  "diving": "outdoor_sports",
+  "surfing": "outdoor_sports",
+  "climbing": "outdoor_sports",
+  "golf_courses": "outdoor_sports",
+  "golf": "outdoor_sports",
+  "swimming": "outdoor_sports",
+  "pool": "outdoor_sports",
+  "recreation": "outdoor_sports",
+  "sports_centres": "outdoor_sports",
+  "swimming_pools": "outdoor_sports",
+  
+  // City Centers & Squares
+  "urban_environment": "city_centers",
+  "urban": "city_centers",
+  "city_center": "city_centers",
+  "city": "city_centers",
+  "squares": "city_centers",
+  "square": "city_centers",
+  "plaza": "city_centers",
+  "streets": "city_centers",
+  "street": "city_centers",
+  "district": "city_centers",
+  "quarter": "city_centers",
+  "neighborhood": "city_centers",
+  
+  // Viewpoints & Landmark Towers
+  "viewpoints": "viewpoints_towers",
+  "viewpoint": "viewpoints_towers",
+  "view_point": "viewpoints_towers",
+  "observation_decks": "viewpoints_towers",
+  "observation": "viewpoints_towers",
+  "lookouts": "viewpoints_towers",
+  "lookout": "viewpoints_towers",
+  "scenic": "viewpoints_towers",
+  "panoramic": "viewpoints_towers",
+  "overlook": "viewpoints_towers",
+  "vista": "viewpoints_towers",
+  
+  // Theme Parks & Zoos
+  "amusements": "theme_parks_zoos",
+  "amusement": "theme_parks_zoos",
+  "theme_parks": "theme_parks_zoos",
+  "theme_park": "theme_parks_zoos",
+  "amusement_park": "theme_parks_zoos",
+  "water_park": "theme_parks_zoos",
+  "zoos": "theme_parks_zoos",
+  "zoo": "theme_parks_zoos",
+  "aquariums": "theme_parks_zoos",
+  "aquarium": "theme_parks_zoos",
+  "miniature_park": "theme_parks_zoos",
+  "roller_coaster": "theme_parks_zoos",
+  "ferris_wheel": "theme_parks_zoos",
+  
+  // Nightlife
+  "nightlife": "nightlife",
+  "nightclubs": "nightlife",
+  "bars": "nightlife",
+  "bar": "nightlife",
+  "clubs": "nightlife",
+  "club": "nightlife",
+  "casinos": "nightlife",
+  "casino": "nightlife",
+  "entertainment": "nightlife",
+  
+  // Shows & Cinema
+  "theaters": "shows_cinema",
+  "theater": "shows_cinema",
+  "theatres": "shows_cinema",
+  "cinemas": "shows_cinema",
+  "cinema": "shows_cinema",
+  
+  // Shopping (if OpenTripMap provides these)
+  "shopping": "shopping",
+  "mall": "shopping",
+  "market": "shopping",
+  "shops": "shopping",
+  
+  // Interesting Places
+  "interesting_places": "interesting_places",
+  "tourist_facilities": "interesting_places",
+  "tourist_attraction": "interesting_places",
+  "attraction": "interesting_places",
+  "other": "interesting_places",
+  "unspecified": "interesting_places",
+  
+  // Food & Dining (if OpenTripMap provides these)
+  "restaurants": "food_dining",
+  "restaurant": "food_dining",
+  "cafes": "food_dining",
+  "cafe": "food_dining",
+  "food": "food_dining",
+  "dining": "food_dining"
+};
+
 /**
  * Extract categories from OpenTripMap kinds that match our English ActivityCategory system
  */
@@ -629,123 +759,3 @@ export function getFallbackImageUrl(categories: ActivityCategory[]): string {
   // Default fallback image
   return 'https://images.pexels.com/photos/1796730/pexels-photo-1796730.jpeg';
 }
-
-// Missing detailedCategoryMappings object that's referenced in extractCategoriesFromKinds
-const detailedCategoryMappings: Record<string, ActivityCategory> = {
-  // Museums & Arts
-  'museums': 'museums_arts',
-  'galleries': 'museums_arts',
-  'art_galleries': 'museums_arts',
-  'cultural': 'museums_arts',
-  
-  // Historical Sites
-  'historic': 'historical_sites',
-  'historical': 'historical_sites',
-  'ancient': 'historical_sites',
-  'archaeological': 'historical_sites',
-  'heritage': 'historical_sites',
-  'monuments': 'historical_sites',
-  'memorials': 'historical_sites',
-  'ruins': 'historical_sites',
-  'battlefield': 'historical_sites',
-  
-  // Religious Sites
-  'religion': 'religious_sites',
-  'churches': 'religious_sites',
-  'cathedrals': 'religious_sites',
-  'temples': 'religious_sites',
-  'monasteries': 'religious_sites',
-  'mosques': 'religious_sites',
-  'shrines': 'religious_sites',
-  
-  // Castles & Palaces
-  'castles': 'castles_palaces',
-  'palaces': 'castles_palaces',
-  'fortifications': 'castles_palaces',
-  'forts': 'castles_palaces',
-  
-  // Architectural Landmarks
-  'architecture': 'architectural_landmarks',
-  'towers': 'architectural_landmarks',
-  'bridges': 'architectural_landmarks',
-  'buildings': 'architectural_landmarks',
-  
-  // Natural Landscapes
-  'natural': 'natural_landscapes',
-  'mountains': 'natural_landscapes',
-  'lakes': 'natural_landscapes',
-  'rivers': 'natural_landscapes',
-  'beaches': 'natural_landscapes',
-  'islands': 'natural_landscapes',
-  'forests': 'natural_landscapes',
-  'geological': 'natural_landscapes',
-  
-  // Parks & Gardens
-  'parks': 'parks_gardens',
-  'gardens': 'parks_gardens',
-  'national_parks': 'parks_gardens',
-  'nature_reserves': 'parks_gardens',
-  'wildlife': 'parks_gardens',
-  'botanical_gardens': 'parks_gardens',
-  
-  // Outdoor Sports
-  'sport': 'outdoor_sports',
-  'recreation': 'outdoor_sports',
-  'stadium': 'outdoor_sports',
-  'golf': 'outdoor_sports',
-  'ski': 'outdoor_sports',
-  'diving': 'outdoor_sports',
-  'surfing': 'outdoor_sports',
-  'climbing': 'outdoor_sports',
-  'swimming': 'outdoor_sports',
-  
-  // City Centers
-  'urban_environment': 'city_centers',
-  'city_center': 'city_centers',
-  'squares': 'city_centers',
-  'streets': 'city_centers',
-  'districts': 'city_centers',
-  
-  // Viewpoints & Towers
-  'viewpoints': 'viewpoints_towers',
-  'observation_decks': 'viewpoints_towers',
-  'lookouts': 'viewpoints_towers',
-  'scenic': 'viewpoints_towers',
-  
-  // Theme Parks & Zoos
-  'amusements': 'theme_parks_zoos',
-  'theme_parks': 'theme_parks_zoos',
-  'zoos': 'theme_parks_zoos',
-  'aquariums': 'theme_parks_zoos',
-  'water_parks': 'theme_parks_zoos',
-  
-  // Nightlife
-  'nightlife': 'nightlife',
-  'bars': 'nightlife',
-  'clubs': 'nightlife',
-  'casinos': 'nightlife',
-  
-  // Shows & Cinema
-  'theaters': 'shows_cinema',
-  'cinemas': 'shows_cinema',
-  'shows': 'shows_cinema',
-  'opera': 'shows_cinema',
-  
-  // Shopping
-  'shopping': 'shopping',
-  'malls': 'shopping',
-  'markets': 'shopping',
-  
-  // Food & Dining
-  'restaurants': 'food_dining',
-  'cafes': 'food_dining',
-  'food': 'food_dining',
-  'dining': 'food_dining',
-  'culinary': 'food_dining',
-  
-  // Interesting Places (fallback)
-  'interesting_places': 'interesting_places',
-  'tourist_attraction': 'interesting_places',
-  'tourist_facilities': 'interesting_places',
-  'entertainment': 'interesting_places'
-};
