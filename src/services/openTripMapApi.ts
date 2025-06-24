@@ -75,19 +75,6 @@ export class OpenTripMapApiError extends Error {
 }
 
 /**
- * Process image URL - validates and returns the URL or null if invalid
- */
-export async function processImageUrl(url: string): Promise<string | null> {
-  if (!url || url.trim() === '') {
-    return null;
-  }
-  
-  // Return the URL as-is for now
-  // This function can be enhanced later with additional processing logic
-  return url;
-}
-
-/**
  * Check if a URL is a direct Wikimedia image URL
  * Enhanced to accept both upload.wikimedia.org and commons.wikimedia.org/static/images/ URLs
  */
@@ -96,6 +83,65 @@ export function isDirectWikimediaUrl(url: string): boolean {
     url.includes('upload.wikimedia.org') || 
     (url.includes('commons.wikimedia.org') && url.includes('/static/images/'))
   ) && !url.includes('Special:FilePath');
+}
+
+/**
+ * Check if URL has a valid image file extension
+ */
+function hasImageExtension(url: string): boolean {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
+  const urlLower = url.toLowerCase();
+  return imageExtensions.some(ext => urlLower.includes(ext));
+}
+
+/**
+ * Enhanced processImageUrl function - validates and returns the URL or null if invalid
+ * This function implements robust validation logic to maximize use of original images
+ */
+export async function processImageUrl(url: string): Promise<string | null> {
+  if (!url || url.trim() === '') {
+    console.warn('🚫 processImageUrl: Empty or null URL provided');
+    return null;
+  }
+
+  const trimmedUrl = url.trim();
+  
+  // Priority 1: Wikimedia Special:FilePath URLs are designed to redirect to actual images
+  if (trimmedUrl.includes('commons.wikimedia.org/wiki/Special:FilePath/')) {
+    console.log(`✅ processImageUrl: Accepting Wikimedia Special:FilePath URL: ${trimmedUrl}`);
+    return trimmedUrl;
+  }
+  
+  // Priority 2: Direct Wikimedia image URLs (upload.wikimedia.org or commons.wikimedia.org/static/images/)
+  if (isDirectWikimediaUrl(trimmedUrl)) {
+    console.log(`✅ processImageUrl: Accepting direct Wikimedia URL: ${trimmedUrl}`);
+    return trimmedUrl;
+  }
+  
+  // Priority 3: URLs with valid image file extensions
+  if (hasImageExtension(trimmedUrl)) {
+    console.log(`✅ processImageUrl: Accepting URL with image extension: ${trimmedUrl}`);
+    return trimmedUrl;
+  }
+  
+  // Priority 4: URLs from trusted image domains (even without extensions)
+  const trustedDomains = [
+    'images.pexels.com',
+    'unsplash.com',
+    'pixabay.com',
+    'flickr.com',
+    'imgur.com'
+  ];
+  
+  const urlDomain = trimmedUrl.toLowerCase();
+  if (trustedDomains.some(domain => urlDomain.includes(domain))) {
+    console.log(`✅ processImageUrl: Accepting trusted domain URL: ${trimmedUrl}`);
+    return trimmedUrl;
+  }
+  
+  // Reject URLs that don't meet our criteria
+  console.warn(`🚫 processImageUrl: Rejecting URL (no image extension or trusted domain): ${trimmedUrl}`);
+  return null;
 }
 
 /**
