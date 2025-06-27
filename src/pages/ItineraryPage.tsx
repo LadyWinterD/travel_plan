@@ -20,7 +20,6 @@ import {
   DragStartEvent,
   DragOverEvent,
   MeasuringStrategy,
-  DragOverlay as DndDragOverlay,
 } from '@dnd-kit/core';
 import {
   arrayMove,
