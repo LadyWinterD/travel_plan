@@ -22,7 +22,7 @@ function App() {
               <Route path="/destinations" element={<DestinationsPage />} />
               <Route path="/activities" element={<ActivitiesPage />} />
               <Route path="/itinerary" element={<ItineraryPage />} />
-              <Route path="*" element={<Navigate to="/\" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           <Footer />
