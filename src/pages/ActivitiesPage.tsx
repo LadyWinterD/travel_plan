@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -27,7 +27,7 @@ const CategorySkeleton: React.FC = () => (
   </div>
 );
 
-const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> = ({ weather, location }) => {
+const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string; isForTravelDate?: boolean }> = ({ weather, location, isForTravelDate = false }) => {
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
     if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
@@ -40,6 +40,24 @@ const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> 
     if (weather.temperature < 5) return "Indoor activities recommended";
     if (weather.temperature > 20) return "Ideal weather for outdoor adventures";
     return "Good weather for both indoor and outdoor activities";       
+  };
+
+  const getWeatherTypeLabel = () => {
+    if (isForTravelDate) {
+      const weatherDate = new Date(weather.date);
+      const today = new Date();
+      const isHistorical = weatherDate < today;
+      const daysDiff = Math.abs(weatherDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (isHistorical) {
+        return "Historical Weather";
+      } else if (daysDiff <= 14) {
+        return "Weather Forecast";
+      } else {
+        return "Weather Estimate";
+      }
+    }
+    return "Current Weather";
   };
 
   return (
@@ -62,6 +80,12 @@ const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string }> 
                 </div>
               )}
             </div>
+            {isForTravelDate && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+                <Calendar size={14} />
+                <span>{getWeatherTypeLabel()} for {new Date(weather.date).toLocaleDateString()}</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="text-right">
@@ -229,7 +253,7 @@ const ActivitiesPage: React.FC = () => {
     preferences,
     startDate,
     endDate,
-    fetchWeatherForCity
+    fetchWeatherForDate
   } = useAppContext();
   
   const [activeDestination, setActiveDestination] = useState<string | null>(
@@ -272,14 +296,14 @@ const ActivitiesPage: React.FC = () => {
     setSelectedInterests([]);
   }, [activeDestination]);
   
-  // Fetch real weather data when destination changes
+  // Fetch weather data for travel dates when destination changes
   useEffect(() => {
-    if (!activeDestination) return;
+    if (!activeDestination || !startDate) return;
 
     const destination = destinations.find(d => d.id === activeDestination);
     if (destination?.name) {
       setIsWeatherLoading(true);
-      fetchWeatherForCity(destination.name)
+      fetchWeatherForDate(destination.name, startDate)
         .then((weather) => {
           if (weather) {
             setWeatherData(weather);
@@ -289,7 +313,7 @@ const ActivitiesPage: React.FC = () => {
           setIsWeatherLoading(false);
         });
     }
-  }, [activeDestination, destinations, fetchWeatherForCity]);
+  }, [activeDestination, destinations, startDate, fetchWeatherForDate]);
 
   // Load activities from API
   useEffect(() => {
@@ -414,6 +438,16 @@ const ActivitiesPage: React.FC = () => {
         </div>
       )}
       
+      {/* Travel Dates Warning */}
+      {!startDate && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+          <div className="flex items-center gap-2">
+            <Calendar size={16} />
+            <span>Set your travel dates to see weather forecasts for your trip!</span>
+          </div>
+        </div>
+      )}
+      
       {/* Destination Tabs */}
       <div className="mb-6">
         <div className="flex overflow-x-auto pb-2 space-x-3 scrollbar-hide">
@@ -462,7 +496,7 @@ const ActivitiesPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="text-right">
               <div className="text-sm font-medium text-teal-800">Smart Weather Filtering</div>
-              <div className="text-xs text-teal-600">Optimize for current weather</div>
+              <div className="text-xs text-teal-600">Optimize for travel date weather</div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -481,7 +515,7 @@ const ActivitiesPage: React.FC = () => {
       {isWeatherLoading && (
         <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading weather data...</p>
+          <p className="text-gray-500">Loading weather data for your travel dates...</p>
         </div>
       )}
       
@@ -489,6 +523,7 @@ const ActivitiesPage: React.FC = () => {
         <WeatherForecastCard 
           weather={weatherData} 
           location={`${currentDestination.name}, ${currentDestination.country}`}
+          isForTravelDate={!!startDate}
         />
       )}
       

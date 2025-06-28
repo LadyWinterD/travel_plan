@@ -24,6 +24,7 @@ interface AppContextType {
   updatePreferences: (newPreferences: string[]) => void;
   fetchWeatherForCity: (cityName: string) => Promise<WeatherData | null>;
   fetchForecastForCity: (cityName: string, days: number) => Promise<WeatherData[] | null>;
+  fetchWeatherForDate: (cityName: string, date: Date) => Promise<WeatherData | null>;
 }
 
 const defaultContext: AppContextType = {
@@ -46,6 +47,7 @@ const defaultContext: AppContextType = {
   updatePreferences: () => {},
   fetchWeatherForCity: async () => null,
   fetchForecastForCity: async () => null,
+  fetchWeatherForDate: async () => null,
 };
 
 const AppContext = createContext<AppContextType>(defaultContext);
@@ -129,8 +131,127 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   // Track which cities we've already fetched weather for to prevent loops
   const [fetchedWeatherCities, setFetchedWeatherCities] = useState<Set<string>>(new Set());
 
-  // Fetch real weather data from API
+  // Calculate days between two dates
+  const getDaysBetween = (date1: Date, date2: Date): number => {
+    const diffTime = Math.abs(date2.getTime() - date1.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Check if date is in the future (within 14 days for forecast)
+  const isWithinForecastRange = (date: Date): boolean => {
+    const today = new Date();
+    const daysDiff = getDaysBetween(today, date);
+    return date >= today && daysDiff <= 14;
+  };
+
+  // Check if date is in the past (for historical weather)
+  const isHistoricalDate = (date: Date): boolean => {
+    const today = new Date();
+    return date < today;
+  };
+
+  // Fetch weather for a specific date
+  const fetchWeatherForDate = useCallback(async (cityName: string, date: Date): Promise<WeatherData | null> => {
+    try {
+      const apiKey = '37781fb79e564cf493f112949250706';
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      let url: string;
+      let isHistorical = false;
+      
+      if (isWithinForecastRange(date)) {
+        // Use forecast API for future dates within 14 days
+        const daysFromNow = getDaysBetween(new Date(), date);
+        url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&days=${Math.max(1, daysFromNow + 1)}`;
+        console.log(`🌤️ Fetching forecast weather for ${cityName} on ${dateStr}...`);
+      } else if (isHistoricalDate(date)) {
+        // Use history API for past dates
+        url = `https://api.weatherapi.com/v1/history.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&dt=${dateStr}`;
+        isHistorical = true;
+        console.log(`🌤️ Fetching historical weather for ${cityName} on ${dateStr}...`);
+      } else {
+        // For dates beyond 14 days in the future, use current weather as approximation
+        url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&aqi=no`;
+        console.log(`🌤️ Fetching current weather for ${cityName} (date beyond forecast range: ${dateStr})...`);
+      }
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      let weatherInfo: WeatherData;
+      
+      if (isHistorical) {
+        // Historical weather data structure
+        const dayData = data.forecast.forecastday[0].day;
+        weatherInfo = {
+          date: dateStr,
+          temperature: Math.round(dayData.avgtemp_c),
+          condition: dayData.condition.text,
+          icon: dayData.condition.icon,
+          precipitation: dayData.totalprecip_mm || 0,
+          isRainy: (dayData.totalprecip_mm || 0) > 0.1
+        };
+      } else if (isWithinForecastRange(date)) {
+        // Forecast weather data structure
+        const targetDay = data.forecast.forecastday.find((day: any) => day.date === dateStr);
+        if (targetDay) {
+          weatherInfo = {
+            date: dateStr,
+            temperature: Math.round(targetDay.day.avgtemp_c),
+            condition: targetDay.day.condition.text,
+            icon: targetDay.day.condition.icon,
+            precipitation: targetDay.day.totalprecip_mm || 0,
+            isRainy: (targetDay.day.totalprecip_mm || 0) > 0.1
+          };
+        } else {
+          // Fallback to current weather if specific day not found
+          weatherInfo = {
+            date: dateStr,
+            temperature: Math.round(data.current.temp_c),
+            condition: data.current.condition.text,
+            icon: data.current.condition.icon,
+            precipitation: data.current.precip_mm || 0,
+            isRainy: (data.current.precip_mm || 0) > 0.1
+          };
+        }
+      } else {
+        // Current weather as approximation for far future dates
+        weatherInfo = {
+          date: dateStr,
+          temperature: Math.round(data.current.temp_c),
+          condition: data.current.condition.text + ' (estimated)',
+          icon: data.current.condition.icon,
+          precipitation: data.current.precip_mm || 0,
+          isRainy: (data.current.precip_mm || 0) > 0.1
+        };
+      }
+      
+      console.log(`✅ Weather fetched for ${cityName} on ${dateStr}:`, weatherInfo);
+      
+      // Cache the weather data with date-specific key
+      const cacheKey = `${cityName}_${dateStr}`;
+      setWeatherData(prev => ({
+        ...prev,
+        [cacheKey]: weatherInfo
+      }));
+      
+      return weatherInfo;
+    } catch (error) {
+      console.error(`Failed to fetch weather for ${cityName} on ${date.toISOString().split('T')[0]}:`, error);
+      return null;
+    }
+  }, []);
+
+  // Fetch real weather data from API (current weather)
   const fetchWeatherForCity = useCallback(async (cityName: string): Promise<WeatherData | null> => {
+    // If we have travel dates, fetch weather for the start date instead of current weather
+    if (startDate) {
+      return fetchWeatherForDate(cityName, startDate);
+    }
+
     // Prevent duplicate requests
     if (fetchedWeatherCities.has(cityName)) {
       return weatherData[cityName] || null;
@@ -140,7 +261,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       const apiKey = '37781fb79e564cf493f112949250706';
       const url = `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cityName)}&aqi=no`;
       
-      console.log(`🌤️ Fetching weather for ${cityName}...`);
+      console.log(`🌤️ Fetching current weather for ${cityName}...`);
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -158,7 +279,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
         isRainy: (data.current.precip_mm || 0) > 0.1
       };
       
-      console.log(`✅ Weather fetched for ${cityName}:`, weatherInfo);
+      console.log(`✅ Current weather fetched for ${cityName}:`, weatherInfo);
       
       // Update weather data in state
       setWeatherData(prev => ({
@@ -171,12 +292,12 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       
       return weatherInfo;
     } catch (error) {
-      console.error('Failed to fetch weather for', cityName, ':', error);
+      console.error('Failed to fetch current weather for', cityName, ':', error);
       // Mark as fetched even on error to prevent retry loops
       setFetchedWeatherCities(prev => new Set([...prev, cityName]));
       return null;
     }
-  }, [weatherData, fetchedWeatherCities]);
+  }, [weatherData, fetchedWeatherCities, startDate, fetchWeatherForDate]);
 
   // Fetch multi-day forecast data from API
   const fetchForecastForCity = useCallback(async (cityName: string, days: number): Promise<WeatherData[] | null> => {
@@ -221,77 +342,72 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   useEffect(() => {
     if (!startDate || !endDate || Object.keys(selectedActivities).length === 0) return;
 
-    const newItinerary: TripDay[] = [];
-    let currentDate = new Date(startDate);
+    const updateItineraryWithWeather = async () => {
+      const newItinerary: TripDay[] = [];
+      let currentDate = new Date(startDate);
 
-    destinations.forEach(destination => {
-      const activities = selectedActivities[destination.id] || [];
-      if (activities.length === 0) return;
+      for (const destination of destinations) {
+        const activities = selectedActivities[destination.id] || [];
+        if (activities.length === 0) continue;
 
-      // Sort activities by preference match
-      const sortedActivities = [...activities].sort((a, b) => {
-        const aCategories = a.categories || [];
-        const bCategories = b.categories || [];
-        const aMatches = aCategories.filter(cat => preferences.includes(cat)).length;
-        const bMatches = bCategories.filter(cat => preferences.includes(cat)).length;
-        
-        // Also consider weather appropriateness if weather data is available
-        const cityWeather = weatherData[destination.name];
-        if (cityWeather) {
-          if (cityWeather.isRainy) {
-            // Prioritize indoor activities when raining
-            if (a.indoor && !b.indoor) return -1;
-            if (!a.indoor && b.indoor) return 1;
+        // Sort activities by preference match
+        const sortedActivities = [...activities].sort((a, b) => {
+          const aCategories = a.categories || [];
+          const bCategories = b.categories || [];
+          const aMatches = aCategories.filter(cat => preferences.includes(cat)).length;
+          const bMatches = bCategories.filter(cat => preferences.includes(cat)).length;
+          return bMatches - aMatches;
+        });
+
+        const scheduledActivities = generateTimeSlots(sortedActivities, destination.days);
+
+        // Create days for this destination
+        for (let i = 0; i < destination.days; i++) {
+          const dayActivities = scheduledActivities
+            .filter(act => act.day === i)
+            .map(({ activityId, startTime, endTime, activity }) => ({
+              activityId,
+              startTime,
+              endTime,
+              activity
+            }));
+
+          if (dayActivities.length > 0) {
+            const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
+            
+            // Fetch weather for this specific date
+            const dayWeather = await fetchWeatherForDate(destination.name, currentDate);
+            
+            // Check for weather warnings
+            const hasOutdoorActivitiesInRain = dayWeather?.isRainy && 
+              dayActivities.some(act => !act.activity.indoor);
+            
+            let warning = undefined;
+            if (dailyDuration > 360) {
+              warning = `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.`;
+            } else if (hasOutdoorActivitiesInRain) {
+              warning = `There are outdoor activities scheduled on a rainy day. Consider rearranging if possible.`;
+            }
+            
+            newItinerary.push({
+              id: `day-${currentDate.toISOString()}`,
+              date: currentDate.toISOString(),
+              destinationId: destination.id,
+              activities: dayActivities,
+              weatherData: dayWeather || undefined,
+              warning
+            });
           }
+
+          currentDate = new Date(currentDate.setDate(currentDate.getDate() + 1));
         }
-        
-        return bMatches - aMatches;
-      });
-
-      const scheduledActivities = generateTimeSlots(sortedActivities, destination.days);
-
-      // Create days for this destination
-      for (let i = 0; i < destination.days; i++) {
-        const dayActivities = scheduledActivities
-          .filter(act => act.day === i)
-          .map(({ activityId, startTime, endTime, activity }) => ({
-            activityId,
-            startTime,
-            endTime,
-            activity
-          }));
-
-        if (dayActivities.length > 0) {
-          const dailyDuration = dayActivities.reduce((sum, act) => sum + act.activity.duration, 0);
-          const cityWeather = weatherData[destination.name];
-          
-          // Check for weather warnings
-          const hasOutdoorActivitiesInRain = cityWeather?.isRainy && 
-            dayActivities.some(act => !act.activity.indoor);
-          
-          let warning = undefined;
-          if (dailyDuration > 360) {
-            warning = `This day's schedule exceeds 6 hours. Consider spreading activities across multiple days.`;
-          } else if (hasOutdoorActivitiesInRain) {
-            warning = `There are outdoor activities scheduled on a rainy day. Consider rearranging if possible.`;
-          }
-          
-          newItinerary.push({
-            id: `day-${currentDate.toISOString()}`,
-            date: currentDate.toISOString(),
-            destinationId: destination.id,
-            activities: dayActivities,
-            weatherData: cityWeather,
-            warning
-          });
-        }
-
-        currentDate = new Date(currentDate.setDate(currentDate.getDate() + 1));
       }
-    });
 
-    setDailyItinerary(newItinerary);
-  }, [startDate, endDate, selectedActivities, destinations, preferences, weatherData]);
+      setDailyItinerary(newItinerary);
+    };
+
+    updateItineraryWithWeather();
+  }, [startDate, endDate, selectedActivities, destinations, preferences, fetchWeatherForDate]);
 
   // Save to localStorage when data changes
   useEffect(() => {
@@ -314,8 +430,10 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
       ...prev,
       [destination.id]: []
     }));
-    // Only fetch weather if we haven't already fetched it for this city
-    if (!fetchedWeatherCities.has(destination.name)) {
+    // Fetch weather for travel dates if available, otherwise current weather
+    if (startDate) {
+      fetchWeatherForDate(destination.name, startDate);
+    } else if (!fetchedWeatherCities.has(destination.name)) {
       fetchWeatherForCity(destination.name);
     }
   };
@@ -349,6 +467,13 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const setDates = (start: Date | null, end: Date | null) => {
     setStartDate(start);
     setEndDate(end);
+    
+    // When dates change, refresh weather data for all destinations
+    if (start) {
+      destinations.forEach(destination => {
+        fetchWeatherForDate(destination.name, start);
+      });
+    }
   };
 
   const toggleActivity = (destinationId: string, activity: Activity) => {
@@ -407,7 +532,8 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     resetTrip,
     updatePreferences,
     fetchWeatherForCity,
-    fetchForecastForCity
+    fetchForecastForCity,
+    fetchWeatherForDate
   };
 
   return (
