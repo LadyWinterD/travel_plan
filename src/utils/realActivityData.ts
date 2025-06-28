@@ -200,6 +200,7 @@ async function validateAttractionContent(attraction: any, details: any): Promise
  * 🚀 ENHANCED: Fetch high-quality real activities for a city using OpenTripMap API
  * 🆕 NEW: Multi-tier content strategy to maximize activity count while maintaining quality
  * 🎯 GOAL: Return 30-50 activities per city with varying content quality tiers
+ * 🔥 UPDATED: Now processes 250 attractions instead of 150 for more outdoor activities!
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
   try {
@@ -227,8 +228,8 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 
     console.log(`📊 Processing ${attractions.length} raw attractions for ${cityName}...`);
 
-    // 🆕 ENHANCED: 处理更多景点，使用多层次验证策略
-    const activitiesPromises = attractions.slice(0, 150).map(async (attraction) => { // 处理前150个
+    // 🆕 ENHANCED: 处理更多景点，使用多层次验证策略 - INCREASED TO 250!
+    const activitiesPromises = attractions.slice(0, 250).map(async (attraction) => { // 🔥 INCREASED FROM 150 TO 250!
       try {
         const details = await getPlaceDetails(attraction.xid);
         
@@ -365,11 +366,18 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     const standardCount = validActivities.filter(a => a.wikipediaExtracts && a.wikipediaExtracts.text.length <= 100 && a.wikipediaExtracts.text.length > 50).length;
     const basicCount = validActivities.length - premiumCount - standardCount;
 
-    console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName}`);
+    // 📊 统计户外活动数量
+    const outdoorCount = validActivities.filter(a => !a.indoor).length;
+    const outdoorCategories = validActivities.filter(a => !a.indoor).map(a => a.categories).flat();
+    const uniqueOutdoorCategories = [...new Set(outdoorCategories)];
+
+    console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName} (from 250 raw attractions)`);
     console.log(`📊 Content Quality Distribution:`);
     console.log(`   🏆 Premium (detailed Wikipedia): ${premiumCount} (${Math.round(premiumCount/validActivities.length*100)}%)`);
     console.log(`   ⭐ Standard (basic Wikipedia): ${standardCount} (${Math.round(standardCount/validActivities.length*100)}%)`);
     console.log(`   📝 Basic (generated content): ${basicCount} (${Math.round(basicCount/validActivities.length*100)}%)`);
+    console.log(`🌳 Outdoor Activities: ${outdoorCount}/${validActivities.length} (${Math.round(outdoorCount/validActivities.length*100)}%)`);
+    console.log(`🏞️ Outdoor Categories Found: ${uniqueOutdoorCategories.join(', ')}`);
     
     // 📊 统计免费景点数量
     const freeActivitiesCount = validActivities.filter(activity => 
