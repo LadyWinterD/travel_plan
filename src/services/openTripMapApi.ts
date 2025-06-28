@@ -489,7 +489,7 @@ export async function getPlaceDetails(xid: string): Promise<OpenTripMapDetails |
 
 /**
  * 🚀 ENHANCED: Main function to get top attractions (combines all steps)
- * 增加返回数量到50个，提供更多选择
+ * INCREASED TO 250 ATTRACTIONS for maximum variety!
  */
 export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 50, cityName: string = 'Unknown'): Promise<OpenTripMapPlace[]> {
   try {
@@ -512,10 +512,10 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
       filteredPreviews.some(preview => preview.xid === attraction.xid)
     );
     
-    // 🚀 ENHANCED: Return top 50 instead of 20
-    const topAttractions = filteredAttractions.slice(0, 50);
+    // 🚀 ENHANCED: Return top 250 instead of 50 for maximum variety!
+    const topAttractions = filteredAttractions.slice(0, 250);
     
-    console.log(`🏆 Returning ${topAttractions.length} top filtered attractions for ${cityName}`);
+    console.log(`🏆 Returning ${topAttractions.length} top filtered attractions for ${cityName} (INCREASED TO 250!)`);
     return topAttractions;
     
   } catch (error) {
