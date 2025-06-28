@@ -3,7 +3,6 @@ import {
   getCoordinatesForCity, 
   getTopAttractions, 
   getPlaceDetails,
-  extractCategoriesFromKinds,
   isLikelyIndoorFromKinds,
   getFallbackImageUrl,
   fetchWikimediaImage,
@@ -14,91 +13,105 @@ import { getCachedApiResponse, cacheApiResponse } from './storage';
 import { ActivityCategory, detailedCategoryMappings } from '../data/activityCategories';
 
 /**
- * Enhanced category extraction with new English category system
- * FIXED: Removed conditional checks to allow all matching passes to run
+ * REFINED: Enhanced category extraction with precise matching logic
+ * This function now prioritizes exact matches and only falls back to broader matching when necessary
  */
 function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
   const kindsArray = kinds.toLowerCase().split(',').map(k => k.trim());
   const matchedCategories = new Set<ActivityCategory>();
 
-  // First pass: exact matches using detailed mappings
+  console.log(`🔍 Extracting categories from kinds: ${kinds}`);
+
+  // PHASE 1: Exact matches using detailed mappings (HIGHEST PRIORITY)
   for (const kind of kindsArray) {
     if (detailedCategoryMappings[kind]) {
       matchedCategories.add(detailedCategoryMappings[kind]);
+      console.log(`✅ Exact match: "${kind}" → ${detailedCategoryMappings[kind]}`);
     }
   }
 
-  // Second pass: partial matches for compound kinds (ALWAYS RUN)
-  for (const kind of kindsArray) {
-    for (const [mappedKind, category] of Object.entries(detailedCategoryMappings)) {
-      if (kind.includes(mappedKind) || mappedKind.includes(kind)) {
-        matchedCategories.add(category);
+  // PHASE 2: Partial matches for compound kinds (ONLY if no exact matches found)
+  if (matchedCategories.size === 0) {
+    console.log(`🔄 No exact matches found, trying partial matches...`);
+    for (const kind of kindsArray) {
+      for (const [mappedKind, category] of Object.entries(detailedCategoryMappings)) {
+        if (kind.includes(mappedKind) && mappedKind.length > 3) { // Avoid very short matches
+          matchedCategories.add(category);
+          console.log(`✅ Partial match: "${kind}" contains "${mappedKind}" → ${category}`);
+        }
       }
     }
   }
 
-  // Third pass: keyword-based fallbacks with English categories (ALWAYS RUN)
-  for (const kind of kindsArray) {
-    // Culture & History
-    if (kind.includes('museum') || kind.includes('gallery') || kind.includes('art') || kind.includes('cultural')) {
-      matchedCategories.add('museums_arts');
-    }
-    if (kind.includes('historic') || kind.includes('ancient') || kind.includes('archaeological') || kind.includes('heritage')) {
-      matchedCategories.add('historical_sites');
-    }
-    if (kind.includes('church') || kind.includes('cathedral') || kind.includes('temple') || kind.includes('mosque') || kind.includes('religious')) {
-      matchedCategories.add('religious_sites');
-    }
-    if (kind.includes('castle') || kind.includes('palace') || kind.includes('fort') || kind.includes('fortress')) {
-      matchedCategories.add('castles_palaces');
-    }
-    if (kind.includes('tower') || kind.includes('bridge') || kind.includes('architecture') || kind.includes('building')) {
-      matchedCategories.add('architectural_landmarks');
-    }
-    
-    // Nature & Outdoors
-    if (kind.includes('natural') || kind.includes('mountain') || kind.includes('lake') || kind.includes('beach') || kind.includes('cave')) {
-      matchedCategories.add('natural_landscapes');
-    }
-    if (kind.includes('park') || kind.includes('garden') || kind.includes('botanical') || kind.includes('fountain')) {
-      matchedCategories.add('parks_gardens');
-    }
-    if (kind.includes('sport') || kind.includes('skiing') || kind.includes('diving') || kind.includes('golf') || kind.includes('stadium')) {
-      matchedCategories.add('outdoor_sports');
-    }
-    
-    // Urban Exploration
-    if (kind.includes('urban') || kind.includes('square') || kind.includes('street') || kind.includes('city')) {
-      matchedCategories.add('city_centers');
-    }
-    if (kind.includes('viewpoint') || kind.includes('scenic') || kind.includes('observation') || kind.includes('overlook')) {
-      matchedCategories.add('viewpoints_towers');
-    }
-    
-    // Leisure & Entertainment
-    if (kind.includes('amusement') || kind.includes('theme') || kind.includes('zoo') || kind.includes('aquarium')) {
-      matchedCategories.add('theme_parks_zoos');
-    }
-    if (kind.includes('bar') || kind.includes('club') || kind.includes('casino') || kind.includes('nightlife')) {
-      matchedCategories.add('nightlife');
-    }
-    if (kind.includes('theater') || kind.includes('theatre') || kind.includes('cinema')) {
-      matchedCategories.add('shows_cinema');
-    }
-    if (kind.includes('shopping') || kind.includes('mall') || kind.includes('market')) {
-      matchedCategories.add('shopping');
-    }
-    if (kind.includes('restaurant') || kind.includes('cafe') || kind.includes('food') || kind.includes('dining')) {
-      matchedCategories.add('food_dining');
+  // PHASE 3: Keyword-based fallbacks (ONLY if still no matches found)
+  if (matchedCategories.size === 0) {
+    console.log(`🔄 No partial matches found, trying keyword-based fallbacks...`);
+    for (const kind of kindsArray) {
+      // Culture & History
+      if (kind.includes('museum') || kind.includes('gallery') || kind.includes('art')) {
+        matchedCategories.add('museums_arts');
+        console.log(`✅ Keyword match: "${kind}" → museums_arts`);
+      } else if (kind.includes('historic') || kind.includes('ancient') || kind.includes('heritage')) {
+        matchedCategories.add('historical_sites');
+        console.log(`✅ Keyword match: "${kind}" → historical_sites`);
+      } else if (kind.includes('church') || kind.includes('cathedral') || kind.includes('temple') || kind.includes('religious')) {
+        matchedCategories.add('religious_sites');
+        console.log(`✅ Keyword match: "${kind}" → religious_sites`);
+      } else if (kind.includes('castle') || kind.includes('palace') || kind.includes('fort')) {
+        matchedCategories.add('castles_palaces');
+        console.log(`✅ Keyword match: "${kind}" → castles_palaces`);
+      } else if (kind.includes('tower') || kind.includes('bridge') || kind.includes('architecture')) {
+        matchedCategories.add('architectural_landmarks');
+        console.log(`✅ Keyword match: "${kind}" → architectural_landmarks`);
+      }
+      // Nature & Outdoors
+      else if (kind.includes('natural') || kind.includes('mountain') || kind.includes('lake') || kind.includes('beach')) {
+        matchedCategories.add('natural_landscapes');
+        console.log(`✅ Keyword match: "${kind}" → natural_landscapes`);
+      } else if (kind.includes('park') || kind.includes('garden') || kind.includes('botanical')) {
+        matchedCategories.add('parks_gardens');
+        console.log(`✅ Keyword match: "${kind}" → parks_gardens`);
+      } else if (kind.includes('sport') || kind.includes('stadium') || kind.includes('golf')) {
+        matchedCategories.add('outdoor_sports');
+        console.log(`✅ Keyword match: "${kind}" → outdoor_sports`);
+      }
+      // Urban Exploration
+      else if (kind.includes('urban') || kind.includes('square') || kind.includes('city')) {
+        matchedCategories.add('city_centers');
+        console.log(`✅ Keyword match: "${kind}" → city_centers`);
+      } else if (kind.includes('viewpoint') || kind.includes('scenic') || kind.includes('observation')) {
+        matchedCategories.add('viewpoints_towers');
+        console.log(`✅ Keyword match: "${kind}" → viewpoints_towers`);
+      }
+      // Leisure & Entertainment
+      else if (kind.includes('amusement') || kind.includes('theme') || kind.includes('zoo')) {
+        matchedCategories.add('theme_parks_zoos');
+        console.log(`✅ Keyword match: "${kind}" → theme_parks_zoos`);
+      } else if (kind.includes('night') || kind.includes('bar') || kind.includes('club')) {
+        matchedCategories.add('nightlife');
+        console.log(`✅ Keyword match: "${kind}" → nightlife`);
+      } else if (kind.includes('theater') || kind.includes('cinema')) {
+        matchedCategories.add('shows_cinema');
+        console.log(`✅ Keyword match: "${kind}" → shows_cinema`);
+      } else if (kind.includes('shop') || kind.includes('mall') || kind.includes('market')) {
+        matchedCategories.add('shopping');
+        console.log(`✅ Keyword match: "${kind}" → shopping`);
+      } else if (kind.includes('restaurant') || kind.includes('cafe') || kind.includes('food')) {
+        matchedCategories.add('food_dining');
+        console.log(`✅ Keyword match: "${kind}" → food_dining`);
+      }
     }
   }
 
-  // Final fallback
+  // Final fallback if nothing matched
   if (matchedCategories.size === 0) {
     matchedCategories.add('interesting_places');
+    console.log(`⚠️ No matches found, using fallback: interesting_places`);
   }
 
-  return Array.from(matchedCategories);
+  const result = Array.from(matchedCategories);
+  console.log(`🎯 Final categories for "${kinds}": ${result.join(', ')}`);
+  return result;
 }
 
 /**
