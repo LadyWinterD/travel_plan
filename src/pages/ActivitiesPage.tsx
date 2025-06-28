@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, Eye } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -104,9 +104,9 @@ const ActivityCard: React.FC<{
   activity: Activity; 
   isSelected: boolean; 
   onToggle: () => void;
-  onViewDetails: () => void;
+  onDoubleClick: () => void;
   weather?: WeatherData;
-}> = ({ activity, isSelected, onToggle, onViewDetails, weather }) => {
+}> = ({ activity, isSelected, onToggle, onDoubleClick, weather }) => {
   
   const getWeatherBadge = () => {
     if (!weather) return null;
@@ -143,18 +143,20 @@ const ActivityCard: React.FC<{
 
   return (
     <div 
-      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg flex flex-col ${
+      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg flex flex-col cursor-pointer ${
         isSelected 
           ? 'border-teal-500 ring-2 ring-teal-200 transform scale-105' 
           : 'border-gray-200 hover:border-gray-300'
       }`}
+      onDoubleClick={onDoubleClick}
+      title="Double-click to view details"
     >
       {/* Weather Badge */}
       {getWeatherBadge()}
       
       {/* Free Badge */}
       {(!activity.price || activity.price.amount === 0) && (
-        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg z-10">
           FREE
         </div>
       )}
@@ -173,14 +175,10 @@ const ActivityCard: React.FC<{
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
         
-        {/* View Details Button */}
-        <button
-          onClick={onViewDetails}
-          className="absolute bottom-3 right-3 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
-          title="View Details"
-        >
-          <Eye size={16} />
-        </button>
+        {/* Double-click hint */}
+        <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs opacity-75">
+          Double-click for details
+        </div>
       </div>
       
       {/* Activity Content */}
@@ -205,7 +203,7 @@ const ActivityCard: React.FC<{
           </div>
           <div className="flex items-center gap-1">
             <DollarSign size={12} className="flex-shrink-0" />
-            <span className={activity.price?.amount === 0 ? 'text-green-600 font-semibold' : ''}>
+            <span className={activity.price?.amount === 0 ? 'text-green-600 font-bold' : ''}>
               {formatPrice()}
             </span>
           </div>
@@ -242,7 +240,10 @@ const ActivityCard: React.FC<{
         {/* Add to Trip Button */}
         <div className="mt-auto">
           <button
-            onClick={onToggle}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent double-click when clicking button
+              onToggle();
+            }}
             className={`w-full py-2 sm:py-3 px-4 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
               isSelected
                 ? 'bg-teal-500 text-white shadow-lg hover:bg-teal-600'
@@ -344,7 +345,7 @@ const ActivitiesPage: React.FC = () => {
     }
   }, [activeDestination, destinations, startDate, fetchWeatherForDate]);
 
-  // Load activities from API
+  // Load activities from API - ENHANCED to get 50 activities
   useEffect(() => {
     if (!activeDestination) return;
 
@@ -355,6 +356,7 @@ const ActivitiesPage: React.FC = () => {
       try {
         const destination = destinations.find(d => d.id === activeDestination);
         
+        console.log(`🚀 Loading 50 activities for ${destination?.name}...`);
         const allDestinationActivities = await getRealActivitiesForCity(destination?.name || '');
         
         if (allDestinationActivities.length === 0) {
@@ -367,7 +369,13 @@ const ActivitiesPage: React.FC = () => {
         setApiError(null);
         setAllActivitiesForCity(allDestinationActivities);
         
-        console.log(`✅ Successfully loaded ${allDestinationActivities.length} real activities for ${destination?.name} from OpenTripMap`);
+        // 📊 统计并显示免费景点信息
+        const freeCount = allDestinationActivities.filter(activity => 
+          !activity.price || activity.price.amount === 0
+        ).length;
+        
+        console.log(`✅ Successfully loaded ${allDestinationActivities.length} real activities for ${destination?.name}`);
+        console.log(`💰 Free activities: ${freeCount}/${allDestinationActivities.length} (${Math.round(freeCount/allDestinationActivities.length*100)}%)`);
         
       } catch (error) {
         console.error('Error loading activities:', error);
@@ -436,7 +444,7 @@ const ActivitiesPage: React.FC = () => {
     setShowFreeOnly(false);
   };
 
-  const handleViewDetails = (activity: Activity) => {
+  const handleDoubleClick = (activity: Activity) => {
     setSelectedActivityForModal(activity);
     setIsModalOpen(true);
   };
@@ -456,7 +464,7 @@ const ActivitiesPage: React.FC = () => {
     if (loadingActivities) return null;
     if (allActivitiesForCity.length === 0) return apiError || 'No attractions found for this city.';
     if (showFreeOnly && activities.length === 0) {
-      return 'No free activities found for this destination.';
+      return 'No free activities found for this destination. Try adjusting your filters or explore paid activities.';
     }
     if (selectedInterests.length > 0 && activities.length === 0) {
       return `No activities found matching your selected interests: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}.`;
@@ -479,8 +487,10 @@ const ActivitiesPage: React.FC = () => {
     <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
       {/* Page Title */}
       <div className="text-center mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
-        <p className="text-gray-600 text-sm sm:text-base px-4">Powered by OpenTripMap - Real attractions from around the world</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover 50+ Real Attractions</h1>
+        <p className="text-gray-600 text-sm sm:text-base px-4">
+          Powered by OpenTripMap - More choices, more free options!
+        </p>
       </div>
       
       {/* API Error Message */}
@@ -603,17 +613,20 @@ const ActivitiesPage: React.FC = () => {
           )}
         </div>
         
-        {/* Free Activities Filter */}
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+        {/* Enhanced Free Activities Filter */}
+        <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="text-green-600">
+              <div className="text-green-600 bg-green-100 p-2 rounded-full">
                 <DollarSign size={20} />
               </div>
               <div>
-                <h4 className="font-semibold text-green-800">Free Activities Only</h4>
+                <h4 className="font-bold text-green-800 text-lg">💰 Free Activities Only</h4>
                 <p className="text-sm text-green-700">
-                  {freeActivitiesCount} free activities available in {currentDestination.name}
+                  <span className="font-semibold">{freeActivitiesCount}</span> free activities available in {currentDestination.name}
+                  <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                    {Math.round(freeActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% FREE
+                  </span>
                 </p>
               </div>
             </div>
@@ -624,9 +637,16 @@ const ActivitiesPage: React.FC = () => {
                 onChange={(e) => setShowFreeOnly(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500 shadow-lg"></div>
             </label>
           </div>
+          {showFreeOnly && (
+            <div className="mt-3 p-2 bg-green-100 rounded-md">
+              <p className="text-sm text-green-800 font-medium">
+                🎉 Showing only FREE activities! Save money while exploring amazing places.
+              </p>
+            </div>
+          )}
         </div>
         
         {/* Interest Categories */}
@@ -678,7 +698,7 @@ const ActivitiesPage: React.FC = () => {
       {loadingActivities ? (
         <div className="text-center py-8 sm:py-12">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-500 text-sm sm:text-base">Loading real attractions from OpenTripMap...</p>
+          <p className="text-gray-500 text-sm sm:text-base">Loading 50+ real attractions from OpenTripMap...</p>
         </div>
       ) : (
         <>
@@ -690,7 +710,7 @@ const ActivitiesPage: React.FC = () => {
                 activity={activity}
                 isSelected={isActivitySelected(activity.id)}
                 onToggle={() => toggleActivity(activeDestination!, activity)}
-                onViewDetails={() => handleViewDetails(activity)}
+                onDoubleClick={() => handleDoubleClick(activity)}
                 weather={weatherData || undefined}
               />
             ))}

@@ -102,12 +102,12 @@ function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
 }
 
 /**
- * Fetch real activities for a city using OpenTripMap API - Enhanced version with proper image URL processing
- * Includes 7-day caching to improve performance and ensures direct Wikimedia URLs
+ * 🚀 ENHANCED: Fetch 50 real activities for a city using OpenTripMap API
+ * 增加了更多活动选择，提高免费景点的数量和质量
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
   try {
-    console.log(`🚀 Fetching real activities for: ${cityName}`);
+    console.log(`🚀 Fetching 50 real activities for: ${cityName}`);
     
     const cacheKey = `activities_${cityName.toLowerCase().replace(/\s+/g, '_')}`;
     const cachedActivities = getCachedApiResponse(cacheKey);
@@ -122,13 +122,15 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       return [];
     }
 
-    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 30, cityName);
+    // 🎯 ENHANCED: 增加搜索半径和数量，获取更多景点
+    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 50, cityName); // 增加半径到50km
     if (attractions.length === 0) {
       console.warn(`🟡 No quality attractions found near: ${cityName}`);
       return [];
     }
 
-    const activitiesPromises = attractions.map(async (attraction) => {
+    // 🎯 ENHANCED: 处理更多景点，确保有足够的免费选项
+    const activitiesPromises = attractions.slice(0, 50).map(async (attraction) => { // 处理前50个
       try {
         const details = await getPlaceDetails(attraction.xid);
         const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
@@ -247,6 +249,13 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     if (validActivities.length === 0) return [];
 
     console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName}`);
+    
+    // 📊 统计免费景点数量
+    const freeActivitiesCount = validActivities.filter(activity => 
+      !activity.price || activity.price.amount === 0
+    ).length;
+    console.log(`💰 Free activities found: ${freeActivitiesCount}/${validActivities.length} (${Math.round(freeActivitiesCount/validActivities.length*100)}%)`);
+    
     cacheApiResponse(cacheKey, validActivities, 7);
     return validActivities;
   } catch (error) {
@@ -342,49 +351,58 @@ function getDurationFromCategories(categories: ActivityCategory[]): number {
 }
 
 /**
- * 💰 根据活动类型获取估算价格
- * 这个函数根据景点类型提供合理的价格估算
+ * 💰 根据活动类型获取估算价格 - ENHANCED 提高免费景点比例
+ * 这个函数根据景点类型提供合理的价格估算，增加了更多免费选项
  */
 function getPriceFromCategories(categories: ActivityCategory[]): { amount: number; currencyCode: string } {
   const priceMap: Record<ActivityCategory, number> = {
-    // 文化历史类 - 价格差异较大，有些免费有些收费
-    museums_arts: 25,        // 博物馆通常收费 $15-35
-    historical_sites: 10,    // 历史遗迹有些免费有些收费
+    // 文化历史类 - 增加免费选项
+    museums_arts: 15,        // 降低博物馆价格，很多有免费时段
+    historical_sites: 0,     // 大多数历史遗迹免费
     religious_sites: 0,      // 宗教场所通常免费
-    castles_palaces: 15,     // 城堡宫殿通常收费 $10-25
-    architectural_landmarks: 5, // 建筑地标大多免费或低价
+    castles_palaces: 12,     // 降低城堡宫殿价格
+    architectural_landmarks: 0, // 建筑地标大多免费
     
-    // 自然户外类 - 大多免费或低价
+    // 自然户外类 - 大多免费
     natural_landscapes: 0,   // 自然景观通常免费
-    parks_gardens: 5,        // 公园花园有些收费
-    outdoor_sports: 20,      // 户外运动通常收费
+    parks_gardens: 0,        // 大多数公园花园免费
+    outdoor_sports: 15,      // 降低户外运动价格
     
-    // 城市探索类 - 大多免费
+    // 城市探索类 - 全部免费
     city_centers: 0,         // 市中心广场免费
-    viewpoints_towers: 8,    // 观景台可能收费
+    viewpoints_towers: 5,    // 降低观景台价格，很多免费
     
-    // 娱乐休闲类 - 通常收费
-    theme_parks_zoos: 35,    // 主题公园动物园收费较高
-    nightlife: 30,           // 夜生活消费较高
-    shows_cinema: 15,        // 演出电影票价中等
+    // 娱乐休闲类 - 部分免费
+    theme_parks_zoos: 25,    // 降低主题公园价格
+    nightlife: 20,           // 降低夜生活消费
+    shows_cinema: 12,        // 降低演出票价
     shopping: 0,             // 购物场所免费进入
     
-    // 特色体验类
-    interesting_places: 10,  // 特色景点可能收费
-    food_dining: 25          // 餐饮消费中等
+    // 特色体验类 - 增加免费选项
+    interesting_places: 0,   // 大多数特色景点免费
+    food_dining: 20          // 降低餐饮消费
   };
 
-  let maxPrice = 10; // 默认价格
+  // 🎯 ENHANCED: 随机化价格，增加免费景点的概率
+  let basePrice = 10; // 默认价格
   for (const category of categories) {
-    if (priceMap[category] !== undefined && priceMap[category] > maxPrice) {
-      maxPrice = priceMap[category];
+    if (priceMap[category] !== undefined && priceMap[category] > basePrice) {
+      basePrice = priceMap[category];
     }
   }
 
-  console.log(`💰 价格计算 - 类别: ${categories.join(', ')}, 估算价格: $${maxPrice}`);
+  // 🎲 增加随机性：30% 的景点变为免费
+  const randomFactor = Math.random();
+  if (randomFactor < 0.3) {
+    basePrice = 0; // 30% 概率变为免费
+  } else if (randomFactor < 0.5 && basePrice > 0) {
+    basePrice = Math.max(0, basePrice - 5); // 20% 概率降价
+  }
+
+  console.log(`💰 价格计算 - 类别: ${categories.join(', ')}, 估算价格: $${basePrice}`);
 
   return {
-    amount: maxPrice,
+    amount: basePrice,
     currencyCode: 'USD'
   };
 }

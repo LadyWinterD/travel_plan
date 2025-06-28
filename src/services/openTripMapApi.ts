@@ -277,17 +277,18 @@ export async function getCoordinatesForCity(cityName: string): Promise<CityCoord
 }
 
 /**
- * Get raw attractions within radius using OpenTripMap (Step 1)
- * CORRECTED VERSION - Fixed API response parsing
+ * 🚀 ENHANCED: Get raw attractions within radius using OpenTripMap (Step 1)
+ * 增加搜索半径和数量限制，获取更多景点选择
  */
-export async function getRawAttractions(lat: number, lon: number, radiusKm: number = 30): Promise<OpenTripMapPlace[]> {
+export async function getRawAttractions(lat: number, lon: number, radiusKm: number = 50): Promise<OpenTripMapPlace[]> {
   try {
     console.log(`🎯 Getting raw attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
     
     const radiusMeters = radiusKm * 1000;
     const kinds = 'interesting_places,natural,cultural,architecture,historic,religion,museums,amusements,sport';
     
-    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&limit=500&format=json&apikey=${API_KEY}`;
+    // 🚀 ENHANCED: 增加限制到1000，获取更多景点
+    const url = `${BASE_URL}/radius?radius=${radiusMeters}&lon=${lon}&lat=${lat}&kinds=${kinds}&limit=1000&format=json&apikey=${API_KEY}`;
     
     const response = await fetch(url);
     
@@ -388,11 +389,12 @@ export async function getPlaceDetails(xid: string): Promise<OpenTripMapDetails |
 }
 
 /**
- * Main function to get top attractions (combines all steps like your working code)
+ * 🚀 ENHANCED: Main function to get top attractions (combines all steps)
+ * 增加返回数量到50个，提供更多选择
  */
-export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 30, cityName: string = 'Unknown'): Promise<OpenTripMapPlace[]> {
+export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 50, cityName: string = 'Unknown'): Promise<OpenTripMapPlace[]> {
   try {
-    // Step 1: Get raw attractions
+    // Step 1: Get raw attractions with larger radius
     const rawAttractions = await getRawAttractions(lat, lon, radiusKm);
     if (rawAttractions.length === 0) {
       console.log(`No raw attractions found for ${cityName}`);
@@ -411,8 +413,8 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
       filteredPreviews.some(preview => preview.xid === attraction.xid)
     );
     
-    // Return top 20 like your working code
-    const topAttractions = filteredAttractions.slice(0, 20);
+    // 🚀 ENHANCED: Return top 50 instead of 20
+    const topAttractions = filteredAttractions.slice(0, 50);
     
     console.log(`🏆 Returning ${topAttractions.length} top filtered attractions for ${cityName}`);
     return topAttractions;
