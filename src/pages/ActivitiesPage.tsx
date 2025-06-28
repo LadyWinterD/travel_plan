@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, Eye } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
 import type { ActivityCategory } from '../data/activityCategories';
+import ActivityDetailModal from '../components/ActivityDetailModal';
 
 // Utility function for category validation
 const validateCategory = (cat: string): ActivityCategory => {
@@ -103,8 +104,9 @@ const ActivityCard: React.FC<{
   activity: Activity; 
   isSelected: boolean; 
   onToggle: () => void;
+  onViewDetails: () => void;
   weather?: WeatherData;
-}> = ({ activity, isSelected, onToggle, weather }) => {
+}> = ({ activity, isSelected, onToggle, onViewDetails, weather }) => {
   
   const getWeatherBadge = () => {
     if (!weather) return null;
@@ -150,6 +152,13 @@ const ActivityCard: React.FC<{
       {/* Weather Badge */}
       {getWeatherBadge()}
       
+      {/* Free Badge */}
+      {(!activity.price || activity.price.amount === 0) && (
+        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+          FREE
+        </div>
+      )}
+      
       {/* Activity Image */}
       <div className="h-40 sm:h-48 relative">
         <img
@@ -163,6 +172,15 @@ const ActivityCard: React.FC<{
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        
+        {/* View Details Button */}
+        <button
+          onClick={onViewDetails}
+          className="absolute bottom-3 right-3 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+          title="View Details"
+        >
+          <Eye size={16} />
+        </button>
       </div>
       
       {/* Activity Content */}
@@ -187,7 +205,9 @@ const ActivityCard: React.FC<{
           </div>
           <div className="flex items-center gap-1">
             <DollarSign size={12} className="flex-shrink-0" />
-            <span>{formatPrice()}</span>
+            <span className={activity.price?.amount === 0 ? 'text-green-600 font-semibold' : ''}>
+              {formatPrice()}
+            </span>
           </div>
         </div>
         
@@ -274,6 +294,11 @@ const ActivitiesPage: React.FC = () => {
   
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
+  const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
+  
+  // Modal state
+  const [selectedActivityForModal, setSelectedActivityForModal] = useState<Activity | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   
   // Memoized available categories - performance optimized
   const availableCategories = useMemo(() => {
@@ -362,6 +387,13 @@ const ActivitiesPage: React.FC = () => {
   useEffect(() => {
     let filteredActivities = [...allActivitiesForCity];
 
+    // Apply free filter
+    if (showFreeOnly) {
+      filteredActivities = filteredActivities.filter(activity =>
+        !activity.price || activity.price.amount === 0
+      );
+    }
+
     // Apply interest category filters
     if (selectedInterests.length > 0) {
       filteredActivities = filteredActivities.filter(activity =>
@@ -379,7 +411,7 @@ const ActivitiesPage: React.FC = () => {
     }
 
     setActivities(filteredActivities);
-  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences]);
+  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -401,12 +433,31 @@ const ActivitiesPage: React.FC = () => {
   const clearAllFilters = () => {
     setSelectedInterests([]);
     setSmartWeatherFiltering(false);
+    setShowFreeOnly(false);
   };
+
+  const handleViewDetails = (activity: Activity) => {
+    setSelectedActivityForModal(activity);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedActivityForModal(null);
+  };
+
+  // Count free activities
+  const freeActivitiesCount = allActivitiesForCity.filter(activity => 
+    !activity.price || activity.price.amount === 0
+  ).length;
 
   // Determine empty state message
   const getEmptyStateMessage = () => {
     if (loadingActivities) return null;
     if (allActivitiesForCity.length === 0) return apiError || 'No attractions found for this city.';
+    if (showFreeOnly && activities.length === 0) {
+      return 'No free activities found for this destination.';
+    }
     if (selectedInterests.length > 0 && activities.length === 0) {
       return `No activities found matching your selected interests: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}.`;
     }
@@ -535,59 +586,92 @@ const ActivitiesPage: React.FC = () => {
         />
       )}
       
-      {/* Dynamic Interest Categories */}
+      {/* Enhanced Filter Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-teal-600" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter by Interests</h3>
-            {availableCategories.length > 0 && (
-              <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
-            )}
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
           </div>
-          {selectedInterests.length > 0 && (
+          {(selectedInterests.length > 0 || showFreeOnly) && (
             <button
-              onClick={() => setSelectedInterests([])}
+              onClick={clearAllFilters}
               className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
             >
-              Clear filters
+              Clear all filters
             </button>
           )}
         </div>
         
-        {/* Loading state for categories */}
-        {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+        {/* Free Activities Filter */}
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-green-600">
+                <DollarSign size={20} />
+              </div>
+              <div>
+                <h4 className="font-semibold text-green-800">Free Activities Only</h4>
+                <p className="text-sm text-green-700">
+                  {freeActivitiesCount} free activities available in {currentDestination.name}
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFreeOnly}
+                onChange={(e) => setShowFreeOnly(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
+          </div>
+        </div>
         
-        {/* Dynamic categories grid */}
-        {!loadingActivities && !isInitialLoad && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {availableCategories.map((interest) => (
-              <label
-                key={interest}
-                className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
-                  selectedInterests.includes(interest)
-                    ? 'border-teal-500 bg-teal-50 text-teal-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedInterests.includes(interest)}
-                  onChange={() => handleInterestToggle(interest)}
-                  className="sr-only"
-                />
-                <span className="font-medium text-center">
-                  {activityCategoryLabels[interest] || interest}
-                </span>
-              </label>
-            ))}
-            {availableCategories.length === 0 && !loadingActivities && (
-              <p className="text-gray-500 col-span-full text-center py-4 text-sm">
-                No categories available for this city.
-              </p>
+        {/* Interest Categories */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900">Filter by Interests</h4>
+            {availableCategories.length > 0 && (
+              <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
             )}
           </div>
-        )}
+          
+          {/* Loading state for categories */}
+          {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+          
+          {/* Dynamic categories grid */}
+          {!loadingActivities && !isInitialLoad && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {availableCategories.map((interest) => (
+                <label
+                  key={interest}
+                  className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
+                    selectedInterests.includes(interest)
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInterests.includes(interest)}
+                    onChange={() => handleInterestToggle(interest)}
+                    className="sr-only"
+                  />
+                  <span className="font-medium text-center">
+                    {activityCategoryLabels[interest] || interest}
+                  </span>
+                </label>
+              ))}
+              {availableCategories.length === 0 && !loadingActivities && (
+                <p className="text-gray-500 col-span-full text-center py-4 text-sm">
+                  No categories available for this city.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Activity Cards Grid */}
@@ -606,6 +690,7 @@ const ActivitiesPage: React.FC = () => {
                 activity={activity}
                 isSelected={isActivitySelected(activity.id)}
                 onToggle={() => toggleActivity(activeDestination!, activity)}
+                onViewDetails={() => handleViewDetails(activity)}
                 weather={weatherData || undefined}
               />
             ))}
@@ -624,6 +709,14 @@ const ActivitiesPage: React.FC = () => {
             {getEmptyStateMessage()}
           </p>
           <div className="space-y-2">
+            {showFreeOnly && (
+              <button
+                onClick={() => setShowFreeOnly(false)}
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
+              >
+                Show all activities (including paid)
+              </button>
+            )}
             {selectedInterests.length > 0 && (
               <button
                 onClick={() => setSelectedInterests([])}
@@ -632,7 +725,7 @@ const ActivitiesPage: React.FC = () => {
                 Clear interest filters
               </button>
             )}
-            {(selectedInterests.length > 0 || smartWeatherFiltering) && (
+            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly) && (
               <button
                 onClick={clearAllFilters}
                 className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
@@ -660,6 +753,21 @@ const ActivitiesPage: React.FC = () => {
           View Itinerary →
         </button>
       </div>
+
+      {/* Activity Detail Modal */}
+      {selectedActivityForModal && (
+        <ActivityDetailModal
+          activity={selectedActivityForModal}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          weather={weatherData || undefined}
+          location={`${currentDestination.name}, ${currentDestination.country}`}
+          isSelected={isActivitySelected(selectedActivityForModal.id)}
+          onToggle={() => {
+            toggleActivity(activeDestination!, selectedActivityForModal);
+          }}
+        />
+      )}
     </div>
   );
 };
