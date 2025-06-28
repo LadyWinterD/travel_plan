@@ -27,30 +27,31 @@ const Header: React.FC = () => {
   ];
 
   return (
-    <header className="bg-white shadow-md">
-      <div className="container mx-auto px-4 py-4">
+    <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-3 sm:py-4">
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center space-x-2">
-            <span className="text-teal-600 text-2xl font-bold">TravelPlanner</span>
+            <span className="text-teal-600 text-xl sm:text-2xl font-bold">TravelPlanner</span>
           </Link>
           
           {/* Mobile menu button */}
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-500 hover:text-teal-600 focus:outline-none"
+              className="text-gray-500 hover:text-teal-600 focus:outline-none p-2"
+              aria-label="Toggle menu"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
           
           {/* Desktop navigation */}
-          <nav className="hidden md:flex space-x-8">
+          <nav className="hidden md:flex space-x-4 lg:space-x-8">
             {navigationItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.disabled ? '#' : item.path}
-                className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors ${
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors text-sm lg:text-base ${
                   item.step === stepNumber
                     ? 'text-white bg-teal-600'
                     : item.disabled
@@ -70,17 +71,17 @@ const Header: React.FC = () => {
         
         {/* Mobile navigation */}
         {isMenuOpen && (
-          <nav className="md:hidden mt-4 space-y-2">
+          <nav className="md:hidden mt-4 pb-4 space-y-2 border-t border-gray-100 pt-4">
             {navigationItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.disabled ? '#' : item.path}
-                className={`flex items-center space-x-2 px-4 py-3 rounded-md transition-colors ${
+                className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
                   item.step === stepNumber
                     ? 'text-white bg-teal-600'
                     : item.disabled
                     ? 'text-gray-400 cursor-not-allowed'
-                    : 'text-gray-600 hover:text-teal-600'
+                    : 'text-gray-600 hover:text-teal-600 hover:bg-gray-50'
                 }`}
                 onClick={(e) => {
                   if (item.disabled) e.preventDefault();
@@ -88,7 +89,7 @@ const Header: React.FC = () => {
                 }}
               >
                 {item.icon}
-                <span>{item.name}</span>
+                <span className="text-base">{item.name}</span>
               </Link>
             ))}
           </nav>

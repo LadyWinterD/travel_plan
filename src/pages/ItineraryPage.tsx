@@ -41,18 +41,18 @@ interface SortableActivityProps {
 
 const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500" />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500" />;
-    return <Cloud className="text-gray-500" />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={16} />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={16} />;
+    return <Cloud className="text-gray-500" size={16} />;
   };
 
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
       {getWeatherIcon()}
       <span>{Math.round(weather.temperature)}°C</span>
       {weather.isRainy && (
         <span className="flex items-center text-blue-500">
-          <Umbrella size={14} className="mr-1" />
+          <Umbrella size={12} className="mr-1" />
           {Math.round(weather.precipitation)}mm
         </span>
       )}
@@ -89,18 +89,18 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
       className={`mb-3 ${isDragging ? 'opacity-50' : ''}`}
       data-activity-id={activity.activityId}
     >
-      <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-        <div className="flex items-center gap-4">
-          <div className="flex-shrink-0 w-20 text-sm text-gray-600">
+      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex-shrink-0 w-16 sm:w-20 text-xs sm:text-sm text-gray-600">
             {activity.startTime}
           </div>
           
           <div 
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded touch-none"
+            className="cursor-grab active:cursor-grabbing p-1 sm:p-2 hover:bg-gray-100 rounded touch-none"
           >
-            <GripVertical size={16} className="text-gray-400" />
+            <GripVertical size={14} className="text-gray-400" />
           </div>
           
           <img
@@ -117,19 +117,19 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
               img.onerror = null; // Prevent infinite loop if fallback also fails
               img.src = getFallbackImageUrl(activity.activity.categories);
             }}
-            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+            className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
           />
           
           <div className="flex-grow min-w-0">
-            <h4 className="font-medium text-gray-900 truncate">{activity.activity.name}</h4>
-            <div className="flex items-center gap-4 mt-1">
-              <div className="flex items-center text-sm text-gray-600">
-                <Clock size={14} className="mr-1 flex-shrink-0" />
+            <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base">{activity.activity.name}</h4>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
+              <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                <Clock size={12} className="mr-1 flex-shrink-0" />
                 <span>{Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}</span>
               </div>
               {location && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin size={14} className="mr-1 flex-shrink-0" />
+                <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                  <MapPin size={12} className="mr-1 flex-shrink-0" />
                   <span className="truncate">{location}</span>
                 </div>
               )}
@@ -137,8 +137,8 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
             </div>
             
             {showWeatherWarning && (
-              <div className="mt-2 text-sm text-yellow-700 bg-yellow-50 px-3 py-1 rounded-md flex items-center">
-                <AlertTriangle size={14} className="mr-1 flex-shrink-0" />
+              <div className="mt-2 text-xs sm:text-sm text-yellow-700 bg-yellow-50 px-2 sm:px-3 py-1 rounded-md flex items-center">
+                <AlertTriangle size={12} className="mr-1 flex-shrink-0" />
                 <span>This is an outdoor activity and rain is forecasted</span>
               </div>
             )}
@@ -146,9 +146,9 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
           
           <button
             onClick={onDelete}
-            className="p-2 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+            className="p-1 sm:p-2 hover:bg-red-50 rounded-full text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
       </div>
@@ -471,23 +471,24 @@ const ItineraryPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Your Itinerary</h1>
+    <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Your Itinerary</h1>
         
         {/* Export PDF Button */}
         {dailyItinerary.length > 0 && (
           <button
             onClick={handleExportPDF}
             disabled={isExporting || isPreloadingImages}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
               isExporting || isPreloadingImages
                 ? 'bg-gray-400 text-white cursor-not-allowed'
                 : 'bg-teal-500 text-white hover:bg-teal-600 shadow-lg hover:shadow-xl'
             }`}
           >
-            <Download size={20} />
-            {getExportButtonText()}
+            <Download size={16} />
+            <span className="hidden sm:inline">{getExportButtonText()}</span>
+            <span className="sm:hidden">Export PDF</span>
           </button>
         )}
       </div>
@@ -508,13 +509,13 @@ const ItineraryPage: React.FC = () => {
               }
             }}
           >
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {Object.entries(daysByDestination).map(([destinationId, days]) => {
                 const location = getLocationForDay(destinationId);
                 return (
                   <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden">
                     <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white">
-                      <h2 className="text-xl font-semibold">{location}</h2>
+                      <h2 className="text-lg sm:text-xl font-semibold">{location}</h2>
                       <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
                     </div>
                     
@@ -522,22 +523,24 @@ const ItineraryPage: React.FC = () => {
                       {days.map((day, index) => (
                         <div 
                           key={day.id}
-                          className={`p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
+                          className={`p-4 sm:p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
                         >
-                          <div className="mb-6">
-                            <div className="flex justify-between items-start">
+                          <div className="mb-4 sm:mb-6">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                               <div>
-                                <h3 className="text-lg font-semibold">Day {index + 1}</h3>
+                                <h3 className="text-base sm:text-lg font-semibold">Day {index + 1}</h3>
                                 <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
                               </div>
                               {day.weatherData && (
-                                <WeatherDisplay weather={day.weatherData} />
+                                <div className="self-start">
+                                  <WeatherDisplay weather={day.weatherData} />
+                                </div>
                               )}
                             </div>
                             {day.warning && (
-                              <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-center">
-                                <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
-                                {day.warning}
+                              <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-start">
+                                <AlertTriangle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm">{day.warning}</span>
                               </div>
                             )}
                           </div>
@@ -583,12 +586,12 @@ const ItineraryPage: React.FC = () => {
             </DragOverlay>
           </DndContext>
         ) : (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <Calendar size={48} className="mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600 mb-4">No activities scheduled yet.</p>
+          <div className="text-center py-8 sm:py-12 bg-white rounded-lg shadow-sm">
+            <Calendar size={32} className="mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 mb-4 text-sm sm:text-base">No activities scheduled yet.</p>
             <button
               onClick={() => navigate('/activities')}
-              className="px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors"
+              className="px-4 sm:px-6 py-2 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors text-sm sm:text-base"
             >
               Add Activities
             </button>
@@ -597,10 +600,10 @@ const ItineraryPage: React.FC = () => {
       </div>
       
       {/* Navigation Buttons */}
-      <div className="mt-8 flex justify-between">
+      <div className="mt-6 sm:mt-8 flex justify-between">
         <button
           onClick={() => navigate('/activities')}
-          className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+          className="px-4 sm:px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors text-sm sm:text-base"
         >
           Back to Activities
         </button>

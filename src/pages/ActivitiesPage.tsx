@@ -17,7 +17,7 @@ const validateCategory = (cat: string): ActivityCategory => {
 
 // Loading skeleton component for categories
 const CategorySkeleton: React.FC = () => (
-  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
     {Array.from({ length: 8 }).map((_, index) => (
       <div
         key={index}
@@ -29,9 +29,9 @@ const CategorySkeleton: React.FC = () => (
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string; isForTravelDate?: boolean }> = ({ weather, location, isForTravelDate = false }) => {
   const getWeatherIcon = () => {
-    if (weather.isRainy) return <CloudRain className="text-blue-500" size={32} />;
-    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={32} />;
-    return <Cloud className="text-gray-500" size={32} />;
+    if (weather.isRainy) return <CloudRain className="text-blue-500" size={24} />;
+    if (weather.temperature > 25) return <Sun className="text-yellow-500" size={24} />;
+    return <Cloud className="text-gray-500" size={24} />;
   };
 
   const getWeatherAdvice = () => {
@@ -61,18 +61,18 @@ const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string; is
   };
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-xl p-6 mb-6 border border-blue-100">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="bg-gradient-to-r from-blue-50 to-teal-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-blue-100">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {getWeatherIcon()}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800">{location}</h3>
-            <div className="flex items-center gap-3 mt-1">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{location}</h3>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
               <div className="flex items-center gap-1">
-                <Thermometer size={16} className="text-red-500" />
-                <span className="text-2xl font-bold text-gray-900">{Math.round(weather.temperature)}°C</span>
+                <Thermometer size={14} className="text-red-500 flex-shrink-0" />
+                <span className="text-xl sm:text-2xl font-bold text-gray-900">{Math.round(weather.temperature)}°C</span>
               </div>
-              <span className="text-gray-600">{weather.condition}</span>
+              <span className="text-gray-600 text-sm sm:text-base">{weather.condition}</span>
               {weather.isRainy && weather.precipitation != null && (
                 <div className="flex items-center gap-1 text-blue-600">
                   <Umbrella size={14} />
@@ -88,9 +88,9 @@ const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string; is
             )}
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <div className="text-sm text-gray-500 mb-1">Weather Recommendation</div>
-          <div className="text-sm font-medium text-gray-800 max-w-48">
+          <div className="text-sm font-medium text-gray-800">
             {getWeatherAdvice()}
           </div>
         </div>
@@ -111,16 +111,16 @@ const ActivityCard: React.FC<{
     
     if (!activity.indoor && !weather.isRainy && weather.temperature > 15) {
       return (
-        <div className="absolute top-3 left-3 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-          ☀️ Perfect Weather Activity
+        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+          ☀️ <span className="hidden sm:inline">Perfect Weather Activity</span>
         </div>
       );
     }
     
     if (activity.indoor && weather.isRainy) {
       return (
-        <div className="absolute top-3 left-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
-          ☂️ Rainy Day Recommended
+        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+          ☂️ <span className="hidden sm:inline">Rainy Day Recommended</span>
         </div>
       );
     }
@@ -151,7 +151,7 @@ const ActivityCard: React.FC<{
       {getWeatherBadge()}
       
       {/* Activity Image */}
-      <div className="h-48 relative">
+      <div className="h-40 sm:h-48 relative">
         <img
           src={activity.image}
           alt={`Photo of ${activity.name}`}
@@ -166,8 +166,8 @@ const ActivityCard: React.FC<{
       </div>
       
       {/* Activity Content */}
-      <div className="p-4 flex flex-col flex-grow">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
+      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
           {activity.name}
         </h3>
         
@@ -176,24 +176,24 @@ const ActivityCard: React.FC<{
         </p>
         
         {/* Info Row */}
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-3 gap-2">
           <div className="flex items-center gap-1">
-            <Clock size={14} />
+            <Clock size={12} className="flex-shrink-0" />
             <span>{formatDuration(activity.duration)}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Star size={14} className="text-yellow-500" />
+            <Star size={12} className="text-yellow-500 flex-shrink-0" />
             <span>{activity.rating.toFixed(1)}</span>
           </div>
           <div className="flex items-center gap-1">
-            <DollarSign size={14} />
+            <DollarSign size={12} className="flex-shrink-0" />
             <span>{formatPrice()}</span>
           </div>
         </div>
         
         {/* Category Tags */}
         <div className="flex flex-wrap gap-1 mb-3">
-          {activity.categories.slice(0, 3).map((category) => (
+          {activity.categories.slice(0, 2).map((category) => (
             <span 
               key={category}
               className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
@@ -201,9 +201,9 @@ const ActivityCard: React.FC<{
               {activityCategoryLabels[category] || category}
             </span>
           ))}
-          {activity.categories.length > 3 && (
+          {activity.categories.length > 2 && (
             <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">
-              +{activity.categories.length - 3}
+              +{activity.categories.length - 2}
             </span>
           )}
         </div>
@@ -223,7 +223,7 @@ const ActivityCard: React.FC<{
         <div className="mt-auto">
           <button
             onClick={onToggle}
-            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+            className={`w-full py-2 sm:py-3 px-4 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
               isSelected
                 ? 'bg-teal-500 text-white shadow-lg hover:bg-teal-600'
                 : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
@@ -232,10 +232,14 @@ const ActivityCard: React.FC<{
             {isSelected ? (
               <span className="flex items-center justify-center gap-2">
                 <Check size={16} />
-                Added to Trip
+                <span className="hidden sm:inline">Added to Trip</span>
+                <span className="sm:hidden">Added</span>
               </span>
             ) : (
-              'Add to Trip'
+              <>
+                <span className="hidden sm:inline">Add to Trip</span>
+                <span className="sm:hidden">Add</span>
+              </>
             )}
           </button>
         </div>
@@ -421,16 +425,16 @@ const ActivitiesPage: React.FC = () => {
   }
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
       {/* Page Title */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
-        <p className="text-gray-600">Powered by OpenTripMap - Real attractions from around the world</p>
+      <div className="text-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
+        <p className="text-gray-600 text-sm sm:text-base px-4">Powered by OpenTripMap - Real attractions from around the world</p>
       </div>
       
       {/* API Error Message */}
       {apiError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="mb-4 sm:mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm sm:text-base">
           <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>{apiError}</span>
@@ -440,29 +444,29 @@ const ActivitiesPage: React.FC = () => {
       
       {/* Travel Dates Warning */}
       {!startDate && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+        <div className="mb-4 sm:mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
           <div className="flex items-center gap-2">
             <Calendar size={16} />
-            <span>Set your travel dates to see weather forecasts for your trip!</span>
+            <span className="text-sm sm:text-base">Set your travel dates to see weather forecasts for your trip!</span>
           </div>
         </div>
       )}
       
       {/* Destination Tabs */}
-      <div className="mb-6">
-        <div className="flex overflow-x-auto pb-2 space-x-3 scrollbar-hide">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex overflow-x-auto pb-2 space-x-2 sm:space-x-3 scrollbar-hide">
           {destinations.map((destination, index) => (
             <button
               key={destination.id}
               onClick={() => setActiveDestination(destination.id)}
-              className={`flex-shrink-0 px-6 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${
+              className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-sm sm:text-base ${
                 activeDestination === destination.id
                   ? 'bg-teal-500 text-white shadow-lg transform scale-105'
                   : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                   activeDestination === destination.id ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-600'
                 }`}>
                   {String.fromCharCode(65 + index)}
@@ -475,19 +479,23 @@ const ActivitiesPage: React.FC = () => {
       </div>
       
       {/* Destination Information with Smart Weather Filtering */}
-      <div className="mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className="text-teal-600" size={20} />
-            <div>
-              <h2 className="text-lg font-semibold text-teal-800">
+      <div className="mb-4 sm:mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <MapPin className="text-teal-600 flex-shrink-0" size={20} />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-semibold text-teal-800 truncate">
                 {currentDestination.name}, {currentDestination.country}
               </h2>
-              <p className="text-teal-700 text-sm">
+              <p className="text-teal-700 text-xs sm:text-sm">
                 Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
-                Selected Activities: {selectedActivities[currentDestination.id]?.length || 0} • 
-                Available Activities: {activities.length}
-                {selectedInterests.length > 0 && ` • Filtered by: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}`}
+                Selected: {selectedActivities[currentDestination.id]?.length || 0} • 
+                Available: {activities.length}
+                {selectedInterests.length > 0 && (
+                  <span className="block sm:inline sm:ml-2">
+                    Filtered by: {selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -513,9 +521,9 @@ const ActivitiesPage: React.FC = () => {
 
       {/* Weather Recommendation */}
       {isWeatherLoading && (
-        <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading weather data for your travel dates...</p>
+        <div className="bg-gray-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-center">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
+          <p className="text-gray-500 text-sm sm:text-base">Loading weather data for your travel dates...</p>
         </div>
       )}
       
@@ -528,11 +536,11 @@ const ActivitiesPage: React.FC = () => {
       )}
       
       {/* Dynamic Interest Categories */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-teal-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Filter by Interests</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter by Interests</h3>
             {availableCategories.length > 0 && (
               <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
             )}
@@ -552,7 +560,7 @@ const ActivitiesPage: React.FC = () => {
         
         {/* Dynamic categories grid */}
         {!loadingActivities && !isInitialLoad && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {availableCategories.map((interest) => (
               <label
                 key={interest}
@@ -574,7 +582,7 @@ const ActivitiesPage: React.FC = () => {
               </label>
             ))}
             {availableCategories.length === 0 && !loadingActivities && (
-              <p className="text-gray-500 col-span-full text-center py-4">
+              <p className="text-gray-500 col-span-full text-center py-4 text-sm">
                 No categories available for this city.
               </p>
             )}
@@ -584,14 +592,14 @@ const ActivitiesPage: React.FC = () => {
       
       {/* Activity Cards Grid */}
       {loadingActivities ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading real attractions from OpenTripMap...</p>
+        <div className="text-center py-8 sm:py-12">
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm sm:text-base">Loading real attractions from OpenTripMap...</p>
         </div>
       ) : (
         <>
           {/* Activity Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {activities.map((activity) => (
               <ActivityCard
                 key={activity.id}
@@ -607,19 +615,19 @@ const ActivitiesPage: React.FC = () => {
 
       {/* Enhanced No Activities Message */}
       {getEmptyStateMessage() && (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="text-center py-8 sm:py-12 bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="text-gray-400 mb-4">
-            <Sun size={48} className="mx-auto" />
+            <Sun size={32} className="mx-auto" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
-          <p className="text-gray-500 mb-4 max-w-md mx-auto">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
+          <p className="text-gray-500 mb-4 max-w-md mx-auto text-sm sm:text-base px-4">
             {getEmptyStateMessage()}
           </p>
           <div className="space-y-2">
             {selectedInterests.length > 0 && (
               <button
                 onClick={() => setSelectedInterests([])}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
               >
                 Clear interest filters
               </button>
@@ -627,7 +635,7 @@ const ActivitiesPage: React.FC = () => {
             {(selectedInterests.length > 0 || smartWeatherFiltering) && (
               <button
                 onClick={clearAllFilters}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
               >
                 Clear all filters
               </button>
@@ -637,16 +645,16 @@ const ActivitiesPage: React.FC = () => {
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row justify-between mt-6 sm:mt-8 pt-6 border-t border-gray-200 gap-4">
         <button
           onClick={() => navigate('/destinations')}
-          className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+          className="px-4 sm:px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm sm:text-base"
         >
           ← Back to Destinations
         </button>
         <button
           onClick={() => navigate('/itinerary')}
-          className="px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-medium shadow-lg"
+          className="px-4 sm:px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-medium shadow-lg text-sm sm:text-base"
           disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
         >
           View Itinerary →
