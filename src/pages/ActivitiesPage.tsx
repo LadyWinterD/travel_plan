@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -104,9 +104,9 @@ const ActivityCard: React.FC<{
   activity: Activity; 
   isSelected: boolean; 
   onToggle: () => void;
-  onDoubleClick: () => void;
+  onClick: () => void;
   weather?: WeatherData;
-}> = ({ activity, isSelected, onToggle, onDoubleClick, weather }) => {
+}> = ({ activity, isSelected, onToggle, onClick, weather }) => {
   
   const getWeatherBadge = () => {
     if (!weather) return null;
@@ -143,13 +143,12 @@ const ActivityCard: React.FC<{
 
   return (
     <div 
-      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg flex flex-col cursor-pointer ${
+      className={`relative bg-white rounded-xl shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 flex flex-col cursor-pointer ${
         isSelected 
           ? 'border-teal-500 ring-2 ring-teal-200 transform scale-105' 
           : 'border-gray-200 hover:border-gray-300'
       }`}
-      onDoubleClick={onDoubleClick}
-      title="Double-click to view details"
+      onClick={onClick}
     >
       {/* Weather Badge */}
       {getWeatherBadge()}
@@ -174,11 +173,6 @@ const ActivityCard: React.FC<{
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-        
-        {/* Double-click hint */}
-        <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs opacity-75">
-          Double-click for details
-        </div>
       </div>
       
       {/* Activity Content */}
@@ -241,7 +235,7 @@ const ActivityCard: React.FC<{
         <div className="mt-auto">
           <button
             onClick={(e) => {
-              e.stopPropagation(); // Prevent double-click when clicking button
+              e.stopPropagation(); // Prevent modal opening when clicking button
               onToggle();
             }}
             className={`w-full py-2 sm:py-3 px-4 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
@@ -296,6 +290,7 @@ const ActivitiesPage: React.FC = () => {
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
+  const [hideFallbackImages, setHideFallbackImages] = useState<boolean>(true); // Default to true
   
   // Modal state
   const [selectedActivityForModal, setSelectedActivityForModal] = useState<Activity | null>(null);
@@ -395,6 +390,14 @@ const ActivitiesPage: React.FC = () => {
   useEffect(() => {
     let filteredActivities = [...allActivitiesForCity];
 
+    // Apply image filter - exclude activities with fallback images
+    if (hideFallbackImages) {
+      filteredActivities = filteredActivities.filter(activity => {
+        const fallbackUrl = getFallbackImageUrl(activity.categories);
+        return activity.image !== fallbackUrl;
+      });
+    }
+
     // Apply free filter
     if (showFreeOnly) {
       filteredActivities = filteredActivities.filter(activity =>
@@ -419,7 +422,7 @@ const ActivitiesPage: React.FC = () => {
     }
 
     setActivities(filteredActivities);
-  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly]);
+  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly, hideFallbackImages]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -442,9 +445,10 @@ const ActivitiesPage: React.FC = () => {
     setSelectedInterests([]);
     setSmartWeatherFiltering(false);
     setShowFreeOnly(false);
+    setHideFallbackImages(false);
   };
 
-  const handleDoubleClick = (activity: Activity) => {
+  const handleClick = (activity: Activity) => {
     setSelectedActivityForModal(activity);
     setIsModalOpen(true);
   };
@@ -459,10 +463,19 @@ const ActivitiesPage: React.FC = () => {
     !activity.price || activity.price.amount === 0
   ).length;
 
+  // Count activities with real images
+  const realImageActivitiesCount = allActivitiesForCity.filter(activity => {
+    const fallbackUrl = getFallbackImageUrl(activity.categories);
+    return activity.image !== fallbackUrl;
+  }).length;
+
   // Determine empty state message
   const getEmptyStateMessage = () => {
     if (loadingActivities) return null;
     if (allActivitiesForCity.length === 0) return apiError || 'No attractions found for this city.';
+    if (hideFallbackImages && activities.length === 0) {
+      return 'No activities with real images found. Try showing all activities or adjust your filters.';
+    }
     if (showFreeOnly && activities.length === 0) {
       return 'No free activities found for this destination. Try adjusting your filters or explore paid activities.';
     }
@@ -487,9 +500,9 @@ const ActivitiesPage: React.FC = () => {
     <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
       {/* Page Title */}
       <div className="text-center mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover 50+ Real Attractions</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
         <p className="text-gray-600 text-sm sm:text-base px-4">
-          Powered by OpenTripMap - More choices, more free options!
+          Powered by OpenTripMap - Real attractions with authentic photos!
         </p>
       </div>
       
@@ -603,13 +616,49 @@ const ActivitiesPage: React.FC = () => {
             <Filter size={18} className="text-teal-600" />
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
           </div>
-          {(selectedInterests.length > 0 || showFreeOnly) && (
+          {(selectedInterests.length > 0 || showFreeOnly || hideFallbackImages) && (
             <button
               onClick={clearAllFilters}
               className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
             >
               Clear all filters
             </button>
+          )}
+        </div>
+        
+        {/* Real Images Filter */}
+        <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-purple-600 bg-purple-100 p-2 rounded-full">
+                <ImageIcon size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-purple-800 text-lg">📸 Real Images Only</h4>
+                <p className="text-sm text-purple-700">
+                  <span className="font-semibold">{realImageActivitiesCount}</span> attractions with authentic photos
+                  <span className="ml-2 text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
+                    {Math.round(realImageActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% REAL PHOTOS
+                  </span>
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hideFallbackImages}
+                onChange={(e) => setHideFallbackImages(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 shadow-lg"></div>
+            </label>
+          </div>
+          {hideFallbackImages && (
+            <div className="mt-3 p-2 bg-purple-100 rounded-md">
+              <p className="text-sm text-purple-800 font-medium">
+                🎯 Showing only attractions with real photos! Get authentic previews of your destinations.
+              </p>
+            </div>
           )}
         </div>
         
@@ -698,7 +747,7 @@ const ActivitiesPage: React.FC = () => {
       {loadingActivities ? (
         <div className="text-center py-8 sm:py-12">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-500 text-sm sm:text-base">Loading 50+ real attractions from OpenTripMap...</p>
+          <p className="text-gray-500 text-sm sm:text-base">Loading real attractions from OpenTripMap...</p>
         </div>
       ) : (
         <>
@@ -710,7 +759,7 @@ const ActivitiesPage: React.FC = () => {
                 activity={activity}
                 isSelected={isActivitySelected(activity.id)}
                 onToggle={() => toggleActivity(activeDestination!, activity)}
-                onDoubleClick={() => handleDoubleClick(activity)}
+                onClick={() => handleClick(activity)}
                 weather={weatherData || undefined}
               />
             ))}
@@ -729,6 +778,14 @@ const ActivitiesPage: React.FC = () => {
             {getEmptyStateMessage()}
           </p>
           <div className="space-y-2">
+            {hideFallbackImages && (
+              <button
+                onClick={() => setHideFallbackImages(false)}
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
+              >
+                Show all activities (including stock photos)
+              </button>
+            )}
             {showFreeOnly && (
               <button
                 onClick={() => setShowFreeOnly(false)}
@@ -745,7 +802,7 @@ const ActivitiesPage: React.FC = () => {
                 Clear interest filters
               </button>
             )}
-            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly) && (
+            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly || hideFallbackImages) && (
               <button
                 onClick={clearAllFilters}
                 className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
