@@ -1,6 +1,6 @@
 import React from 'react';
 import { Activity, WeatherData } from '../types';
-import { X, Clock, Star, DollarSign, MapPin, Calendar, Thermometer, Umbrella, ExternalLink, Info } from 'lucide-react';
+import { X, Clock, Star, DollarSign, MapPin, Calendar, Thermometer, Umbrella, ExternalLink, Info, Globe } from 'lucide-react';
 import { activityCategoryLabels } from '../data/activityCategories';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 
@@ -84,6 +84,13 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30"></div>
+          
+          {/* Free Badge */}
+          {(!activity.price || activity.price.amount === 0) && (
+            <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+              FREE
+            </div>
+          )}
           
           {/* Close Button */}
           <button
@@ -183,7 +190,42 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
               About This Activity
             </h3>
             <p className="text-gray-700 leading-relaxed">{activity.description}</p>
+            
+            {/* Wikipedia Extracts */}
+            {activity.wikipediaExtracts && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h4 className="font-medium text-blue-900 mb-2">From Wikipedia:</h4>
+                <p className="text-blue-800 text-sm leading-relaxed">
+                  {activity.wikipediaExtracts.text}
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Address Information */}
+          {activity.address && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                <MapPin size={18} className="mr-2 text-gray-600" />
+                Address
+              </h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-1 text-sm">
+                  {activity.address.road && activity.address.houseNumber && (
+                    <div className="text-gray-900 font-medium">
+                      {activity.address.houseNumber} {activity.address.road}
+                    </div>
+                  )}
+                  {activity.address.city && (
+                    <div className="text-gray-700">{activity.address.city}</div>
+                  )}
+                  {activity.address.country && (
+                    <div className="text-gray-600">{activity.address.country}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Categories */}
           <div className="mb-6">
@@ -254,6 +296,18 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
               >
                 <ExternalLink size={18} />
                 <span className="hidden sm:inline">View on Map</span>
+              </button>
+            )}
+            
+            {activity.wikipediaUrl && (
+              <button
+                onClick={() => {
+                  window.open(activity.wikipediaUrl, '_blank');
+                }}
+                className="px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
+              >
+                <Globe size={18} />
+                <span className="hidden sm:inline">Wikipedia</span>
               </button>
             )}
           </div>
