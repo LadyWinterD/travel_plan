@@ -188,13 +188,28 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
 
         console.log(`📋 ${attraction.name} categories:`, categories);
 
+        // 🌟 评分处理逻辑 - 这里是评分的来源！
+        const rawRating = attraction.rate || 0; // OpenTripMap 原始评分 (0-10 scale)
+        
+        // 将 OpenTripMap 的 0-10 评分转换为 1-5 星级评分
+        let processedRating: number;
+        if (rawRating === 0) {
+          // 如果没有评分，根据景点类型给予合理的默认评分
+          processedRating = getDefaultRatingByCategory(categories);
+        } else {
+          // 将 0-10 转换为 1-5，并确保最低 3.5 分（保证用户体验）
+          processedRating = Math.max(3.5, (rawRating / 10) * 5);
+        }
+
+        console.log(`⭐ ${attraction.name} - 原始评分: ${rawRating}, 处理后评分: ${processedRating.toFixed(1)}`);
+
         return {
           id: `otm_${attraction.xid}`,
           name: attraction.name,
           description,
           image: imageUrl,
           duration: getDurationFromCategories(categories),
-          rating: Math.max(attraction.rate || 4.0, 3.5),
+          rating: Math.round(processedRating * 10) / 10, // 保留一位小数
           price: getPriceFromCategories(categories),
           categories,
           indoor: isIndoor,
@@ -212,7 +227,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           description: `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`,
           image: getFallbackImageUrl(categories),
           duration: getDurationFromCategories(categories),
-          rating: Math.max(attraction.rate || 4.0, 3.5),
+          rating: getDefaultRatingByCategory(categories),
           price: getPriceFromCategories(categories),
           categories,
           indoor: isLikelyIndoorFromKinds(attraction.kinds, attraction.name),
@@ -238,6 +253,50 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     console.error(`❌ Error fetching real activities for ${cityName}:`, error);
     return [];
   }
+}
+
+/**
+ * 💰 根据活动类型获取默认评分
+ * 这个函数为没有评分的景点提供合理的默认评分
+ */
+function getDefaultRatingByCategory(categories: ActivityCategory[]): number {
+  const categoryRatings: Record<ActivityCategory, number> = {
+    // 文化历史类 - 通常评分较高
+    museums_arts: 4.2,
+    historical_sites: 4.3, 
+    religious_sites: 4.1,
+    castles_palaces: 4.4,
+    architectural_landmarks: 4.0,
+    
+    // 自然户外类 - 评分很高
+    natural_landscapes: 4.5,
+    parks_gardens: 4.2, 
+    outdoor_sports: 4.0,
+    
+    // 城市探索类 - 中等评分
+    city_centers: 3.8,
+    viewpoints_towers: 4.1,
+    
+    // 娱乐休闲类 - 评分差异较大
+    theme_parks_zoos: 4.3,
+    nightlife: 3.7,
+    shows_cinema: 3.9,
+    shopping: 3.6,
+    
+    // 特色体验类
+    interesting_places: 3.8,
+    food_dining: 4.0
+  };
+
+  // 取最高评分的类别作为默认评分
+  let maxRating = 3.8; // 基础默认评分
+  for (const category of categories) {
+    if (categoryRatings[category] && categoryRatings[category] > maxRating) {
+      maxRating = categoryRatings[category];
+    }
+  }
+
+  return maxRating;
 }
 
 /**
@@ -283,43 +342,46 @@ function getDurationFromCategories(categories: ActivityCategory[]): number {
 }
 
 /**
- * Get estimated price based on English activity categories
+ * 💰 根据活动类型获取估算价格
+ * 这个函数根据景点类型提供合理的价格估算
  */
 function getPriceFromCategories(categories: ActivityCategory[]): { amount: number; currencyCode: string } {
   const priceMap: Record<ActivityCategory, number> = {
-    // Culture & History - varies, some free, some paid
-    museums_arts: 25,
-    historical_sites: 10,
-    religious_sites: 0,
-    castles_palaces: 15,
-    architectural_landmarks: 5,
+    // 文化历史类 - 价格差异较大，有些免费有些收费
+    museums_arts: 25,        // 博物馆通常收费 $15-35
+    historical_sites: 10,    // 历史遗迹有些免费有些收费
+    religious_sites: 0,      // 宗教场所通常免费
+    castles_palaces: 15,     // 城堡宫殿通常收费 $10-25
+    architectural_landmarks: 5, // 建筑地标大多免费或低价
     
-    // Nature & Outdoors - mostly free or low cost
-    natural_landscapes: 0,
-    parks_gardens: 5,
-    outdoor_sports: 20,
+    // 自然户外类 - 大多免费或低价
+    natural_landscapes: 0,   // 自然景观通常免费
+    parks_gardens: 5,        // 公园花园有些收费
+    outdoor_sports: 20,      // 户外运动通常收费
     
-    // Urban Exploration - mostly free
-    city_centers: 0,
-    viewpoints_towers: 8,
+    // 城市探索类 - 大多免费
+    city_centers: 0,         // 市中心广场免费
+    viewpoints_towers: 8,    // 观景台可能收费
     
-    // Leisure & Entertainment - typically paid
-    theme_parks_zoos: 35,
-    nightlife: 30,
-    shows_cinema: 15,
-    shopping: 0,
+    // 娱乐休闲类 - 通常收费
+    theme_parks_zoos: 35,    // 主题公园动物园收费较高
+    nightlife: 30,           // 夜生活消费较高
+    shows_cinema: 15,        // 演出电影票价中等
+    shopping: 0,             // 购物场所免费进入
     
-    // Unique Experiences
-    interesting_places: 10,
-    food_dining: 25
+    // 特色体验类
+    interesting_places: 10,  // 特色景点可能收费
+    food_dining: 25          // 餐饮消费中等
   };
 
-  let maxPrice = 10; // Default price
+  let maxPrice = 10; // 默认价格
   for (const category of categories) {
     if (priceMap[category] !== undefined && priceMap[category] > maxPrice) {
       maxPrice = priceMap[category];
     }
   }
+
+  console.log(`💰 价格计算 - 类别: ${categories.join(', ')}, 估算价格: $${maxPrice}`);
 
   return {
     amount: maxPrice,
