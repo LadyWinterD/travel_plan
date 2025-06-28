@@ -117,12 +117,69 @@ function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
 }
 
 /**
- * 🚀 ENHANCED: Fetch 50 real activities for a city using OpenTripMap API
- * 🆕 NEW: Now includes full Wikipedia extracts for better descriptions
+ * 🆕 NEW: Check if an attraction has sufficient Wikipedia information
+ * This function determines if an attraction is worth including based on Wikipedia content
+ */
+async function hasValidWikipediaContent(attraction: any, details: any): Promise<{
+  isValid: boolean;
+  wikipediaExtracts?: any;
+  wikipediaUrl?: string;
+}> {
+  console.log(`📖 Checking Wikipedia content for: ${attraction.name}`);
+  
+  // Priority 1: Try to get full Wikipedia extract from Wikipedia URL
+  if (details?.wikipedia) {
+    const wikipediaUrl = details.wikipedia;
+    const pageTitle = extractWikipediaTitle(wikipediaUrl);
+    
+    if (pageTitle) {
+      console.log(`🔍 Fetching Wikipedia extract for: ${pageTitle}`);
+      const fullExtract = await fetchWikipediaFullExtract(pageTitle);
+      
+      if (fullExtract && fullExtract.text.length > 100) {
+        console.log(`✅ Found substantial Wikipedia content for ${attraction.name} (${fullExtract.text.length} chars)`);
+        return {
+          isValid: true,
+          wikipediaExtracts: {
+            title: fullExtract.title || attraction.name,
+            text: fullExtract.text,
+            html: fullExtract.html
+          },
+          wikipediaUrl
+        };
+      } else {
+        console.log(`❌ Wikipedia content too short or empty for ${attraction.name}`);
+      }
+    }
+  }
+
+  // Priority 2: Check OpenTripMap's built-in wikipedia_extracts
+  if (details?.wikipedia_extracts?.text && details.wikipedia_extracts.text.length > 100) {
+    console.log(`✅ Found OpenTripMap Wikipedia extract for ${attraction.name} (${details.wikipedia_extracts.text.length} chars)`);
+    return {
+      isValid: true,
+      wikipediaExtracts: {
+        title: details.wikipedia_extracts.title || attraction.name,
+        text: details.wikipedia_extracts.text,
+        html: details.wikipedia_extracts.html
+      },
+      wikipediaUrl: details.wikipedia
+    };
+  }
+
+  // 🚫 FILTER OUT: No substantial Wikipedia content found
+  console.log(`🚫 FILTERED OUT: ${attraction.name} - No substantial Wikipedia content found`);
+  return { isValid: false };
+}
+
+/**
+ * 🚀 ENHANCED: Fetch high-quality real activities for a city using OpenTripMap API
+ * 🆕 NEW: Now filters out attractions without substantial Wikipedia content
+ * 🎯 FOCUS: Only returns attractions that are genuinely notable tourist destinations
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
   try {
-    console.log(`🚀 Fetching 50 real activities for: ${cityName}`);
+    console.log(`🚀 Fetching high-quality activities for: ${cityName}`);
     
     const cacheKey = `activities_${cityName.toLowerCase().replace(/\s+/g, '_')}`;
     const cachedActivities = getCachedApiResponse(cacheKey);
@@ -144,10 +201,19 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       return [];
     }
 
-    // 🎯 ENHANCED: 处理更多景点，确保有足够的免费选项
-    const activitiesPromises = attractions.slice(0, 50).map(async (attraction) => { // 处理前50个
+    console.log(`📊 Processing ${attractions.length} raw attractions for ${cityName}...`);
+
+    // 🆕 ENHANCED: 处理更多景点，但只保留有Wikipedia内容的
+    const activitiesPromises = attractions.slice(0, 100).map(async (attraction) => { // 处理前100个
       try {
         const details = await getPlaceDetails(attraction.xid);
+        
+        // 🔍 CRITICAL: Check if attraction has valid Wikipedia content
+        const wikipediaCheck = await hasValidWikipediaContent(attraction, details);
+        if (!wikipediaCheck.isValid) {
+          return null; // Filter out attractions without substantial Wikipedia content
+        }
+
         const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
         const isIndoor = isLikelyIndoorFromKinds(attraction.kinds, attraction.name);
         
@@ -199,50 +265,11 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           console.log(`⚠️ Using fallback image for ${attraction.name}`);
         }
 
-        // 🆕 ENHANCED: Enhanced description with full Wikipedia extracts
-        let description = `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`;
-        let wikipediaExtracts = undefined;
-        let wikipediaUrl = undefined;
-
-        // Priority 1: Try to get full Wikipedia extract from Wikipedia URL
-        if (details?.wikipedia) {
-          console.log(`📖 Attempting to fetch full Wikipedia extract for ${attraction.name}`);
-          wikipediaUrl = details.wikipedia;
-          
-          const pageTitle = extractWikipediaTitle(details.wikipedia);
-          if (pageTitle) {
-            const fullExtract = await fetchWikipediaFullExtract(pageTitle);
-            if (fullExtract && fullExtract.text.length > 100) {
-              // Use the full Wikipedia extract as the primary description
-              description = fullExtract.text.length > 300 
-                ? fullExtract.text.substring(0, 300) + '...'
-                : fullExtract.text;
-              
-              wikipediaExtracts = {
-                title: fullExtract.title || attraction.name,
-                text: fullExtract.text,
-                html: fullExtract.html
-              };
-              
-              console.log(`✅ Using full Wikipedia extract for ${attraction.name} (${fullExtract.text.length} chars)`);
-            }
-          }
-        }
-
-        // Priority 2: Fallback to OpenTripMap's wikipedia_extracts if available
-        if (!wikipediaExtracts && details?.wikipedia_extracts?.text) {
-          description = details.wikipedia_extracts.text.length > 300 
-            ? details.wikipedia_extracts.text.substring(0, 300) + '...'
-            : details.wikipedia_extracts.text;
-          
-          wikipediaExtracts = {
-            title: details.wikipedia_extracts.title || attraction.name,
-            text: details.wikipedia_extracts.text,
-            html: details.wikipedia_extracts.html
-          };
-          
-          console.log(`✅ Using OpenTripMap Wikipedia extract for ${attraction.name}`);
-        }
+        // 🆕 ENHANCED: Use Wikipedia content for description
+        const { wikipediaExtracts, wikipediaUrl } = wikipediaCheck;
+        let description = wikipediaExtracts.text.length > 300 
+          ? wikipediaExtracts.text.substring(0, 300) + '...'
+          : wikipediaExtracts.text;
 
         // Enhanced address information
         let address = undefined;
@@ -292,33 +319,22 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
         };
       } catch (error) {
         console.error(`Error processing attraction ${attraction.name}:`, error);
-        const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
-        return {
-          id: `otm_${attraction.xid}`,
-          name: attraction.name,
-          description: `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`,
-          image: getFallbackImageUrl(categories),
-          duration: getDurationFromCategories(categories),
-          rating: getDefaultRatingByCategory(categories),
-          price: getPriceFromCategories(categories),
-          categories,
-          indoor: isLikelyIndoorFromKinds(attraction.kinds, attraction.name),
-          location: {
-            lat: attraction.point.lat,
-            lng: attraction.point.lon
-          }
-        };
+        return null; // Filter out attractions that failed to process
       }
     });
 
     const activities = await Promise.all(activitiesPromises);
     const validActivities = activities
-      .filter(Boolean)
+      .filter(Boolean) // Remove null entries (filtered out attractions)
       .sort((a, b) => b.rating - a.rating);
 
-    if (validActivities.length === 0) return [];
+    if (validActivities.length === 0) {
+      console.log(`❌ No valid activities found for ${cityName} after Wikipedia filtering`);
+      return [];
+    }
 
-    console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName}`);
+    console.log(`🎉 Successfully processed ${validActivities.length} high-quality activities for ${cityName}`);
+    console.log(`📊 Filtered out ${attractions.length - validActivities.length} attractions without substantial Wikipedia content`);
     
     // 📊 统计免费景点数量
     const freeActivitiesCount = validActivities.filter(activity => 
