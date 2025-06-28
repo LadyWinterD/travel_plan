@@ -201,10 +201,11 @@ async function validateAttractionContent(attraction: any, details: any): Promise
  * 🆕 NEW: Multi-tier content strategy to maximize activity count while maintaining quality
  * 🎯 GOAL: Return 30-50 activities per city with varying content quality tiers
  * 🔥 UPDATED: Now processes 250 attractions instead of 150 for more outdoor activities!
+ * 🌍 ENHANCED: Increased search radius to 100km for maximum coverage!
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
   try {
-    console.log(`🚀 Fetching activities with multi-tier strategy for: ${cityName}`);
+    console.log(`🚀 Fetching activities with multi-tier strategy for: ${cityName} (100km radius)`);
     
     const cacheKey = `activities_${cityName.toLowerCase().replace(/\s+/g, '_')}`;
     const cachedActivities = getCachedApiResponse(cacheKey);
@@ -219,14 +220,14 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       return [];
     }
 
-    // 🎯 ENHANCED: 增加搜索半径到70km，获取更多景点
-    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 70, cityName);
+    // 🎯 ENHANCED: 增加搜索半径到100km，获取更多景点覆盖范围
+    const attractions = await getTopAttractions(coordinates.lat, coordinates.lon, 100, cityName);
     if (attractions.length === 0) {
       console.warn(`🟡 No quality attractions found near: ${cityName}`);
       return [];
     }
 
-    console.log(`📊 Processing ${attractions.length} raw attractions for ${cityName}...`);
+    console.log(`📊 Processing ${attractions.length} raw attractions for ${cityName} within 100km radius...`);
 
     // 🆕 ENHANCED: 处理更多景点，使用多层次验证策略 - INCREASED TO 250!
     const activitiesPromises = attractions.slice(0, 250).map(async (attraction) => { // 🔥 INCREASED FROM 150 TO 250!
@@ -371,7 +372,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     const outdoorCategories = validActivities.filter(a => !a.indoor).map(a => a.categories).flat();
     const uniqueOutdoorCategories = [...new Set(outdoorCategories)];
 
-    console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName} (from 250 raw attractions)`);
+    console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName} (from 250 raw attractions within 100km)`);
     console.log(`📊 Content Quality Distribution:`);
     console.log(`   🏆 Premium (detailed Wikipedia): ${premiumCount} (${Math.round(premiumCount/validActivities.length*100)}%)`);
     console.log(`   ⭐ Standard (basic Wikipedia): ${standardCount} (${Math.round(standardCount/validActivities.length*100)}%)`);

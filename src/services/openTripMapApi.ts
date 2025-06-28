@@ -377,9 +377,9 @@ export async function getCoordinatesForCity(cityName: string): Promise<CityCoord
 
 /**
  * 🚀 ENHANCED: Get raw attractions within radius using OpenTripMap (Step 1)
- * 增加搜索半径和数量限制，获取更多景点选择
+ * 🌍 ENHANCED: Increased default radius to 100km for maximum coverage
  */
-export async function getRawAttractions(lat: number, lon: number, radiusKm: number = 50): Promise<OpenTripMapPlace[]> {
+export async function getRawAttractions(lat: number, lon: number, radiusKm: number = 100): Promise<OpenTripMapPlace[]> {
   try {
     console.log(`🎯 Getting raw attractions near: ${lat}, ${lon} (radius: ${radiusKm}km)`);
     
@@ -408,7 +408,7 @@ export async function getRawAttractions(lat: number, lon: number, radiusKm: numb
     // Filter out unnamed places as good practice
     const namedPlaces = places.filter(p => p.name);
     
-    console.log(`✅ Found ${namedPlaces.length} raw attractions near: ${lat}, ${lon}`);
+    console.log(`✅ Found ${namedPlaces.length} raw attractions near: ${lat}, ${lon} within ${radiusKm}km`);
     return namedPlaces;
     
   } catch (error) {
@@ -489,9 +489,9 @@ export async function getPlaceDetails(xid: string): Promise<OpenTripMapDetails |
 
 /**
  * 🚀 ENHANCED: Main function to get top attractions (combines all steps)
- * INCREASED TO 250 ATTRACTIONS for maximum variety!
+ * 🌍 ENHANCED: Increased default radius to 100km and returns 250 attractions for maximum variety!
  */
-export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 50, cityName: string = 'Unknown'): Promise<OpenTripMapPlace[]> {
+export async function getTopAttractions(lat: number, lon: number, radiusKm: number = 100, cityName: string = 'Unknown'): Promise<OpenTripMapPlace[]> {
   try {
     // Step 1: Get raw attractions with larger radius
     const rawAttractions = await getRawAttractions(lat, lon, radiusKm);
@@ -515,7 +515,7 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
     // 🚀 ENHANCED: Return top 250 instead of 50 for maximum variety!
     const topAttractions = filteredAttractions.slice(0, 250);
     
-    console.log(`🏆 Returning ${topAttractions.length} top filtered attractions for ${cityName} (INCREASED TO 250!)`);
+    console.log(`🏆 Returning ${topAttractions.length} top filtered attractions for ${cityName} within ${radiusKm}km (INCREASED TO 250!)`);
     return topAttractions;
     
   } catch (error) {
