@@ -4,8 +4,6 @@ import { useAppContext } from '../context/AppContext';
 import { Destination } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import CityAutocomplete from '../components/CityAutocomplete';
-import MapSelector from '../components/MapSelector';
-import { MapPin, Type } from 'lucide-react';
 
 const DestinationsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,14 +12,13 @@ const DestinationsPage: React.FC = () => {
   const [cityName, setCityName] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [selectionMethod, setSelectionMethod] = useState<'search' | 'map'>('search');
   
   // Handle form submission for adding a new destination
   const handleAddDestination = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!cityName.trim()) {
-      setError('Please select a city from the dropdown or map');
+      setError('Please select a city from the dropdown');
       return;
     }
     
@@ -54,16 +51,6 @@ const DestinationsPage: React.FC = () => {
       setSelectedCountry(country);
     }
     // Clear error when user starts typing
-    if (error) {
-      setError(null);
-    }
-  };
-
-  // Handle location selection from map
-  const handleMapLocationSelect = (cityName: string, country: string, coordinates: { lat: number; lng: number }) => {
-    setCityName(cityName);
-    setSelectedCountry(country);
-    // Clear error when location is selected
     if (error) {
       setError(null);
     }
@@ -156,96 +143,34 @@ const DestinationsPage: React.FC = () => {
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6 sm:mb-8">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Destinations</h2>
         
-        {/* Selection Method Toggle */}
-        <div className="mb-6">
-          <div className="flex items-center justify-center">
-            <div className="bg-gray-100 p-1 rounded-lg flex">
-              <button
-                onClick={() => setSelectionMethod('search')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 text-sm font-medium ${
-                  selectionMethod === 'search'
-                    ? 'bg-white text-teal-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                <Type size={16} />
-                Search Cities
-              </button>
-              <button
-                onClick={() => setSelectionMethod('map')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 text-sm font-medium ${
-                  selectionMethod === 'map'
-                    ? 'bg-white text-teal-600 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                <MapPin size={16} />
-                Select on Map
-              </button>
+        {/* Add Destination Form */}
+        <form onSubmit={handleAddDestination} className="mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
+            {/* Destination Input with Autocomplete */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type destination (a, b, c...)
+              </label>
+              <CityAutocomplete
+                value={cityName}
+                onChange={handleCityChange}
+                placeholder="e.g., Paris"
+                error={!!error && error.includes('city')}
+                className="text-base sm:text-lg py-2 sm:py-3"
+              />
             </div>
-          </div>
-        </div>
-
-        {/* Destination Selection */}
-        {selectionMethod === 'search' ? (
-          /* Search Method */
-          <form onSubmit={handleAddDestination} className="mb-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
-              {/* Destination Input with Autocomplete */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type destination (a, b, c...)
-                </label>
-                <CityAutocomplete
-                  value={cityName}
-                  onChange={handleCityChange}
-                  placeholder="e.g., Paris"
-                  error={!!error && error.includes('city')}
-                  className="text-base sm:text-lg py-2 sm:py-3"
-                />
-              </div>
-              
-              {/* Add Destination Button */}
-              <div className="w-full sm:w-auto">
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors whitespace-nowrap text-base sm:text-lg"
-                >
-                  Add Destination
-                </button>
-              </div>
-            </div>
-          </form>
-        ) : (
-          /* Map Method */
-          <div className="mb-6">
-            <MapSelector
-              onLocationSelect={handleMapLocationSelect}
-              className="mb-4"
-            />
             
-            {/* Selected location display and add button */}
-            {cityName && (
-              <div className="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="text-teal-600" size={20} />
-                    <div>
-                      <div className="font-semibold text-gray-900">{cityName}</div>
-                      <div className="text-sm text-gray-600">{selectedCountry}</div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleAddDestination}
-                    className="w-full sm:w-auto px-6 py-3 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors"
-                  >
-                    Add This Destination
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Add Destination Button */}
+            <div className="w-full sm:w-auto">
+              <button
+                type="submit"
+                className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-teal-500 text-white font-medium rounded-lg hover:bg-teal-600 transition-colors whitespace-nowrap text-base sm:text-lg"
+              >
+                Add Destination
+              </button>
+            </div>
           </div>
-        )}
+        </form>
         
         {/* Added Destinations List */}
         {destinations.length > 0 && (
