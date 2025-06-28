@@ -17,6 +17,19 @@ export interface Activity {
     lat: number;
     lng: number;
   };
+  // Enhanced fields for detailed information
+  wikipediaExtracts?: {
+    title: string;
+    text: string;
+    html?: string;
+  };
+  address?: {
+    city?: string;
+    country?: string;
+    road?: string;
+    houseNumber?: string;
+  };
+  wikipediaUrl?: string;
 }
 
 export interface Destination {

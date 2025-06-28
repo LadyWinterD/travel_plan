@@ -184,9 +184,38 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           console.log(`⚠️ Using fallback image for ${attraction.name}`);
         }
 
-        const description = details?.wikipedia_extracts?.text 
-          ? details.wikipedia_extracts.text.substring(0, 120) + '...'
-          : `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`;
+        // Enhanced description with Wikipedia extracts
+        let description = `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`;
+        let wikipediaExtracts = undefined;
+        let wikipediaUrl = undefined;
+
+        if (details?.wikipedia_extracts?.text) {
+          description = details.wikipedia_extracts.text.length > 200 
+            ? details.wikipedia_extracts.text.substring(0, 200) + '...'
+            : details.wikipedia_extracts.text;
+          
+          wikipediaExtracts = {
+            title: details.wikipedia_extracts.title || attraction.name,
+            text: details.wikipedia_extracts.text,
+            html: details.wikipedia_extracts.html
+          };
+        }
+
+        // Build Wikipedia URL if available
+        if (details?.wikipedia) {
+          wikipediaUrl = details.wikipedia;
+        }
+
+        // Enhanced address information
+        let address = undefined;
+        if (details?.address) {
+          address = {
+            city: details.address.city,
+            country: details.address.country,
+            road: details.address.road,
+            houseNumber: details.address.house_number
+          };
+        }
 
         console.log(`📋 ${attraction.name} categories:`, categories);
 
@@ -218,7 +247,10 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           location: {
             lat: attraction.point.lat,
             lng: attraction.point.lon
-          }
+          },
+          wikipediaExtracts,
+          address,
+          wikipediaUrl
         };
       } catch (error) {
         console.error(`Error processing attraction ${attraction.name}:`, error);
