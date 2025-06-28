@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid3X3 } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
-import { getFallbackImageUrl } from '../services/openTripMapApi';
+import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
 import type { ActivityCategory } from '../data/activityCategories';
 import ActivityDetailModal from '../components/ActivityDetailModal';
+import ActivityMap from '../components/ActivityMap';
 
 // Utility function for category validation
 const validateCategory = (cat: string): ActivityCategory => {
@@ -287,6 +288,10 @@ const ActivitiesPage: React.FC = () => {
   const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
   
+  // View state - map or grid
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [cityCoordinates, setCityCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
@@ -339,6 +344,24 @@ const ActivitiesPage: React.FC = () => {
         });
     }
   }, [activeDestination, destinations, startDate, fetchWeatherForDate]);
+
+  // Fetch city coordinates for map view
+  useEffect(() => {
+    if (!activeDestination) return;
+
+    const destination = destinations.find(d => d.id === activeDestination);
+    if (destination?.name) {
+      getCoordinatesForCity(destination.name)
+        .then((coordinates) => {
+          if (coordinates) {
+            setCityCoordinates({ lat: coordinates.lat, lng: coordinates.lon });
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to get city coordinates:', error);
+        });
+    }
+  }, [activeDestination, destinations]);
 
   // Load activities from API - ENHANCED to get 50 activities
   useEffect(() => {
@@ -469,6 +492,9 @@ const ActivitiesPage: React.FC = () => {
     return activity.image !== fallbackUrl;
   }).length;
 
+  // Get selected activities for current destination
+  const currentSelectedActivities = activeDestination ? selectedActivities[activeDestination] || [] : [];
+
   // Determine empty state message
   const getEmptyStateMessage = () => {
     if (loadingActivities) return null;
@@ -552,9 +578,9 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Destination Information with Smart Weather Filtering */}
+      {/* Destination Information with View Toggle */}
       <div className="mb-4 sm:mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <MapPin className="text-teal-600 flex-shrink-0" size={20} />
             <div className="min-w-0 flex-1">
@@ -574,21 +600,41 @@ const ActivitiesPage: React.FC = () => {
             </div>
           </div>
           
-          {/* Smart Weather Filtering Toggle */}
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm font-medium text-teal-800">Smart Weather Filtering</div>
-              <div className="text-xs text-teal-600">Optimize for travel date weather</div>
+          {/* View Toggle */}
+          <div className="flex items-center gap-4">
+            <div className="view-toggle">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={viewMode === 'grid' ? 'active' : ''}
+              >
+                <Grid3X3 size={16} className="mr-1" />
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('map')}
+                className={viewMode === 'map' ? 'active' : ''}
+              >
+                <Map size={16} className="mr-1" />
+                Map
+              </button>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={smartWeatherFiltering}
-                onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
-            </label>
+            
+            {/* Smart Weather Filtering Toggle */}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-sm font-medium text-teal-800">Smart Weather</div>
+                <div className="text-xs text-teal-600">Optimize for travel date</div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smartWeatherFiltering}
+                  onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -609,141 +655,143 @@ const ActivitiesPage: React.FC = () => {
         />
       )}
       
-      {/* Enhanced Filter Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-teal-600" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
-          </div>
-          {(selectedInterests.length > 0 || showFreeOnly || hideFallbackImages) && (
-            <button
-              onClick={clearAllFilters}
-              className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
-        
-        {/* Real Images Filter */}
-        <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-purple-600 bg-purple-100 p-2 rounded-full">
-                <ImageIcon size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-purple-800 text-lg">📸 Real Images Only</h4>
-                <p className="text-sm text-purple-700">
-                  <span className="font-semibold">{realImageActivitiesCount}</span> attractions with authentic photos
-                  <span className="ml-2 text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
-                    {Math.round(realImageActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% REAL PHOTOS
-                  </span>
-                </p>
-              </div>
+      {/* Enhanced Filter Section - Only show in grid view */}
+      {viewMode === 'grid' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+            <div className="flex items-center gap-2">
+              <Filter size={18} className="text-teal-600" />
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hideFallbackImages}
-                onChange={(e) => setHideFallbackImages(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 shadow-lg"></div>
-            </label>
-          </div>
-          {hideFallbackImages && (
-            <div className="mt-3 p-2 bg-purple-100 rounded-md">
-              <p className="text-sm text-purple-800 font-medium">
-                🎯 Showing only attractions with real photos! Get authentic previews of your destinations.
-              </p>
-            </div>
-          )}
-        </div>
-        
-        {/* Enhanced Free Activities Filter */}
-        <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-green-600 bg-green-100 p-2 rounded-full">
-                <DollarSign size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-green-800 text-lg">💰 Free Activities Only</h4>
-                <p className="text-sm text-green-700">
-                  <span className="font-semibold">{freeActivitiesCount}</span> free activities available in {currentDestination.name}
-                  <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                    {Math.round(freeActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% FREE
-                  </span>
-                </p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showFreeOnly}
-                onChange={(e) => setShowFreeOnly(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500 shadow-lg"></div>
-            </label>
-          </div>
-          {showFreeOnly && (
-            <div className="mt-3 p-2 bg-green-100 rounded-md">
-              <p className="text-sm text-green-800 font-medium">
-                🎉 Showing only FREE activities! Save money while exploring amazing places.
-              </p>
-            </div>
-          )}
-        </div>
-        
-        {/* Interest Categories */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">Filter by Interests</h4>
-            {availableCategories.length > 0 && (
-              <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
+            {(selectedInterests.length > 0 || showFreeOnly || hideFallbackImages) && (
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
+              >
+                Clear all filters
+              </button>
             )}
           </div>
           
-          {/* Loading state for categories */}
-          {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
-          
-          {/* Dynamic categories grid */}
-          {!loadingActivities && !isInitialLoad && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {availableCategories.map((interest) => (
-                <label
-                  key={interest}
-                  className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
-                    selectedInterests.includes(interest)
-                      ? 'border-teal-500 bg-teal-50 text-teal-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedInterests.includes(interest)}
-                    onChange={() => handleInterestToggle(interest)}
-                    className="sr-only"
-                  />
-                  <span className="font-medium text-center">
-                    {activityCategoryLabels[interest] || interest}
-                  </span>
-                </label>
-              ))}
-              {availableCategories.length === 0 && !loadingActivities && (
-                <p className="text-gray-500 col-span-full text-center py-4 text-sm">
-                  No categories available for this city.
+          {/* Real Images Filter */}
+          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-purple-600 bg-purple-100 p-2 rounded-full">
+                  <ImageIcon size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-purple-800 text-lg">📸 Real Images Only</h4>
+                  <p className="text-sm text-purple-700">
+                    <span className="font-semibold">{realImageActivitiesCount}</span> attractions with authentic photos
+                    <span className="ml-2 text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
+                      {Math.round(realImageActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% REAL PHOTOS
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hideFallbackImages}
+                  onChange={(e) => setHideFallbackImages(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 shadow-lg"></div>
+              </label>
+            </div>
+            {hideFallbackImages && (
+              <div className="mt-3 p-2 bg-purple-100 rounded-md">
+                <p className="text-sm text-purple-800 font-medium">
+                  🎯 Showing only attractions with real photos! Get authentic previews of your destinations.
                 </p>
+              </div>
+            )}
+          </div>
+          
+          {/* Enhanced Free Activities Filter */}
+          <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-green-600 bg-green-100 p-2 rounded-full">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-green-800 text-lg">💰 Free Activities Only</h4>
+                  <p className="text-sm text-green-700">
+                    <span className="font-semibold">{freeActivitiesCount}</span> free activities available in {currentDestination.name}
+                    <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                      {Math.round(freeActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% FREE
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showFreeOnly}
+                  onChange={(e) => setShowFreeOnly(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500 shadow-lg"></div>
+              </label>
+            </div>
+            {showFreeOnly && (
+              <div className="mt-3 p-2 bg-green-100 rounded-md">
+                <p className="text-sm text-green-800 font-medium">
+                  🎉 Showing only FREE activities! Save money while exploring amazing places.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          {/* Interest Categories */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900">Filter by Interests</h4>
+              {availableCategories.length > 0 && (
+                <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
               )}
             </div>
-          )}
+            
+            {/* Loading state for categories */}
+            {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+            
+            {/* Dynamic categories grid */}
+            {!loadingActivities && !isInitialLoad && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                {availableCategories.map((interest) => (
+                  <label
+                    key={interest}
+                    className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
+                      selectedInterests.includes(interest)
+                        ? 'border-teal-500 bg-teal-50 text-teal-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedInterests.includes(interest)}
+                      onChange={() => handleInterestToggle(interest)}
+                      className="sr-only"
+                    />
+                    <span className="font-medium text-center">
+                      {activityCategoryLabels[interest] || interest}
+                    </span>
+                  </label>
+                ))}
+                {availableCategories.length === 0 && !loadingActivities && (
+                  <p className="text-gray-500 col-span-full text-center py-4 text-sm">
+                    No categories available for this city.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       
-      {/* Activity Cards Grid */}
+      {/* Content Area - Map or Grid */}
       {loadingActivities ? (
         <div className="text-center py-8 sm:py-12">
           <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
@@ -751,19 +799,34 @@ const ActivitiesPage: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Activity Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {activities.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                activity={activity}
-                isSelected={isActivitySelected(activity.id)}
-                onToggle={() => toggleActivity(activeDestination!, activity)}
-                onClick={() => handleClick(activity)}
+          {viewMode === 'map' ? (
+            /* Map View */
+            <div className="mb-6">
+              <ActivityMap
+                activities={activities}
+                selectedActivities={currentSelectedActivities}
+                onActivityToggle={(activity) => toggleActivity(activeDestination!, activity)}
+                onActivityClick={handleClick}
+                centerCoordinates={cityCoordinates || undefined}
                 weather={weatherData || undefined}
+                location={`${currentDestination.name}, ${currentDestination.country}`}
               />
-            ))}
-          </div>
+            </div>
+          ) : (
+            /* Grid View */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {activities.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  isSelected={isActivitySelected(activity.id)}
+                  onToggle={() => toggleActivity(activeDestination!, activity)}
+                  onClick={() => handleClick(activity)}
+                  weather={weatherData || undefined}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 

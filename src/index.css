@@ -1,3 +1,4 @@
+@import 'leaflet/dist/leaflet.css';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
@@ -176,4 +177,68 @@
 
 .skeleton-image {
   @apply skeleton w-full h-48;
+}
+
+/* Custom Leaflet map styles */
+.leaflet-container {
+  @apply rounded-lg;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply rounded-lg shadow-lg;
+}
+
+.leaflet-popup-content {
+  @apply p-0 m-0;
+}
+
+/* Custom marker cluster styles */
+.marker-cluster-small {
+  @apply bg-teal-100 text-teal-800;
+}
+
+.marker-cluster-medium {
+  @apply bg-teal-200 text-teal-900;
+}
+
+.marker-cluster-large {
+  @apply bg-teal-300 text-teal-900;
+}
+
+/* Map popup styles */
+.map-popup {
+  @apply p-4 min-w-64;
+}
+
+.map-popup h3 {
+  @apply text-lg font-semibold text-gray-900 mb-2;
+}
+
+.map-popup p {
+  @apply text-sm text-gray-600 mb-3;
+}
+
+.map-popup .popup-stats {
+  @apply flex items-center gap-4 text-xs text-gray-500 mb-3;
+}
+
+.map-popup .popup-button {
+  @apply w-full py-2 px-4 bg-teal-500 text-white rounded-md hover:bg-teal-600 transition-colors text-sm font-medium;
+}
+
+/* Map view toggle styles */
+.view-toggle {
+  @apply flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm;
+}
+
+.view-toggle button {
+  @apply px-4 py-2 text-sm font-medium transition-colors;
+}
+
+.view-toggle button.active {
+  @apply bg-teal-500 text-white;
+}
+
+.view-toggle button:not(.active) {
+  @apply text-gray-600 hover:bg-gray-50;
 }
