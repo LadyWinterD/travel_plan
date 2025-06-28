@@ -183,19 +183,19 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             </div>
           )}
 
-          {/* Description */}
+          {/* Description - ENHANCED: Show Wikipedia content directly without "About This Activity" title */}
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-              <Info size={18} className="mr-2 text-gray-600" />
-              About This Activity
-            </h3>
-            <p className="text-gray-700 leading-relaxed">{activity.description}</p>
-            
-            {/* Wikipedia Extracts - REMOVED "From Wikipedia:" title */}
-            {activity.wikipediaExtracts && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-blue-800 text-sm leading-relaxed">
+            {/* Show Wikipedia content if available, otherwise show basic description */}
+            {activity.wikipediaExtracts ? (
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-700 leading-relaxed text-base">
                   {activity.wikipediaExtracts.text}
+                </p>
+              </div>
+            ) : (
+              <div className="prose prose-sm max-w-none">
+                <p className="text-gray-700 leading-relaxed text-base">
+                  {activity.description}
                 </p>
               </div>
             )}
@@ -241,7 +241,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Activity Type - REMOVED Activity ID and Coordinates */}
+          {/* Activity Type */}
           <div className="mb-6">
             <h3 className="font-semibold text-gray-900 mb-3">Activity Type</h3>
             <div className="space-y-2">
