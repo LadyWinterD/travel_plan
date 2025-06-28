@@ -8,6 +8,8 @@ import {
   fetchWikimediaImage,
   fetchOpenTripMapImage,
   processImageUrl,
+  fetchWikipediaFullExtract,
+  extractWikipediaTitle,
 } from '../services/openTripMapApi';
 import { getCachedApiResponse, cacheApiResponse } from './storage';
 import { ActivityCategory, detailedCategoryMappings } from '../data/activityCategories';
@@ -116,7 +118,7 @@ function extractCategoriesFromKindsEnhanced(kinds: string): ActivityCategory[] {
 
 /**
  * 🚀 ENHANCED: Fetch 50 real activities for a city using OpenTripMap API
- * 增加了更多活动选择，提高免费景点的数量和质量
+ * 🆕 NEW: Now includes full Wikipedia extracts for better descriptions
  */
 export async function getRealActivitiesForCity(cityName: string): Promise<Activity[]> {
   try {
@@ -197,14 +199,40 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           console.log(`⚠️ Using fallback image for ${attraction.name}`);
         }
 
-        // Enhanced description with Wikipedia extracts
+        // 🆕 ENHANCED: Enhanced description with full Wikipedia extracts
         let description = `Explore this ${categories[0]?.toLowerCase().replace(/_/g, ' ') || 'attraction'} in ${cityName}`;
         let wikipediaExtracts = undefined;
         let wikipediaUrl = undefined;
 
-        if (details?.wikipedia_extracts?.text) {
-          description = details.wikipedia_extracts.text.length > 200 
-            ? details.wikipedia_extracts.text.substring(0, 200) + '...'
+        // Priority 1: Try to get full Wikipedia extract from Wikipedia URL
+        if (details?.wikipedia) {
+          console.log(`📖 Attempting to fetch full Wikipedia extract for ${attraction.name}`);
+          wikipediaUrl = details.wikipedia;
+          
+          const pageTitle = extractWikipediaTitle(details.wikipedia);
+          if (pageTitle) {
+            const fullExtract = await fetchWikipediaFullExtract(pageTitle);
+            if (fullExtract && fullExtract.text.length > 100) {
+              // Use the full Wikipedia extract as the primary description
+              description = fullExtract.text.length > 300 
+                ? fullExtract.text.substring(0, 300) + '...'
+                : fullExtract.text;
+              
+              wikipediaExtracts = {
+                title: fullExtract.title || attraction.name,
+                text: fullExtract.text,
+                html: fullExtract.html
+              };
+              
+              console.log(`✅ Using full Wikipedia extract for ${attraction.name} (${fullExtract.text.length} chars)`);
+            }
+          }
+        }
+
+        // Priority 2: Fallback to OpenTripMap's wikipedia_extracts if available
+        if (!wikipediaExtracts && details?.wikipedia_extracts?.text) {
+          description = details.wikipedia_extracts.text.length > 300 
+            ? details.wikipedia_extracts.text.substring(0, 300) + '...'
             : details.wikipedia_extracts.text;
           
           wikipediaExtracts = {
@@ -212,11 +240,8 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
             text: details.wikipedia_extracts.text,
             html: details.wikipedia_extracts.html
           };
-        }
-
-        // Build Wikipedia URL if available
-        if (details?.wikipedia) {
-          wikipediaUrl = details.wikipedia;
+          
+          console.log(`✅ Using OpenTripMap Wikipedia extract for ${attraction.name}`);
         }
 
         // Enhanced address information
@@ -300,6 +325,12 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       !activity.price || activity.price.amount === 0
     ).length;
     console.log(`💰 Free activities found: ${freeActivitiesCount}/${validActivities.length} (${Math.round(freeActivitiesCount/validActivities.length*100)}%)`);
+    
+    // 📊 统计有详细描述的景点数量
+    const detailedDescriptionsCount = validActivities.filter(activity => 
+      activity.wikipediaExtracts && activity.wikipediaExtracts.text.length > 100
+    ).length;
+    console.log(`📖 Activities with detailed descriptions: ${detailedDescriptionsCount}/${validActivities.length} (${Math.round(detailedDescriptionsCount/validActivities.length*100)}%)`);
     
     cacheApiResponse(cacheKey, validActivities, 7);
     return validActivities;

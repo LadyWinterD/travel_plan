@@ -75,6 +75,105 @@ export class OpenTripMapApiError extends Error {
 }
 
 /**
+ * NEW: Fetch full Wikipedia extract using Wikipedia API
+ * This function gets comprehensive descriptions directly from Wikipedia
+ */
+export async function fetchWikipediaFullExtract(pageTitle: string): Promise<{
+  title: string;
+  text: string;
+  html?: string;
+} | null> {
+  if (!pageTitle || pageTitle.trim() === '') {
+    return null;
+  }
+
+  try {
+    console.log(`📖 Fetching full Wikipedia extract for: ${pageTitle}`);
+    
+    // Clean the page title - remove URL parts if it's a full URL
+    let cleanTitle = pageTitle;
+    if (pageTitle.includes('wikipedia.org/wiki/')) {
+      cleanTitle = pageTitle.split('/wiki/')[1];
+    }
+    
+    // Decode URL encoding
+    cleanTitle = decodeURIComponent(cleanTitle);
+    
+    // Wikipedia API endpoint for extracts
+    const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&format=json&titles=${encodeURIComponent(cleanTitle)}&prop=extracts&exintro=&explaintext=&exsectionformat=plain&origin=*`;
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch Wikipedia extract for ${cleanTitle}: ${response.status}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    // Check if we got valid data
+    if (!data.query || !data.query.pages) {
+      console.log(`❌ No Wikipedia data found for: ${cleanTitle}`);
+      return null;
+    }
+    
+    // Get the first (and usually only) page from the results
+    const pages = Object.values(data.query.pages) as any[];
+    const page = pages[0];
+    
+    if (!page || page.missing !== undefined) {
+      console.log(`❌ Wikipedia page not found for: ${cleanTitle}`);
+      return null;
+    }
+    
+    if (!page.extract || page.extract.trim() === '') {
+      console.log(`❌ No extract content found for: ${cleanTitle}`);
+      return null;
+    }
+    
+    const extract = {
+      title: page.title || cleanTitle,
+      text: page.extract.trim(),
+      html: undefined // We're using plain text for now
+    };
+    
+    console.log(`✅ Successfully fetched Wikipedia extract for ${cleanTitle} (${extract.text.length} characters)`);
+    return extract;
+    
+  } catch (error) {
+    console.error(`Error fetching Wikipedia extract for ${pageTitle}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Extract Wikipedia page title from a Wikipedia URL
+ */
+export function extractWikipediaTitle(wikipediaUrl: string): string | null {
+  if (!wikipediaUrl) return null;
+  
+  try {
+    // Handle different Wikipedia URL formats
+    const patterns = [
+      /\/wiki\/([^#?]+)/,  // Standard /wiki/Title format
+      /\/([^\/]+)$/        // Just the title at the end
+    ];
+    
+    for (const pattern of patterns) {
+      const match = wikipediaUrl.match(pattern);
+      if (match && match[1]) {
+        return decodeURIComponent(match[1]);
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error extracting Wikipedia title:', error);
+    return null;
+  }
+}
+
+/**
  * Check if a URL is a direct Wikimedia image URL
  * Enhanced to accept both upload.wikimedia.org and commons.wikimedia.org/static/images/ URLs
  */
