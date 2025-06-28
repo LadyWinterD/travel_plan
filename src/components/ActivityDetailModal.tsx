@@ -191,10 +191,9 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             </h3>
             <p className="text-gray-700 leading-relaxed">{activity.description}</p>
             
-            {/* Wikipedia Extracts */}
+            {/* Wikipedia Extracts - REMOVED "From Wikipedia:" title */}
             {activity.wikipediaExtracts && (
               <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <h4 className="font-medium text-blue-900 mb-2">From Wikipedia:</h4>
                 <p className="text-blue-800 text-sm leading-relaxed">
                   {activity.wikipediaExtracts.text}
                 </p>
@@ -242,11 +241,11 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Indoor/Outdoor & Additional Info */}
+          {/* Activity Type - REMOVED Activity ID and Coordinates */}
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Additional Information</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">Activity Type</h3>
             <div className="space-y-2">
-              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div className="flex items-center justify-between py-2">
                 <span className="text-gray-600">Type</span>
                 <span className={`px-2 py-1 rounded-full text-sm font-medium ${
                   activity.indoor 
@@ -255,20 +254,6 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
                 }`}>
                   {activity.indoor ? '🏢 Indoor Activity' : '🌳 Outdoor Activity'}
                 </span>
-              </div>
-              
-              {activity.location && (
-                <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Coordinates</span>
-                  <span className="text-gray-900 font-mono text-sm">
-                    {activity.location.lat.toFixed(4)}, {activity.location.lng.toFixed(4)}
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex items-center justify-between py-2">
-                <span className="text-gray-600">Activity ID</span>
-                <span className="text-gray-500 font-mono text-xs">{activity.id}</span>
               </div>
             </div>
           </div>
