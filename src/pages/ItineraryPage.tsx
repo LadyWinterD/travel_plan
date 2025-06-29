@@ -4,7 +4,9 @@ import { useAppContext } from '../context/AppContext';
 import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella, Download, Edit2, Check, RotateCcw } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import html2pdf from 'html2pdf.js';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { createEvent } from 'ics';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import {
   DndContext,
@@ -106,7 +108,7 @@ const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
   };
 
   return (
-    <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+    <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm weather-display">
       {getWeatherIcon()}
       <span>{Math.round(weather.temperature)}°C</span>
       {weather.isRainy && (
@@ -145,7 +147,7 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [editTime, setEditTime] = useState(activity.startTime);
 
-  const handleDoubleClick = () => {
+  const handleClick = () => {
     setIsEditingTime(true);
     setEditTime(activity.startTime);
   };
@@ -207,8 +209,8 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
               <div className="flex flex-col items-center gap-1">
                 <div 
                   className="text-xs sm:text-sm text-gray-600 font-medium cursor-pointer hover:text-teal-600 transition-colors"
-                  onDoubleClick={handleDoubleClick}
-                  title="Double-click to edit time"
+                  onClick={handleClick}
+                  title="Click to edit time"
                 >
                   {activity.startTime}
                 </div>
@@ -252,10 +254,15 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
                 <Clock size={12} className="mr-1 flex-shrink-0" />
                 <span>{Math.floor(activity.activity.duration / 60)} hr {activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}</span>
               </div>
-              {location && (
+              {activity.activity.address && (
                 <div className="flex items-center text-xs sm:text-sm text-gray-600">
                   <MapPin size={12} className="mr-1 flex-shrink-0" />
-                  <span className="truncate">{location}</span>
+                  <span className="truncate">
+                    {[
+                      activity.activity.address.city,
+                      activity.activity.address.country
+                    ].filter(Boolean).join(', ')}
+                  </span>
                 </div>
               )}
               {weather && <WeatherDisplay weather={weather} />}
@@ -309,67 +316,65 @@ const formatDate = (dateString: string) => {
  * This ensures images are fully loaded and prevents blank areas in the PDF
  */
 const preloadImages = async (element: HTMLElement): Promise<void> => {
-  const images = element.querySelectorAll('img, [style*="background-image"]');
-  const imagePromises: Promise<void>[] = [];
+  const images = element.querySelectorAll('img');
+  console.log(`🔄 Found ${images.length} images to preload`);
 
-  images.forEach((img) => {
-    let imageUrl: string | null = null;
+  if (images.length === 0) {
+    console.log(`ℹ️ No images found to preload`);
+    return;
+  }
 
-    if (img instanceof HTMLImageElement) {
-      imageUrl = img.src;
-    } else {
-      // Handle background images
-      const style = window.getComputedStyle(img);
-      const backgroundImage = style.backgroundImage;
-      const match = backgroundImage.match(/url\(['"]?([^'"]+)['"]?\)/);
-      if (match && match[1]) {
-        imageUrl = match[1];
-      }
-    }
-
-    if (imageUrl) {
-      const promise = new Promise<void>((resolve) => {
-        const testImg = new Image();
-        testImg.crossOrigin = 'anonymous';
-        
-        testImg.onload = () => {
-          console.log(`✅ Image preloaded successfully: ${imageUrl}`);
-          resolve();
-        };
-        
-        testImg.onerror = () => {
-          console.warn(`⚠️ Failed to preload image: ${imageUrl}`);
-          // Don't reject, just resolve to continue with other images
-          resolve();
-        };
-        
-        testImg.src = imageUrl;
-      });
+  const imagePromises = Array.from(images).map((img, index) => {
+    return new Promise<void>((resolve) => {
+      const imageUrl = img.src;
       
-      imagePromises.push(promise);
-    }
+      if (!imageUrl || imageUrl.includes('data:')) {
+        console.log(`⏭️ Skipping image ${index + 1}: ${imageUrl ? 'data URL' : 'no URL'}`);
+        resolve();
+        return;
+      }
+
+      console.log(`🔄 Preloading image ${index + 1}/${images.length}: ${imageUrl.substring(0, 50)}...`);
+      
+      const testImg = new Image();
+      testImg.crossOrigin = 'anonymous';
+      
+      testImg.onload = () => {
+        console.log(`✅ Image ${index + 1}/${images.length} preloaded successfully`);
+        resolve();
+      };
+      
+      testImg.onerror = () => {
+        console.warn(`⚠️ Failed to preload image ${index + 1}/${images.length}`);
+        resolve();
+      };
+      
+      // Add a timeout to prevent hanging
+      setTimeout(() => {
+        console.warn(`⏰ Timeout for image ${index + 1}/${images.length}`);
+        resolve();
+      }, 15000);
+      
+      testImg.src = imageUrl;
+    });
   });
 
-  if (imagePromises.length > 0) {
-    console.log(`🔄 Preloading ${imagePromises.length} images...`);
-    await Promise.all(imagePromises);
-    console.log(`✅ All images preloaded successfully`);
-  }
+  console.log(`🔄 Preloading ${imagePromises.length} images...`);
+  await Promise.all(imagePromises);
+  console.log(`✅ All images preloaded successfully`);
 };
 
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
   const { dailyItinerary, updateItinerary, destinations, weatherData } = useAppContext();
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
-  const [draggedLocation, setDraggedLocation] = useState<string | undefined>(undefined);
-  const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isPreloadingImages, setIsPreloadingImages] = useState(false);
-  
-  // Ref for the content to be exported as PDF
+  const [isExportingCalendar, setIsExportingCalendar] = useState(false);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [activeDroppableId, setActiveDroppableId] = useState<UniqueIdentifier | null>(null);
+  const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
+  const [draggedLocation, setDraggedLocation] = useState<string>('');
   const itineraryContentRef = useRef<HTMLDivElement>(null);
-
+  
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -381,9 +386,9 @@ const ItineraryPage: React.FC = () => {
     })
   );
 
-  const getLocationForDay = (destinationId: string) => {
+  const getLocationForDay = (destinationId: string): string => {
     const destination = destinations.find(d => d.id === destinationId);
-    return destination ? `${destination.name}, ${destination.country}` : undefined;
+    return destination ? `${destination.name}, ${destination.country}` : 'Unknown Location';
   };
 
   const calculateDayDuration = (activities: ScheduledActivity[]): number => {
@@ -425,7 +430,7 @@ const ItineraryPage: React.FC = () => {
       const activity = draggedDay.activities.find(a => a.activityId === active.id);
       if (activity) {
         setDraggedActivity(activity);
-        setDraggedLocation(getLocationForDay(draggedDay.destinationId));
+        setDraggedLocation(getLocationForDay(draggedDay.destinationId) || '');
       }
     }
   };
@@ -444,7 +449,7 @@ const ItineraryPage: React.FC = () => {
     if (!over || !draggedActivity) {
       setActiveId(null);
       setDraggedActivity(null);
-      setDraggedLocation(undefined);
+      setDraggedLocation('');
       setActiveDroppableId(null);
       return;
     }
@@ -463,7 +468,7 @@ const ItineraryPage: React.FC = () => {
     if (!sourceDay || !targetDay || sourceDay.destinationId !== targetDay.destinationId) {
       setActiveId(null);
       setDraggedActivity(null);
-      setDraggedLocation(undefined);
+      setDraggedLocation('');
       setActiveDroppableId(null);
       return;
     }
@@ -511,7 +516,7 @@ const ItineraryPage: React.FC = () => {
     
     setActiveId(null);
     setDraggedActivity(null);
-    setDraggedLocation(undefined);
+    setDraggedLocation('');
     setActiveDroppableId(null);
   };
 
@@ -585,64 +590,6 @@ const ItineraryPage: React.FC = () => {
     updateItinerary(updateDayWarnings(newItinerary));
   };
 
-  // Enhanced PDF Export functionality with image preloading
-  const handleExportPDF = async () => {
-    if (!itineraryContentRef.current) {
-      console.error('Itinerary content ref is not available');
-      return;
-    }
-
-    setIsExporting(true);
-    setIsPreloadingImages(true);
-
-    try {
-      const element = itineraryContentRef.current;
-      
-      // Step 1: Preload all images to prevent blank areas in PDF
-      console.log('🔄 Starting image preloading...');
-      await preloadImages(element);
-      setIsPreloadingImages(false);
-      
-      // Step 2: Wait a bit more to ensure all images are rendered
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Step 3: Generate PDF with high quality settings
-      console.log('🔄 Starting PDF generation...');
-      const options = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: 'travel_itinerary.pdf',
-        image: { 
-          type: 'jpeg', 
-          quality: 0.98 
-        },
-        html2canvas: { 
-          scale: 2, // High quality scaling
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          logging: false, // Reduce console noise
-          imageTimeout: 15000, // Longer timeout for images
-          removeContainer: true
-        },
-        jsPDF: { 
-          unit: 'in', 
-          format: 'a4', 
-          orientation: 'portrait' 
-        }
-      };
-
-      await html2pdf().set(options).from(element).save();
-      
-      console.log('✅ PDF exported successfully');
-    } catch (error) {
-      console.error('❌ Error exporting PDF:', error);
-      alert('Failed to export PDF. Please try again.');
-    } finally {
-      setIsExporting(false);
-      setIsPreloadingImages(false);
-    }
-  };
-
   // Group days by destination
   const daysByDestination = dailyItinerary.reduce((acc, day) => {
     if (!acc[day.destinationId]) {
@@ -652,11 +599,344 @@ const ItineraryPage: React.FC = () => {
     return acc;
   }, {} as Record<string, TripDay[]>);
 
-  // Get export button text based on current state
-  const getExportButtonText = () => {
-    if (isPreloadingImages) return 'Preparing Images...';
-    if (isExporting) return 'Generating PDF...';
-    return 'Export as PDF';
+  // Enhanced PDF Export functionality with chunked rendering
+  const handleExportPDF = async () => {
+    if (!itineraryContentRef.current) {
+      console.error('Itinerary content ref is not available');
+      return;
+    }
+
+    if (dailyItinerary.length === 0) {
+      alert('No itinerary to export');
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      console.log('🔄 Starting PDF generation with chunked rendering...');
+      
+      // Preload images first
+      console.log('🔄 Preloading images...');
+      await preloadImages(itineraryContentRef.current);
+      
+      // Create new PDF document
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+      
+      // Group days by destination
+      const daysByDestination = dailyItinerary.reduce((acc, day) => {
+        if (!acc[day.destinationId]) {
+          acc[day.destinationId] = [];
+        }
+        acc[day.destinationId].push(day);
+        return acc;
+      }, {} as Record<string, TripDay[]>);
+      
+      let isFirstPage = true;
+      
+      // Process each destination as a separate chunk
+      for (const [destinationId, days] of Object.entries(daysByDestination)) {
+        const location = getLocationForDay(destinationId);
+        
+        // Create a temporary container for this destination
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '800px';
+        tempContainer.style.backgroundColor = 'white';
+        tempContainer.style.padding = '20px';
+        tempContainer.style.fontFamily = 'Inter, Arial, sans-serif';
+        tempContainer.style.color = 'black';
+        tempContainer.style.lineHeight = '1.6';
+        
+        // Add destination header
+        const headerDiv = document.createElement('div');
+        headerDiv.style.background = 'linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%)';
+        headerDiv.style.color = 'white';
+        headerDiv.style.padding = '16px';
+        headerDiv.style.borderRadius = '8px';
+        headerDiv.style.marginBottom = '20px';
+        headerDiv.innerHTML = `
+          <h2 style="margin: 0 0 8px 0; font-size: 20px; font-weight: bold;">${location}</h2>
+          <p style="margin: 0; opacity: 0.9;">${days.length} ${days.length === 1 ? 'day' : 'days'}</p>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">${formatDate(days[0].date)} - ${formatDate(days[days.length - 1].date)}</p>
+        `;
+        tempContainer.appendChild(headerDiv);
+        
+        // Add each day
+        days.forEach((day, dayIndex) => {
+          const dayDiv = document.createElement('div');
+          dayDiv.style.marginBottom = '20px';
+          dayDiv.style.border = '1px solid #e5e7eb';
+          dayDiv.style.borderRadius = '8px';
+          dayDiv.style.overflow = 'hidden';
+          
+          // Day header
+          const dayHeader = document.createElement('div');
+          dayHeader.style.padding = '16px';
+          dayHeader.style.borderBottom = '1px solid #f3f4f6';
+          dayHeader.style.backgroundColor = 'white';
+          
+          const dayTitle = document.createElement('h3');
+          dayTitle.style.margin = '0 0 4px 0';
+          dayTitle.style.fontSize = '16px';
+          dayTitle.style.fontWeight = 'bold';
+          dayTitle.textContent = `Day ${dayIndex + 1}`;
+          
+          const dayDate = document.createElement('div');
+          dayDate.style.fontSize = '14px';
+          dayDate.style.color = '#6b7280';
+          dayDate.textContent = formatDate(day.date);
+          
+          dayHeader.appendChild(dayTitle);
+          dayHeader.appendChild(dayDate);
+          
+          // Add weather info if available
+          if (day.weatherData) {
+            const weatherDiv = document.createElement('div');
+            weatherDiv.style.marginTop = '8px';
+            weatherDiv.style.fontSize = '14px';
+            weatherDiv.style.color = '#6b7280';
+            weatherDiv.textContent = `Weather: ${Math.round(day.weatherData.temperature)}°C${day.weatherData.isRainy ? `, Rain: ${Math.round(day.weatherData.precipitation)}mm` : ''}`;
+            dayHeader.appendChild(weatherDiv);
+          }
+          
+          dayDiv.appendChild(dayHeader);
+          
+          // Add activities
+          const activitiesDiv = document.createElement('div');
+          activitiesDiv.style.padding = '16px';
+          
+          day.activities.forEach((activity) => {
+            const activityDiv = document.createElement('div');
+            activityDiv.style.marginBottom = '12px';
+            activityDiv.style.padding = '12px';
+            activityDiv.style.backgroundColor = 'white';
+            activityDiv.style.border = '1px solid #e5e7eb';
+            activityDiv.style.borderRadius = '8px';
+            activityDiv.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            
+            // Activity content
+            activityDiv.innerHTML = `
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="flex-shrink: 0; width: 60px; text-align: center;">
+                  <div style="font-size: 14px; font-weight: bold; color: #374151; margin-bottom: 2px;">${activity.startTime}</div>
+                  <div style="font-size: 12px; color: #6b7280;">${activity.endTime}</div>
+                </div>
+                <div style="flex-grow: 1;">
+                  <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold; color: #111827;">${activity.activity.name}</h4>
+                  <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; color: #6b7280;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span>⏱</span>
+                      <span>${Math.floor(activity.activity.duration / 60)} hr ${activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}</span>
+                    </div>
+                    ${activity.activity.address ? `
+                      <div style="display: flex; align-items: center; gap: 4px;">
+                        <span>📍</span>
+                        <span>${[activity.activity.address.city, activity.activity.address.country].filter(Boolean).join(', ')}</span>
+                      </div>
+                    ` : ''}
+                  </div>
+                  ${day.weatherData?.isRainy && !activity.activity.indoor ? `
+                    <div style="margin-top: 8px; padding: 4px 8px; background: #fffbeb; color: #a16207; border-radius: 4px; font-size: 12px;">
+                      ⚠ Outdoor activity - rain forecasted
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+            
+            activitiesDiv.appendChild(activityDiv);
+          });
+          
+          dayDiv.appendChild(activitiesDiv);
+          tempContainer.appendChild(dayDiv);
+        });
+        
+        // Add to document temporarily
+        document.body.appendChild(tempContainer);
+        
+        try {
+          // Wait for any images to load
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Render this chunk
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            imageTimeout: 30000,
+            removeContainer: false,
+            foreignObjectRendering: false,
+            scrollX: 0,
+            scrollY: 0,
+            width: tempContainer.scrollWidth,
+            height: tempContainer.scrollHeight
+          });
+          
+          const imgData = canvas.toDataURL('image/png');
+          
+          // Calculate dimensions
+          const imgWidth = contentWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          // Add new page if not first page
+          if (!isFirstPage) {
+            pdf.addPage();
+          }
+          isFirstPage = false;
+          
+          // Add the image to PDF
+          let heightLeft = imgHeight;
+          let position = 0;
+          
+          // Add first part of the image
+          pdf.addImage(imgData, 'PNG', margin, margin + position, imgWidth, imgHeight);
+          heightLeft -= (pageHeight - 2 * margin);
+          
+          // Add additional pages if needed for this destination
+          while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', margin, margin + position, imgWidth, imgHeight);
+            heightLeft -= (pageHeight - 2 * margin);
+          }
+          
+        } finally {
+          // Clean up
+          document.body.removeChild(tempContainer);
+        }
+      }
+      
+      // Save the PDF
+      const filename = `travel_itinerary_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(filename);
+      console.log('✅ PDF exported successfully with chunked rendering');
+      
+    } catch (error) {
+      console.error('❌ Error exporting PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Calendar Export functionality
+  const handleExportCalendar = async () => {
+    if (dailyItinerary.length === 0) {
+      alert('No itinerary to export');
+      return;
+    }
+
+    setIsExportingCalendar(true);
+
+    try {
+      console.log('🔄 Starting calendar generation...');
+      
+      const events: any[] = [];
+      
+      // Process each day and create calendar events
+      dailyItinerary.forEach((day, dayIndex) => {
+        const location = getLocationForDay(day.destinationId);
+        
+        // Create events for each activity
+        day.activities.forEach((activity, activityIndex) => {
+          // Parse start time
+          const [startHour, startMinute] = activity.startTime.split(':').map(Number);
+          const [endHour, endMinute] = activity.endTime.split(':').map(Number);
+          
+          // Parse date
+          const date = new Date(day.date);
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1; // ics uses 1-based months
+          const dayOfMonth = date.getDate();
+          
+          // Create Google Maps link
+          let googleMapsLink = '';
+          if (activity.activity.location) {
+            googleMapsLink = `https://www.google.com/maps?q=${activity.activity.location.lat},${activity.activity.location.lng}`;
+          } else if (activity.activity.address) {
+            const address = [activity.activity.address.city, activity.activity.address.country].filter(Boolean).join(', ');
+            googleMapsLink = `https://www.google.com/maps/search/${encodeURIComponent(address)}`;
+          } else {
+            googleMapsLink = `https://www.google.com/maps/search/${encodeURIComponent(location)}`;
+          }
+          
+          // Create detailed description
+          const description = [
+            `📍 Location: ${location}`,
+            `⏱ Duration: ${Math.floor(activity.activity.duration / 60)} hr ${activity.activity.duration % 60 > 0 ? `${activity.activity.duration % 60} min` : ''}`,
+            activity.activity.address ? `🏠 Address: ${[activity.activity.address.city, activity.activity.address.country].filter(Boolean).join(', ')}` : '',
+            day.weatherData ? `🌤 Weather: ${Math.round(day.weatherData.temperature)}°C${day.weatherData.isRainy ? `, Rain: ${Math.round(day.weatherData.precipitation)}mm` : ''}` : '',
+            day.weatherData?.isRainy && !activity.activity.indoor ? '⚠️ Outdoor activity - rain forecasted' : '',
+            `🗺 Google Maps: ${googleMapsLink}`,
+            '',
+            `📝 Details: ${activity.activity.description}`
+          ].filter(Boolean).join('\n');
+          
+          // Create event object with detailed information
+          const event = {
+            start: [year, month, dayOfMonth, startHour, startMinute] as [number, number, number, number, number],
+            end: [year, month, dayOfMonth, endHour, endMinute] as [number, number, number, number, number],
+            title: `${activity.activity.name} - ${location}`,
+            description: description,
+            location: activity.activity.address ? [activity.activity.address.city, activity.activity.address.country].filter(Boolean).join(', ') : location
+          };
+          
+          events.push(event);
+        });
+      });
+      
+      console.log('Generated events:', events);
+      
+      // Generate ICS file - create events one by one
+      let icsContent = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Travel Planner//EN\r\n';
+      
+      events.forEach((event, index) => {
+        const startDate = `${event.start[0]}${event.start[1].toString().padStart(2, '0')}${event.start[2].toString().padStart(2, '0')}T${event.start[3].toString().padStart(2, '0')}${event.start[4].toString().padStart(2, '0')}00`;
+        const endDate = `${event.end[0]}${event.end[1].toString().padStart(2, '0')}${event.end[2].toString().padStart(2, '0')}T${event.end[3].toString().padStart(2, '0')}${event.end[4].toString().padStart(2, '0')}00`;
+        
+        icsContent += `BEGIN:VEVENT\r\n`;
+        icsContent += `UID:${uuidv4()}\r\n`;
+        icsContent += `DTSTART:${startDate}\r\n`;
+        icsContent += `DTEND:${endDate}\r\n`;
+        icsContent += `SUMMARY:${event.title.replace(/\n/g, '\\n')}\r\n`;
+        icsContent += `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}\r\n`;
+        if (event.location) {
+          icsContent += `LOCATION:${event.location}\r\n`;
+        }
+        icsContent += `STATUS:CONFIRMED\r\n`;
+        icsContent += `END:VEVENT\r\n`;
+      });
+      
+      icsContent += 'END:VCALENDAR\r\n';
+      
+      // Create and download the file
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `travel_itinerary_${new Date().toISOString().split('T')[0]}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ Calendar exported successfully');
+      
+    } catch (error) {
+      console.error('❌ Error exporting calendar:', error);
+      alert('Failed to export calendar. Please try again.');
+    } finally {
+      setIsExportingCalendar(false);
+    }
   };
 
   return (
@@ -664,26 +944,42 @@ const ItineraryPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold">Your Itinerary</h1>
         
-        {/* Export PDF Button */}
+        {/* Export Buttons */}
         {dailyItinerary.length > 0 && (
-          <button
-            onClick={handleExportPDF}
-            disabled={isExporting || isPreloadingImages}
-            className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
-              isExporting || isPreloadingImages
-                ? 'bg-gray-400 text-white cursor-not-allowed'
-                : 'bg-teal-500 text-white hover:bg-teal-600 shadow-lg hover:shadow-xl'
-            }`}
-          >
-            <Download size={16} />
-            <span className="hidden sm:inline">{getExportButtonText()}</span>
-            <span className="sm:hidden">Export PDF</span>
-          </button>
+          <div className="flex gap-3 export-buttons-container">
+            <button
+              onClick={handleExportCalendar}
+              disabled={isExportingCalendar}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                isExportingCalendar
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg hover:shadow-xl'
+              }`}
+            >
+              <Calendar size={16} />
+              <span className="hidden sm:inline">{isExportingCalendar ? 'Generating Calendar...' : 'Export Calendar'}</span>
+              <span className="sm:hidden">{isExportingCalendar ? 'Generating...' : 'Calendar'}</span>
+            </button>
+            
+            <button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className={`flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                isExporting
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-teal-500 text-white hover:bg-teal-600 shadow-lg hover:shadow-xl'
+              }`}
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">{isExporting ? 'Generating PDF...' : 'Export as PDF'}</span>
+              <span className="sm:hidden">Export PDF</span>
+            </button>
+          </div>
         )}
       </div>
       
       {/* Main content container for PDF export */}
-      <div ref={itineraryContentRef} id="pdf-preview">
+      <div ref={itineraryContentRef} id="pdf-preview" className="pdf-export-container">
         {dailyItinerary.length > 0 ? (
           <DndContext
             sensors={sensors}
@@ -702,17 +998,32 @@ const ItineraryPage: React.FC = () => {
               {Object.entries(daysByDestination).map(([destinationId, days]) => {
                 const location = getLocationForDay(destinationId);
                 return (
-                  <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white">
-                      <h2 className="text-lg sm:text-xl font-semibold">{location}</h2>
-                      <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
+                  <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden pdf-destination">
+                    <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white pdf-header">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                        <div>
+                          <h2 className="text-lg sm:text-xl font-semibold">{location}</h2>
+                          <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar size={16} />
+                            <span>{formatDate(days[0].date)} - {formatDate(days[days.length - 1].date)}</span>
+                          </div>
+                          {days[0].weatherData && (
+                            <div className="flex items-center gap-2">
+                              <WeatherDisplay weather={days[0].weatherData} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="divide-y divide-gray-100">
                       {days.map((day, index) => (
                         <div 
                           key={day.id}
-                          className={`p-4 sm:p-6 ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
+                          className={`p-4 sm:p-6 pdf-day ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
                         >
                           <div className="mb-4 sm:mb-6">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">

@@ -10,64 +10,72 @@ import type { ActivityCategory } from '../data/activityCategories';
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import ActivityMap from '../components/ActivityMap';
 
-// Category colors matching map marker colors
-const categoryColors = {
-  museums_arts: 'bg-purple-500 text-white border-purple-500',
-  historical_sites: 'bg-amber-500 text-white border-amber-500',
-  religious_sites: 'bg-blue-500 text-white border-blue-500',
-  castles_palaces: 'bg-red-500 text-white border-red-500',
-  architectural_landmarks: 'bg-gray-500 text-white border-gray-500',
-  natural_landscapes: 'bg-emerald-500 text-white border-emerald-500',
-  parks_gardens: 'bg-green-500 text-white border-green-500',
-  outdoor_sports: 'bg-orange-500 text-white border-orange-500',
-  city_centers: 'bg-indigo-500 text-white border-indigo-500',
-  viewpoints_towers: 'bg-pink-500 text-white border-pink-500',
-  theme_parks_zoos: 'bg-lime-500 text-white border-lime-500',
-  nightlife: 'bg-violet-500 text-white border-violet-500',
-  shows_cinema: 'bg-red-600 text-white border-red-600',
-  shopping: 'bg-emerald-600 text-white border-emerald-600',
-  interesting_places: 'bg-teal-500 text-white border-teal-500',
-  food_dining: 'bg-amber-600 text-white border-amber-600'
-};
-
-// Category hover and unselected states
-const categoryHoverColors = {
-  museums_arts: 'hover:bg-purple-600 hover:border-purple-600',
-  historical_sites: 'hover:bg-amber-600 hover:border-amber-600',
-  religious_sites: 'hover:bg-blue-600 hover:border-blue-600',
-  castles_palaces: 'hover:bg-red-600 hover:border-red-600',
-  architectural_landmarks: 'hover:bg-gray-600 hover:border-gray-600',
-  natural_landscapes: 'hover:bg-emerald-600 hover:border-emerald-600',
-  parks_gardens: 'hover:bg-green-600 hover:border-green-600',
-  outdoor_sports: 'hover:bg-orange-600 hover:border-orange-600',
-  city_centers: 'hover:bg-indigo-600 hover:border-indigo-600',
-  viewpoints_towers: 'hover:bg-pink-600 hover:border-pink-600',
-  theme_parks_zoos: 'hover:bg-lime-600 hover:border-lime-600',
-  nightlife: 'hover:bg-violet-600 hover:border-violet-600',
-  shows_cinema: 'hover:bg-red-700 hover:border-red-700',
-  shopping: 'hover:bg-emerald-700 hover:border-emerald-700',
-  interesting_places: 'hover:bg-teal-600 hover:border-teal-600',
-  food_dining: 'hover:bg-amber-700 hover:border-amber-700'
-};
-
-// Category unselected states (light background with colored text)
-const categoryUnselectedColors = {
-  museums_arts: 'bg-purple-50 text-purple-700 border-purple-200',
-  historical_sites: 'bg-amber-50 text-amber-700 border-amber-200',
-  religious_sites: 'bg-blue-50 text-blue-700 border-blue-200',
-  castles_palaces: 'bg-red-50 text-red-700 border-red-200',
-  architectural_landmarks: 'bg-gray-50 text-gray-700 border-gray-200',
-  natural_landscapes: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  parks_gardens: 'bg-green-50 text-green-700 border-green-200',
-  outdoor_sports: 'bg-orange-50 text-orange-700 border-orange-200',
-  city_centers: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  viewpoints_towers: 'bg-pink-50 text-pink-700 border-pink-200',
-  theme_parks_zoos: 'bg-lime-50 text-lime-700 border-lime-200',
-  nightlife: 'bg-violet-50 text-violet-700 border-violet-200',
-  shows_cinema: 'bg-red-50 text-red-700 border-red-200',
-  shopping: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  interesting_places: 'bg-teal-50 text-teal-700 border-teal-200',
-  food_dining: 'bg-amber-50 text-amber-700 border-amber-200'
+// Enhanced category style classes for beautiful filter buttons
+const categoryStyleClasses = {
+  museums_arts: {
+    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 scale-105 shadow-md border-purple-500',
+    unselected: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300 shadow-sm'
+  },
+  historical_sites: {
+    selected: 'bg-amber-500 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-500',
+    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+  },
+  religious_sites: {
+    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 scale-105 shadow-md border-blue-500',
+    unselected: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm'
+  },
+  castles_palaces: {
+    selected: 'bg-red-500 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-500',
+    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
+  },
+  architectural_landmarks: {
+    selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
+    unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
+  },
+  natural_landscapes: {
+    selected: 'bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-500',
+    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
+  },
+  parks_gardens: {
+    selected: 'bg-green-500 text-white ring-2 ring-green-300 scale-105 shadow-md border-green-500',
+    unselected: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300 shadow-sm'
+  },
+  outdoor_sports: {
+    selected: 'bg-orange-500 text-white ring-2 ring-orange-300 scale-105 shadow-md border-orange-500',
+    unselected: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300 shadow-sm'
+  },
+  city_centers: {
+    selected: 'bg-indigo-500 text-white ring-2 ring-indigo-300 scale-105 shadow-md border-indigo-500',
+    unselected: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 shadow-sm'
+  },
+  viewpoints_towers: {
+    selected: 'bg-pink-500 text-white ring-2 ring-pink-300 scale-105 shadow-md border-pink-500',
+    unselected: 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100 hover:border-pink-300 shadow-sm'
+  },
+  theme_parks_zoos: {
+    selected: 'bg-lime-500 text-white ring-2 ring-lime-300 scale-105 shadow-md border-lime-500',
+    unselected: 'bg-lime-50 text-lime-700 border-lime-200 hover:bg-lime-100 hover:border-lime-300 shadow-sm'
+  },
+  nightlife: {
+    selected: 'bg-violet-500 text-white ring-2 ring-violet-300 scale-105 shadow-md border-violet-500',
+    unselected: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300 shadow-sm'
+  },
+  shows_cinema: {
+    selected: 'bg-red-600 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-600',
+    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
+  },
+  shopping: {
+    selected: 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-600',
+    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
+  },
+  interesting_places: {
+    selected: 'bg-teal-500 text-white ring-2 ring-teal-300 scale-105 shadow-md border-teal-500',
+    unselected: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 shadow-sm'
+  },
+  food_dining: {
+    selected: 'bg-amber-600 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-600',
+    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+  }
 };
 
 // Utility function for category validation
@@ -600,6 +608,7 @@ const ActivitiesPage: React.FC = () => {
   };
 
   const handleClick = (activity: Activity) => {
+    console.log('handleClick called for activity:', activity.name);
     setSelectedActivityForModal(activity);
     setIsModalOpen(true);
   };
@@ -889,17 +898,16 @@ const ActivitiesPage: React.FC = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {availableCategories.map((interest) => {
               const isSelected = selectedInterests.includes(interest);
-              const selectedColor = categoryColors[interest] || 'bg-gray-500 text-white border-gray-500';
-              const unselectedColor = categoryUnselectedColors[interest] || 'bg-gray-50 text-gray-700 border-gray-200';
-              const hoverColor = categoryHoverColors[interest] || 'hover:bg-gray-600 hover:border-gray-600';
+              const selectedColor = categoryStyleClasses[interest].selected;
+              const unselectedColor = categoryStyleClasses[interest].unselected;
               
               return (
                 <label
                   key={interest}
                   className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium ${
                     isSelected 
-                      ? `${selectedColor} ring-2 ring-offset-2 ring-black scale-105 shadow-md` 
-                      : `${unselectedColor} ${hoverColor} shadow-sm`
+                      ? selectedColor 
+                      : unselectedColor
                   }`}
                 >
                   <input

@@ -293,8 +293,8 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           address = {
             city: details.address.city,
             country: details.address.country,
-            road: details.address.road,
-            houseNumber: details.address.house_number
+            road: undefined, // OpenTripMap API doesn't provide road info
+            houseNumber: undefined // OpenTripMap API doesn't provide house number
           };
         }
 

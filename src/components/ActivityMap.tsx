@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Icon, LatLngBounds } from 'leaflet';
+import React, { useEffect, useMemo, useState } from 'react';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { Icon, LatLngBounds, DomEvent } from 'leaflet';
 import { Activity, WeatherData } from '../types';
 import { Clock, Star, DollarSign, MapPin, Thermometer } from 'lucide-react';
 import { activityCategoryLabels } from '../data/activityCategories';
@@ -37,24 +37,24 @@ const defaultIcon = new Icon({
   shadowSize: [41, 41]
 });
 
-// Icon colors for different activity categories
+// Icon colors for different activity categories - matching category button colors
 const categoryIcons = {
-  museums_arts: createCustomIcon('#8B5CF6'),
-  historical_sites: createCustomIcon('#F59E0B'),
-  religious_sites: createCustomIcon('#3B82F6'),
-  castles_palaces: createCustomIcon('#EF4444'),
-  architectural_landmarks: createCustomIcon('#6B7280'),
-  natural_landscapes: createCustomIcon('#10B981'),
-  parks_gardens: createCustomIcon('#22C55E'),
-  outdoor_sports: createCustomIcon('#F97316'),
-  city_centers: createCustomIcon('#6366F1'),
-  viewpoints_towers: createCustomIcon('#EC4899'),
-  theme_parks_zoos: createCustomIcon('#84CC16'),
-  nightlife: createCustomIcon('#7C3AED'),
-  shows_cinema: createCustomIcon('#DC2626'),
-  shopping: createCustomIcon('#059669'),
-  interesting_places: createCustomIcon('#14B8A6'),
-  food_dining: createCustomIcon('#D97706')
+  museums_arts: createCustomIcon('#8B5CF6'), // purple-500
+  historical_sites: createCustomIcon('#F59E0B'), // amber-500
+  religious_sites: createCustomIcon('#3B82F6'), // blue-500
+  castles_palaces: createCustomIcon('#EF4444'), // red-500
+  architectural_landmarks: createCustomIcon('#6B7280'), // gray-500
+  natural_landscapes: createCustomIcon('#10B981'), // emerald-500
+  parks_gardens: createCustomIcon('#22C55E'), // green-500
+  outdoor_sports: createCustomIcon('#F97316'), // orange-500
+  city_centers: createCustomIcon('#6366F1'), // indigo-500
+  viewpoints_towers: createCustomIcon('#EC4899'), // pink-500
+  theme_parks_zoos: createCustomIcon('#84CC16'), // lime-500
+  nightlife: createCustomIcon('#7C3AED'), // violet-500
+  shows_cinema: createCustomIcon('#DC2626'), // red-600
+  shopping: createCustomIcon('#059669'), // emerald-600
+  interesting_places: createCustomIcon('#14B8A6'), // teal-500
+  food_dining: createCustomIcon('#D97706') // amber-600
 };
 
 interface ActivityMapProps {
@@ -98,14 +98,13 @@ const FitBounds: React.FC<{ activities: Activity[] }> = ({ activities }) => {
   return null;
 };
 
-// Activity popup component
-const ActivityPopup: React.FC<{
+// Custom tooltip component for hover details
+const ActivityTooltip: React.FC<{
   activity: Activity;
-  isSelected: boolean;
-  onToggle: () => void;
-  onClick: () => void;
   weather?: WeatherData;
-}> = ({ activity, isSelected, onToggle, onClick, weather }) => {
+  isVisible: boolean;
+  position: { x: number; y: number };
+}> = ({ activity, weather, isVisible, position }) => {
   const formatDuration = (minutes: number): string => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
@@ -117,14 +116,23 @@ const ActivityPopup: React.FC<{
     return `$${activity.price.amount}`;
   };
 
+  if (!isVisible) return null;
+
   return (
-    <div className="map-popup">
+    <div 
+      className="fixed z-[1000] bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs pointer-events-none"
+      style={{
+        left: position.x,
+        top: position.y - 10,
+        transform: 'translateX(-50%) translateY(-100%)'
+      }}
+    >
       {/* Activity Image */}
-      <div className="mb-3">
+      <div className="mb-2">
         <img
           src={activity.image}
           alt={activity.name}
-          className="w-full h-32 object-cover rounded-md"
+          className="w-full h-20 object-cover rounded-md"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.onerror = null;
@@ -134,21 +142,21 @@ const ActivityPopup: React.FC<{
       </div>
 
       {/* Activity Info */}
-      <h3>{activity.name}</h3>
-      <p className="line-clamp-2">{activity.description}</p>
+      <h4 className="font-semibold text-sm mb-1 line-clamp-1">{activity.name}</h4>
+      <p className="text-xs text-gray-600 line-clamp-2 mb-2">{activity.description}</p>
 
       {/* Stats */}
-      <div className="popup-stats">
+      <div className="flex items-center gap-3 text-xs text-gray-700">
         <div className="flex items-center gap-1">
-          <Clock size={12} />
+          <Clock size={10} />
           <span>{formatDuration(activity.duration)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Star size={12} className="text-yellow-500" />
+          <Star size={10} className="text-yellow-500" />
           <span>{activity.rating.toFixed(1)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <DollarSign size={12} />
+          <DollarSign size={10} />
           <span className={activity.price?.amount === 0 ? 'text-green-600 font-bold' : ''}>
             {formatPrice()}
           </span>
@@ -157,48 +165,27 @@ const ActivityPopup: React.FC<{
 
       {/* Weather info */}
       {weather && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-          <Thermometer size={12} />
+        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+          <Thermometer size={10} />
           <span>{Math.round(weather.temperature)}°C, {weather.condition}</span>
         </div>
       )}
 
       {/* Categories */}
-      <div className="flex flex-wrap gap-1 mb-3">
+      <div className="flex flex-wrap gap-1 mt-2">
         {activity.categories.slice(0, 2).map((category) => (
           <span 
             key={category}
-            className="px-2 py-1 text-xs rounded-full font-medium bg-teal-100 text-teal-800"
+            className="px-1.5 py-0.5 text-xs rounded-full font-medium bg-teal-100 text-teal-800"
           >
             {activityCategoryLabels[category] || category}
           </span>
         ))}
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-            isSelected
-              ? 'bg-teal-500 text-white hover:bg-teal-600'
-              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-          }`}
-        >
-          {isSelected ? '✓ Added' : 'Add to Trip'}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-        >
-          Details
-        </button>
+      {/* Hint */}
+      <div className="text-xs text-gray-400 mt-2 italic">
+        Click for details
       </div>
     </div>
   );
@@ -213,6 +200,16 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
   weather,
   location
 }) => {
+  const [tooltipState, setTooltipState] = useState<{
+    isVisible: boolean;
+    activity: Activity | null;
+    position: { x: number; y: number };
+  }>({
+    isVisible: false,
+    activity: null,
+    position: { x: 0, y: 0 }
+  });
+
   // Filter activities with valid coordinates
   const validActivities = useMemo(() => {
     return activities.filter(activity => 
@@ -226,6 +223,31 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
 
   // Default center (fallback to London if no coordinates provided)
   const defaultCenter = centerCoordinates || { lat: 51.505, lng: -0.09 };
+
+  const handleMarkerMouseOver = (activity: Activity, event: any) => {
+    const markerElement = event.target.getElement();
+    const markerRect = markerElement.getBoundingClientRect();
+    
+    setTooltipState({
+      isVisible: true,
+      activity,
+      position: {
+        x: markerRect.left + markerRect.width / 2,
+        y: markerRect.top
+      }
+    });
+  };
+
+  const handleMarkerMouseOut = () => {
+    setTooltipState(prev => ({ ...prev, isVisible: false }));
+  };
+
+  const handleMarkerClick = (activity: Activity, event: any) => {
+    // Prevent default click behavior
+    DomEvent.stopPropagation(event);
+    console.log('Click detected for activity:', activity.name);
+    onActivityClick(activity);
+  };
 
   if (validActivities.length === 0) {
     return (
@@ -264,25 +286,25 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
               key={activity.id}
               position={[activity.location!.lat, activity.location!.lng]}
               icon={icon}
-            >
-              <Popup
-                closeButton={true}
-                className="activity-popup"
-                maxWidth={280}
-                minWidth={250}
-              >
-                <ActivityPopup
-                  activity={activity}
-                  isSelected={isSelected}
-                  onToggle={() => onActivityToggle(activity)}
-                  onClick={() => onActivityClick(activity)}
-                  weather={weather}
-                />
-              </Popup>
-            </Marker>
+              eventHandlers={{
+                mouseover: (e) => handleMarkerMouseOver(activity, e),
+                mouseout: handleMarkerMouseOut,
+                click: (e) => handleMarkerClick(activity, e)
+              }}
+            />
           );
         })}
       </MapContainer>
+
+      {/* Custom Tooltip */}
+      {tooltipState.activity && (
+        <ActivityTooltip
+          activity={tooltipState.activity}
+          weather={weather}
+          isVisible={tooltipState.isVisible}
+          position={tooltipState.position}
+        />
+      )}
     </div>
   );
 };
