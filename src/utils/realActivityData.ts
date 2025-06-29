@@ -296,6 +296,14 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
             road: undefined, // OpenTripMap API doesn't provide road info
             houseNumber: undefined // OpenTripMap API doesn't provide house number
           };
+        } else if (cityName) {
+          // Fallback: use city name if no address details available
+          address = {
+            city: cityName,
+            country: undefined,
+            road: undefined,
+            houseNumber: undefined
+          };
         }
 
         console.log(`📋 ${attraction.name} [${contentValidation.tier.toUpperCase()}] categories:`, categories);
@@ -350,11 +358,11 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
       .filter(Boolean) // Remove null entries
       .sort((a, b) => {
         // 优先排序：先按内容质量，再按评分
-        const aTier = a.wikipediaExtracts ? (a.wikipediaExtracts.text.length > 100 ? 3 : 2) : 1;
-        const bTier = b.wikipediaExtracts ? (b.wikipediaExtracts.text.length > 100 ? 3 : 2) : 1;
+        const aTier = a!.wikipediaExtracts ? (a!.wikipediaExtracts.text.length > 100 ? 3 : 2) : 1;
+        const bTier = b!.wikipediaExtracts ? (b!.wikipediaExtracts.text.length > 100 ? 3 : 2) : 1;
         
         if (aTier !== bTier) return bTier - aTier; // 高质量内容优先
-        return b.rating - a.rating; // 然后按评分排序
+        return b!.rating - a!.rating; // 然后按评分排序
       });
 
     if (validActivities.length === 0) {
@@ -363,13 +371,13 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     }
 
     // 📊 统计各层次内容数量
-    const premiumCount = validActivities.filter(a => a.wikipediaExtracts && a.wikipediaExtracts.text.length > 100).length;
-    const standardCount = validActivities.filter(a => a.wikipediaExtracts && a.wikipediaExtracts.text.length <= 100 && a.wikipediaExtracts.text.length > 50).length;
+    const premiumCount = validActivities.filter(a => a!.wikipediaExtracts && a!.wikipediaExtracts.text.length > 100).length;
+    const standardCount = validActivities.filter(a => a!.wikipediaExtracts && a!.wikipediaExtracts.text.length <= 100 && a!.wikipediaExtracts.text.length > 50).length;
     const basicCount = validActivities.length - premiumCount - standardCount;
 
     // 📊 统计户外活动数量
-    const outdoorCount = validActivities.filter(a => !a.indoor).length;
-    const outdoorCategories = validActivities.filter(a => !a.indoor).map(a => a.categories).flat();
+    const outdoorCount = validActivities.filter(a => !a!.indoor).length;
+    const outdoorCategories = validActivities.filter(a => !a!.indoor).map(a => a!.categories).flat();
     const uniqueOutdoorCategories = [...new Set(outdoorCategories)];
 
     console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName} (from 250 raw attractions within 100km)`);
@@ -382,12 +390,12 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     
     // 📊 统计免费景点数量
     const freeActivitiesCount = validActivities.filter(activity => 
-      !activity.price || activity.price.amount === 0
+      !activity!.price || activity!.price.amount === 0
     ).length;
     console.log(`💰 Free activities found: ${freeActivitiesCount}/${validActivities.length} (${Math.round(freeActivitiesCount/validActivities.length*100)}%)`);
     
-    cacheApiResponse(cacheKey, validActivities, 7);
-    return validActivities;
+    cacheApiResponse(cacheKey, validActivities as Activity[], 7);
+    return validActivities as Activity[];
   } catch (error) {
     console.error(`❌ Error fetching real activities for ${cityName}:`, error);
     return [];

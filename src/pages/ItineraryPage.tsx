@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { createEvent } from 'ics';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
+import ActivityDetailModal from '../components/ActivityDetailModal';
 import {
   DndContext,
   closestCenter,
@@ -32,6 +33,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { activityCategoryLabels } from '../data/activityCategories';
 
 // Time management utilities
 const DEFAULT_START_TIME = '09:00';
@@ -95,6 +97,7 @@ interface SortableActivityProps {
   onDelete: () => void;
   onTimeEdit: (activityId: string, newStartTime: string) => void;
   onTimeReset: (activityId: string) => void;
+  onShowDetails: (activity: Activity) => void;
   isDragging?: boolean;
   location?: string;
   weather?: WeatherData;
@@ -121,7 +124,7 @@ const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
   );
 };
 
-const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, onTimeEdit, onTimeReset, isDragging, location, weather }) => {
+const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, onTimeEdit, onTimeReset, onShowDetails, isDragging, location, weather }) => {
   const {
     attributes,
     listeners,
@@ -248,7 +251,13 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
           />
           
           <div className="flex-grow min-w-0">
-            <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base">{activity.activity.name}</h4>
+            <h4 
+              className="font-medium text-gray-900 truncate text-sm sm:text-base cursor-pointer hover:text-teal-600 transition-colors"
+              onClick={() => onShowDetails(activity.activity)}
+              title="Click to view details"
+            >
+              {activity.activity.name}
+            </h4>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
               <div className="flex items-center text-xs sm:text-sm text-gray-600">
                 <Clock size={12} className="mr-1 flex-shrink-0" />
@@ -265,6 +274,14 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
                   </span>
                 </div>
               )}
+              <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                  {activity.activity.categories.length > 0 
+                    ? activityCategoryLabels[activity.activity.categories[0]] || activity.activity.categories[0]
+                    : 'Activity'
+                  }
+                </span>
+              </div>
               {weather && <WeatherDisplay weather={weather} />}
             </div>
             
@@ -295,6 +312,7 @@ const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: str
       onDelete={() => {}} 
       onTimeEdit={() => {}}
       onTimeReset={() => {}}
+      onShowDetails={() => {}}
       location={location} 
       weather={weather} 
     />
@@ -367,12 +385,23 @@ const preloadImages = async (element: HTMLElement): Promise<void> => {
 const ItineraryPage: React.FC = () => {
   const navigate = useNavigate();
   const { dailyItinerary, updateItinerary, destinations, weatherData } = useAppContext();
-  const [isExporting, setIsExporting] = useState(false);
-  const [isExportingCalendar, setIsExportingCalendar] = useState(false);
+  
+  // Activity detail modal state
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedActivityLocation, setSelectedActivityLocation] = useState<string>('');
+  const [selectedActivityWeather, setSelectedActivityWeather] = useState<WeatherData | undefined>(undefined);
+  
+  // Drag and drop state
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [activeDroppableId, setActiveDroppableId] = useState<UniqueIdentifier | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
   const [draggedLocation, setDraggedLocation] = useState<string>('');
+  const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
+  const [draggedDestination, setDraggedDestination] = useState<string | null>(null);
+  
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCalendar, setIsExportingCalendar] = useState(false);
   const itineraryContentRef = useRef<HTMLDivElement>(null);
   
   const sensors = useSensors(
@@ -422,15 +451,24 @@ const ItineraryPage: React.FC = () => {
     const { active } = event;
     setActiveId(active.id);
     
-    const draggedDay = dailyItinerary.find(day => 
-      day.activities.some(a => a.activityId === active.id)
-    );
-    
-    if (draggedDay) {
-      const activity = draggedDay.activities.find(a => a.activityId === active.id);
-      if (activity) {
-        setDraggedActivity(activity);
-        setDraggedLocation(getLocationForDay(draggedDay.destinationId) || '');
+    // Check if dragging a destination (city) or an activity
+    if (active.id.toString().startsWith('destination-')) {
+      // Dragging a destination
+      const destinationId = active.id.toString().replace('destination-', '');
+      setDraggedDestination(destinationId);
+      setDraggedLocation(getLocationForDay(destinationId) || '');
+    } else {
+      // Dragging an activity
+      const draggedDay = dailyItinerary.find(day => 
+        day.activities.some(a => a.activityId === active.id)
+      );
+      
+      if (draggedDay) {
+        const activity = draggedDay.activities.find(a => a.activityId === active.id);
+        if (activity) {
+          setDraggedActivity(activity);
+          setDraggedLocation(getLocationForDay(draggedDay.destinationId) || '');
+        }
       }
     }
   };
@@ -446,76 +484,114 @@ const ItineraryPage: React.FC = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over || !draggedActivity) {
+    if (!over) {
       setActiveId(null);
       setDraggedActivity(null);
+      setDraggedDestination(null);
       setDraggedLocation('');
       setActiveDroppableId(null);
       return;
     }
 
-    const newItinerary = [...dailyItinerary];
-    
-    // Find source and target days
-    const sourceDay = newItinerary.find(day => 
-      day.activities.some(a => a.activityId === active.id)
-    );
-    
-    const targetDay = newItinerary.find(day => 
-      day.id === over.id || day.activities.some(a => a.activityId === over.id)
-    );
-
-    if (!sourceDay || !targetDay || sourceDay.destinationId !== targetDay.destinationId) {
-      setActiveId(null);
-      setDraggedActivity(null);
-      setDraggedLocation('');
-      setActiveDroppableId(null);
-      return;
-    }
-
-    const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
-    const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
-
-    // Remove activity from source day
-    const [movedActivity] = sourceDay.activities.splice(
-      sourceDay.activities.findIndex(a => a.activityId === active.id),
-      1
-    );
-
-    // If same day, just reorder
-    if (sourceDay.id === targetDay.id) {
-      const newIndex = targetDay.activities.findIndex(a => a.activityId === over.id);
-      sourceDay.activities.splice(newIndex, 0, movedActivity);
+    // Handle destination (city) dragging
+    if (active.id.toString().startsWith('destination-')) {
+      const sourceDestinationId = active.id.toString().replace('destination-', '');
+      const targetDestinationId = over.id.toString().startsWith('destination-') 
+        ? over.id.toString().replace('destination-', '')
+        : null;
       
-      // Recalculate times for the day after reordering
-      sourceDay.activities = recalculateTimesForDay(sourceDay.activities);
+      if (targetDestinationId && sourceDestinationId !== targetDestinationId) {
+        // Get current destination order
+        const currentOrder = Object.keys(daysByDestination);
+        const sourceIndex = currentOrder.indexOf(sourceDestinationId);
+        const targetIndex = currentOrder.indexOf(targetDestinationId);
+        
+        if (sourceIndex !== -1 && targetIndex !== -1) {
+          // Reorder destinations
+          const newOrder = [...currentOrder];
+          const [movedDestination] = newOrder.splice(sourceIndex, 1);
+          newOrder.splice(targetIndex, 0, movedDestination);
+          
+          // Update dates for the new order
+          updateDatesForCityOrder(newOrder);
+        }
+      }
     } else {
-      // Add to target day at correct position
-      const targetIndex = over.id === targetDay.id 
-        ? targetDay.activities.length 
-        : targetDay.activities.findIndex(a => a.activityId === over.id);
-      targetDay.activities.splice(targetIndex, 0, movedActivity);
+      // Handle activity dragging (existing logic)
+      if (!draggedActivity) {
+        setActiveId(null);
+        setDraggedActivity(null);
+        setDraggedDestination(null);
+        setDraggedLocation('');
+        setActiveDroppableId(null);
+        return;
+      }
+
+      const newItinerary = [...dailyItinerary];
       
-      // Recalculate times for both days
-      sourceDay.activities = recalculateTimesForDay(sourceDay.activities);
-      targetDay.activities = recalculateTimesForDay(targetDay.activities);
-    }
+      // Find source and target days
+      const sourceDay = newItinerary.find(day => 
+        day.activities.some(a => a.activityId === active.id)
+      );
+      
+      const targetDay = newItinerary.find(day => 
+        day.id === over.id || day.activities.some(a => a.activityId === over.id)
+      );
 
-    // Update the days in the itinerary
-    newItinerary[sourceDayIndex] = sourceDay;
-    if (sourceDayIndex !== targetDayIndex) {
-      newItinerary[targetDayIndex] = targetDay;
-    }
+      if (!sourceDay || !targetDay || sourceDay.destinationId !== targetDay.destinationId) {
+        setActiveId(null);
+        setDraggedActivity(null);
+        setDraggedDestination(null);
+        setDraggedLocation('');
+        setActiveDroppableId(null);
+        return;
+      }
 
-    // Remove empty days and update warnings
-    const filteredItinerary = updateDayWarnings(
-      newItinerary.filter(day => day.activities.length > 0)
-    );
-    
-    updateItinerary(filteredItinerary);
+      const sourceDayIndex = newItinerary.findIndex(d => d.id === sourceDay.id);
+      const targetDayIndex = newItinerary.findIndex(d => d.id === targetDay.id);
+
+      // Remove activity from source day
+      const [movedActivity] = sourceDay.activities.splice(
+        sourceDay.activities.findIndex(a => a.activityId === active.id),
+        1
+      );
+
+      // If same day, just reorder
+      if (sourceDay.id === targetDay.id) {
+        const newIndex = targetDay.activities.findIndex(a => a.activityId === over.id);
+        sourceDay.activities.splice(newIndex, 0, movedActivity);
+        
+        // Recalculate times for the day after reordering
+        sourceDay.activities = recalculateTimesForDay(sourceDay.activities);
+      } else {
+        // Add to target day at correct position
+        const targetIndex = over.id === targetDay.id 
+          ? targetDay.activities.length 
+          : targetDay.activities.findIndex(a => a.activityId === over.id);
+        targetDay.activities.splice(targetIndex, 0, movedActivity);
+        
+        // Recalculate times for both days
+        sourceDay.activities = recalculateTimesForDay(sourceDay.activities);
+        targetDay.activities = recalculateTimesForDay(targetDay.activities);
+      }
+
+      // Update the days in the itinerary
+      newItinerary[sourceDayIndex] = sourceDay;
+      if (sourceDayIndex !== targetDayIndex) {
+        newItinerary[targetDayIndex] = targetDay;
+      }
+
+      // Remove empty days and update warnings
+      const filteredItinerary = updateDayWarnings(
+        newItinerary.filter(day => day.activities.length > 0)
+      );
+      
+      updateItinerary(filteredItinerary);
+    }
     
     setActiveId(null);
     setDraggedActivity(null);
+    setDraggedDestination(null);
     setDraggedLocation('');
     setActiveDroppableId(null);
   };
@@ -598,6 +674,37 @@ const ItineraryPage: React.FC = () => {
     acc[day.destinationId].push(day);
     return acc;
   }, {} as Record<string, TripDay[]>);
+
+  // Function to update dates when city order changes
+  const updateDatesForCityOrder = (newOrder: string[]) => {
+    if (!destinations || destinations.length === 0) return;
+
+    const { startDate } = useAppContext();
+    let currentDate = startDate ? new Date(startDate) : new Date();
+    const newItinerary: TripDay[] = [];
+
+    newOrder.forEach(destinationId => {
+      const destination = destinations.find(d => d.id === destinationId);
+      if (!destination) return;
+
+      const destinationDays = dailyItinerary.filter(day => day.destinationId === destinationId);
+      
+      destinationDays.forEach((day, dayIndex) => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(currentDate.getDate() + dayIndex);
+        
+        newItinerary.push({
+          ...day,
+          date: newDate.toISOString().split('T')[0]
+        });
+      });
+
+      // Move to next destination's start date
+      currentDate.setDate(currentDate.getDate() + destination.days);
+    });
+
+    updateItinerary(updateDayWarnings(newItinerary));
+  };
 
   // Enhanced PDF Export functionality with chunked rendering
   const handleExportPDF = async () => {
@@ -741,6 +848,13 @@ const ItineraryPage: React.FC = () => {
                         <span>${[activity.activity.address.city, activity.activity.address.country].filter(Boolean).join(', ')}</span>
                       </div>
                     ` : ''}
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span>🏷️</span>
+                      <span>${activity.activity.categories.length > 0 
+                        ? activityCategoryLabels[activity.activity.categories[0]] || activity.activity.categories[0]
+                        : 'Activity'
+                      }</span>
+                    </div>
                   </div>
                   ${day.weatherData?.isRainy && !activity.activity.indoor ? `
                     <div style="margin-top: 8px; padding: 4px 8px; background: #fffbeb; color: #a16207; border-radius: 4px; font-size: 12px;">
@@ -939,6 +1053,76 @@ const ItineraryPage: React.FC = () => {
     }
   };
 
+  // Sortable Destination Component for city-level dragging
+  interface SortableDestinationProps {
+    destinationId: string;
+    days: TripDay[];
+    children: React.ReactNode;
+    isDragging?: boolean;
+  }
+
+  const SortableDestination: React.FC<SortableDestinationProps> = ({ 
+    destinationId, 
+    days, 
+    children, 
+    isDragging 
+  }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({ 
+      id: `destination-${destinationId}`,
+      data: {
+        type: 'destination',
+        destinationId
+      }
+    });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <div 
+        ref={setNodeRef}
+        style={style}
+        className={`${isDragging ? 'opacity-50' : ''}`}
+      >
+        <div 
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white pdf-header"
+        >
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+            <div className="flex items-center gap-2">
+              <GripVertical size={16} className="text-white/80" />
+              <div>
+                <h2 className="text-lg sm:text-xl font-semibold">{getLocationForDay(destinationId)}</h2>
+                <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} />
+                <span>{formatDate(days[0].date)} - {formatDate(days[days.length - 1].date)}</span>
+              </div>
+              {days[0].weatherData && (
+                <div className="flex items-center gap-2">
+                  <WeatherDisplay weather={days[0].weatherData} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        {children}
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto px-4 py-6 sm:py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
@@ -995,85 +1179,82 @@ const ItineraryPage: React.FC = () => {
             }}
           >
             <div className="space-y-6 sm:space-y-8">
-              {Object.entries(daysByDestination).map(([destinationId, days]) => {
-                const location = getLocationForDay(destinationId);
-                return (
-                  <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden pdf-destination">
-                    <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-4 text-white pdf-header">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <div>
-                          <h2 className="text-lg sm:text-xl font-semibold">{location}</h2>
-                          <p className="text-sm opacity-90">{days.length} {days.length === 1 ? 'day' : 'days'}</p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={16} />
-                            <span>{formatDate(days[0].date)} - {formatDate(days[days.length - 1].date)}</span>
-                          </div>
-                          {days[0].weatherData && (
-                            <div className="flex items-center gap-2">
-                              <WeatherDisplay weather={days[0].weatherData} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="divide-y divide-gray-100">
-                      {days.map((day, index) => (
-                        <div 
-                          key={day.id}
-                          className={`p-4 sm:p-6 pdf-day ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
-                        >
-                          <div className="mb-4 sm:mb-6">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                              <div>
-                                <h3 className="text-base sm:text-lg font-semibold">Day {index + 1}</h3>
-                                <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
-                              </div>
-                              {day.weatherData && (
-                                <div className="self-start">
-                                  <WeatherDisplay weather={day.weatherData} />
+              <SortableContext 
+                items={Object.keys(daysByDestination).map(id => `destination-${id}`)}
+                strategy={verticalListSortingStrategy}
+              >
+                {Object.entries(daysByDestination).map(([destinationId, days]) => {
+                  const location = getLocationForDay(destinationId);
+                  return (
+                    <div key={destinationId} className="bg-white rounded-lg shadow-lg overflow-hidden pdf-destination">
+                      <SortableDestination 
+                        destinationId={destinationId} 
+                        days={days} 
+                        isDragging={activeId === `destination-${destinationId}`}
+                      >
+                        <div className="divide-y divide-gray-100">
+                          {days.map((day, index) => (
+                            <div 
+                              key={day.id}
+                              className={`p-4 sm:p-6 pdf-day ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
+                            >
+                              <div className="mb-4 sm:mb-6">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                  <div>
+                                    <h3 className="text-base sm:text-lg font-semibold">Day {index + 1}</h3>
+                                    <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
+                                  </div>
+                                  {day.weatherData && (
+                                    <div className="self-start">
+                                      <WeatherDisplay weather={day.weatherData} />
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            {day.warning && (
-                              <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-start">
-                                <AlertTriangle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
-                                <span className="text-sm">{day.warning}</span>
+                                {day.warning && (
+                                  <div className="mt-3 p-3 bg-yellow-50 text-yellow-700 rounded-md flex items-start">
+                                    <AlertTriangle size={16} className="mr-2 flex-shrink-0 mt-0.5" />
+                                    <span className="text-sm">{day.warning}</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                          
-                          <SortableContext 
-                            items={day.activities.map(a => a.activityId)} 
-                            strategy={verticalListSortingStrategy}
-                          >
-                            <div>
-                              {day.activities.map((activity) => (
-                                <SortableActivity
-                                  key={activity.activityId}
-                                  activity={activity}
-                                  onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
-                                  onTimeEdit={(activityId, newStartTime) => {
-                                    handleTimeEdit(activityId, newStartTime);
-                                  }}
-                                  onTimeReset={(activityId) => {
-                                    handleTimeReset(activityId);
-                                  }}
-                                  isDragging={activity.activityId === activeId}
-                                  location={location}
-                                  weather={day.weatherData}
-                                />
-                              ))}
+                              
+                              <SortableContext 
+                                items={day.activities.map(a => a.activityId)} 
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div>
+                                  {day.activities.map((activity) => (
+                                    <SortableActivity
+                                      key={activity.activityId}
+                                      activity={activity}
+                                      onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                                      onTimeEdit={(activityId, newStartTime) => {
+                                        handleTimeEdit(activityId, newStartTime);
+                                      }}
+                                      onTimeReset={(activityId) => {
+                                        handleTimeReset(activityId);
+                                      }}
+                                      onShowDetails={(activity) => {
+                                        setSelectedActivity(activity);
+                                        setIsDetailModalOpen(true);
+                                        setSelectedActivityLocation(location);
+                                        setSelectedActivityWeather(day.weatherData);
+                                      }}
+                                      isDragging={activity.activityId === activeId}
+                                      location={location}
+                                      weather={day.weatherData}
+                                    />
+                                  ))}
+                                </div>
+                              </SortableContext>
                             </div>
-                          </SortableContext>
+                          ))}
                         </div>
-                      ))}
+                      </SortableDestination>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </SortableContext>
             </div>
             
             <DragOverlay dropAnimation={{
@@ -1114,6 +1295,25 @@ const ItineraryPage: React.FC = () => {
           Back to Activities
         </button>
       </div>
+      
+      {/* Activity Detail Modal */}
+      {selectedActivity && (
+        <ActivityDetailModal
+          activity={selectedActivity}
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setSelectedActivity(null);
+            setIsDetailModalOpen(false);
+          }}
+          location={selectedActivityLocation}
+          weather={selectedActivityWeather}
+          isSelected={true}
+          onToggle={() => {
+            // Since this is in itinerary, the activity is already selected
+            // We could implement removal logic here if needed
+          }}
+        />
+      )}
     </div>
   );
 };

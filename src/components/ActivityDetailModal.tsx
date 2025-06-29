@@ -213,7 +213,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             <div className="mb-6">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                 <MapPin size={18} className="mr-2 text-gray-600" />
-                Address
+                Location
               </h3>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="space-y-1 text-sm">
@@ -223,12 +223,29 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
                     </div>
                   )}
                   {activity.address.city && (
-                    <div className="text-gray-700">{activity.address.city}</div>
+                    <div className="text-gray-700 font-medium">{activity.address.city}</div>
                   )}
                   {activity.address.country && (
                     <div className="text-gray-600">{activity.address.country}</div>
                   )}
+                  {!activity.address.road && !activity.address.houseNumber && activity.address.city && (
+                    <div className="text-gray-500 text-xs mt-2">
+                      📍 Location shown is approximate
+                    </div>
+                  )}
                 </div>
+                {activity.location && (
+                  <button
+                    onClick={() => {
+                      const url = `https://www.google.com/maps?q=${activity.location!.lat},${activity.location!.lng}`;
+                      window.open(url, '_blank');
+                    }}
+                    className="mt-3 w-full py-2 px-3 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ExternalLink size={14} />
+                    View on Google Maps
+                  </button>
+                )}
               </div>
             </div>
           )}
