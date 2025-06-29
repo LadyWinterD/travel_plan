@@ -247,7 +247,7 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
   }
 
   return (
-    <div className="h-96 sm:h-[500px] w-full rounded-lg overflow-hidden shadow-lg border border-gray-200">
+    <div className="h-96 sm:h-[500px] w-full rounded-lg overflow-hidden shadow-lg border border-gray-200 relative">
       <MapContainer
         key={mapKey}
         center={[defaultCenter.lat, defaultCenter.lng]}
@@ -291,32 +291,6 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
           );
         })}
       </MapContainer>
-      
-      {/* Map Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg max-w-xs">
-        <h4 className="text-sm font-semibold text-gray-900 mb-2">Map Legend</h4>
-        <div className="grid grid-cols-2 gap-1 text-xs">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-            <span>Museums</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span>Nature</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span>Religious</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <span>Castles</span>
-          </div>
-        </div>
-        <p className="text-xs text-gray-600 mt-2">
-          {validActivities.length} activities shown • Click markers for details
-        </p>
-      </div>
     </div>
   );
 };

@@ -760,12 +760,49 @@ const ActivitiesPage: React.FC = () => {
                 Map
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Smart Weather Filtering Toggle - Moved to be with Weather Card */}
+      {weatherData && !isWeatherLoading && (
+        <div className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-teal-50 rounded-xl p-4 sm:p-6 border border-blue-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              {weatherData.isRainy ? <CloudRain className="text-blue-500" size={24} /> : 
+               weatherData.temperature > 25 ? <Sun className="text-yellow-500" size={24} /> : 
+               <Cloud className="text-gray-500" size={24} />}
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">
+                  {currentDestination.name}, {currentDestination.country}
+                </h3>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+                  <div className="flex items-center gap-1">
+                    <Thermometer size={14} className="text-red-500 flex-shrink-0" />
+                    <span className="text-xl sm:text-2xl font-bold text-gray-900">{Math.round(weatherData.temperature)}°C</span>
+                  </div>
+                  <span className="text-gray-600 text-sm sm:text-base">{weatherData.condition}</span>
+                  {weatherData.isRainy && weatherData.precipitation != null && (
+                    <div className="flex items-center gap-1 text-blue-600">
+                      <Umbrella size={14} />
+                      <span className="text-sm">{Math.round(weatherData.precipitation)}mm</span>
+                    </div>
+                  )}
+                </div>
+                {startDate && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+                    <Calendar size={14} />
+                    <span>Weather Forecast for {new Date(weatherData.date).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
             
-            {/* Smart Weather Filtering Toggle */}
+            {/* Smart Weather Toggle - Now positioned with weather info */}
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-sm font-medium text-teal-800">Smart Weather</div>
-                <div className="text-xs text-teal-600">Optimize for travel date</div>
+                <div className="text-sm font-medium text-gray-800">Smart Weather Filtering</div>
+                <div className="text-xs text-gray-600">Optimize activities for weather</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -777,24 +814,27 @@ const ActivitiesPage: React.FC = () => {
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
               </label>
             </div>
+            
+            <div className="text-left sm:text-right">
+              <div className="text-sm text-gray-500 mb-1">Weather Recommendation</div>
+              <div className="text-sm font-medium text-gray-800">
+                {weatherData.isRainy ? "Great weather for indoor activities" :
+                 weatherData.temperature > 30 ? "Perfect for air-conditioned venues" :
+                 weatherData.temperature < 5 ? "Indoor activities recommended" :
+                 weatherData.temperature > 20 ? "Ideal weather for outdoor adventures" :
+                 "Good weather for both indoor and outdoor activities"}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Weather Recommendation */}
+      {/* Weather Loading State */}
       {isWeatherLoading && (
         <div className="bg-gray-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-center">
           <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
           <p className="text-gray-500 text-sm sm:text-base">Loading weather data for your travel dates...</p>
         </div>
-      )}
-      
-      {weatherData && !isWeatherLoading && (
-        <WeatherForecastCard 
-          weather={weatherData} 
-          location={`${currentDestination.name}, ${currentDestination.country}`}
-          isForTravelDate={!!startDate}
-        />
       )}
       
       {/* Enhanced Filter Section - Show in both grid and map views */}
