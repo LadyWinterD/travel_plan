@@ -193,7 +193,6 @@ const ActivityPopup: React.FC<{
         <button
           onClick={(e) => {
             e.stopPropagation();
-            console.log('Map popup Details button clicked for activity:', activity.name);
             onClick();
           }}
           className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
