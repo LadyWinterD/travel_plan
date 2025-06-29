@@ -10,24 +10,72 @@ import type { ActivityCategory } from '../data/activityCategories';
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import ActivityMap from '../components/ActivityMap';
 
-// Category colors for filter buttons (matching map marker colors)
-const categoryColors = {
-  museums_arts: 'bg-purple-500 hover:bg-purple-600 text-white',
-  historical_sites: 'bg-amber-500 hover:bg-amber-600 text-white',
-  religious_sites: 'bg-blue-500 hover:bg-blue-600 text-white',
-  castles_palaces: 'bg-red-500 hover:bg-red-600 text-white',
-  architectural_landmarks: 'bg-gray-500 hover:bg-gray-600 text-white',
-  natural_landscapes: 'bg-emerald-500 hover:bg-emerald-600 text-white',
-  parks_gardens: 'bg-green-500 hover:bg-green-600 text-white',
-  outdoor_sports: 'bg-orange-500 hover:bg-orange-600 text-white',
-  city_centers: 'bg-indigo-500 hover:bg-indigo-600 text-white',
-  viewpoints_towers: 'bg-pink-500 hover:bg-pink-600 text-white',
-  theme_parks_zoos: 'bg-lime-500 hover:bg-lime-600 text-white',
-  nightlife: 'bg-violet-500 hover:bg-violet-600 text-white',
-  shows_cinema: 'bg-red-600 hover:bg-red-700 text-white',
-  shopping: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-  interesting_places: 'bg-teal-500 hover:bg-teal-600 text-white',
-  food_dining: 'bg-amber-600 hover:bg-amber-700 text-white'
+// Enhanced category style classes for beautiful filter buttons
+const categoryStyleClasses = {
+  museums_arts: {
+    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 scale-105 shadow-md border-purple-500',
+    unselected: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300 shadow-sm'
+  },
+  historical_sites: {
+    selected: 'bg-amber-500 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-500',
+    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+  },
+  religious_sites: {
+    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 scale-105 shadow-md border-blue-500',
+    unselected: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm'
+  },
+  castles_palaces: {
+    selected: 'bg-red-500 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-500',
+    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
+  },
+  architectural_landmarks: {
+    selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
+    unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
+  },
+  natural_landscapes: {
+    selected: 'bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-500',
+    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
+  },
+  parks_gardens: {
+    selected: 'bg-green-500 text-white ring-2 ring-green-300 scale-105 shadow-md border-green-500',
+    unselected: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300 shadow-sm'
+  },
+  outdoor_sports: {
+    selected: 'bg-orange-500 text-white ring-2 ring-orange-300 scale-105 shadow-md border-orange-500',
+    unselected: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300 shadow-sm'
+  },
+  city_centers: {
+    selected: 'bg-indigo-500 text-white ring-2 ring-indigo-300 scale-105 shadow-md border-indigo-500',
+    unselected: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 shadow-sm'
+  },
+  viewpoints_towers: {
+    selected: 'bg-pink-500 text-white ring-2 ring-pink-300 scale-105 shadow-md border-pink-500',
+    unselected: 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100 hover:border-pink-300 shadow-sm'
+  },
+  theme_parks_zoos: {
+    selected: 'bg-lime-500 text-white ring-2 ring-lime-300 scale-105 shadow-md border-lime-500',
+    unselected: 'bg-lime-50 text-lime-700 border-lime-200 hover:bg-lime-100 hover:border-lime-300 shadow-sm'
+  },
+  nightlife: {
+    selected: 'bg-violet-500 text-white ring-2 ring-violet-300 scale-105 shadow-md border-violet-500',
+    unselected: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300 shadow-sm'
+  },
+  shows_cinema: {
+    selected: 'bg-red-600 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-600',
+    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
+  },
+  shopping: {
+    selected: 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-600',
+    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
+  },
+  interesting_places: {
+    selected: 'bg-teal-500 text-white ring-2 ring-teal-300 scale-105 shadow-md border-teal-500',
+    unselected: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 shadow-sm'
+  },
+  food_dining: {
+    selected: 'bg-amber-600 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-600',
+    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+  }
 };
 
 // Utility function for category validation
@@ -841,30 +889,35 @@ const ActivitiesPage: React.FC = () => {
           {/* Loading state for categories */}
           {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
           
-          {/* Dynamic categories grid */}
+          {/* Dynamic categories grid with enhanced styling */}
           {!loadingActivities && !isInitialLoad && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {availableCategories.map((interest) => (
-                <label
-                  key={interest}
-                  className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium
-                    ${categoryColors[interest] || 'bg-gray-100 text-gray-700'}
-                    ${selectedInterests.includes(interest)
-                      ? 'ring-2 ring-offset-2 ring-black border-black scale-105'
-                      : 'border-transparent hover:opacity-90'}
-                  `}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedInterests.includes(interest)}
-                    onChange={() => handleInterestToggle(interest)}
-                    className="sr-only"
-                  />
-                  <span className="font-medium text-center">
-                    {activityCategoryLabels[interest] || interest}
-                  </span>
-                </label>
-              ))}
+              {availableCategories.map((interest) => {
+                const isSelected = selectedInterests.includes(interest);
+                const styleClasses = categoryStyleClasses[interest] || {
+                  selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
+                  unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
+                };
+                
+                return (
+                  <label
+                    key={interest}
+                    className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium ${
+                      isSelected ? styleClasses.selected : styleClasses.unselected
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleInterestToggle(interest)}
+                      className="sr-only"
+                    />
+                    <span className="text-center leading-tight">
+                      {activityCategoryLabels[interest] || interest}
+                    </span>
+                  </label>
+                );
+              })}
               {availableCategories.length === 0 && !loadingActivities && (
                 <p className="text-gray-500 col-span-full text-center py-4 text-sm">
                   No categories available for this city.
