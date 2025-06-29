@@ -168,7 +168,9 @@ const ActivityPopup: React.FC<{
         {activity.categories.slice(0, 2).map((category) => (
           <span 
             key={category}
-            className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+            className={`px-2 py-1 text-xs rounded-full font-medium ${
+              categoryColors[category] || 'bg-gray-100 text-gray-600'
+            }`}
           >
             {activityCategoryLabels[category] || category}
           </span>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella, Download } from 'lucide-react';
+import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella, Download, Edit2, Check, RotateCcw } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import html2pdf from 'html2pdf.js';
@@ -31,9 +31,68 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
+// Time management utilities
+const DEFAULT_START_TIME = '09:00';
+const DEFAULT_END_TIME = '18:00';
+const BREAK_DURATION = 30; // minutes between activities
+
+// Time grid options - 30-minute intervals from 6:00 to 22:00
+const TIME_GRID_OPTIONS = [
+  '06:00', '06:30', '07:00', '07:30', '08:00', '08:30',
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+  '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
+  '18:00', '18:30', '19:00', '19:30', '20:00', '20:30',
+  '21:00', '21:30', '22:00'
+];
+
+const timeToMinutes = (time: string): number => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+const addMinutesToTime = (time: string, minutes: number): string => {
+  const totalMinutes = timeToMinutes(time) + minutes;
+  return minutesToTime(totalMinutes);
+};
+
+const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+  return addMinutesToTime(startTime, durationMinutes);
+};
+
+const recalculateTimesForDay = (activities: ScheduledActivity[], startTime: string = DEFAULT_START_TIME): ScheduledActivity[] => {
+  if (activities.length === 0) return activities;
+  
+  const updatedActivities = [...activities];
+  let currentTime = startTime;
+  
+  updatedActivities.forEach((activity, index) => {
+    // Update start time
+    activity.startTime = currentTime;
+    
+    // Calculate end time based on activity duration
+    activity.endTime = calculateEndTime(currentTime, activity.activity.duration);
+    
+    // Calculate next activity start time (add break)
+    if (index < updatedActivities.length - 1) {
+      currentTime = addMinutesToTime(activity.endTime, BREAK_DURATION);
+    }
+  });
+  
+  return updatedActivities;
+};
+
 interface SortableActivityProps {
   activity: ScheduledActivity;
   onDelete: () => void;
+  onTimeEdit: (activityId: string, newStartTime: string) => void;
+  onTimeReset: (activityId: string) => void;
   isDragging?: boolean;
   location?: string;
   weather?: WeatherData;
@@ -60,7 +119,7 @@ const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
   );
 };
 
-const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, isDragging, location, weather }) => {
+const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, onTimeEdit, onTimeReset, isDragging, location, weather }) => {
   const {
     attributes,
     listeners,
@@ -81,6 +140,31 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
   };
 
   const showWeatherWarning = weather?.isRainy && !activity.activity.indoor;
+  
+  // Time editing state
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [editTime, setEditTime] = useState(activity.startTime);
+
+  const handleDoubleClick = () => {
+    setIsEditingTime(true);
+    setEditTime(activity.startTime);
+  };
+
+  const handleTimeSave = () => {
+    if (editTime !== activity.startTime) {
+      onTimeEdit(activity.activityId, editTime);
+    }
+    setIsEditingTime(false);
+  };
+
+  const handleTimeCancel = () => {
+    setEditTime(activity.startTime);
+    setIsEditingTime(false);
+  };
+
+  const handleTimeReset = () => {
+    onTimeReset(activity.activityId);
+  };
 
   return (
     <div 
@@ -91,8 +175,55 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
     >
       <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex-shrink-0 w-16 sm:w-20 text-xs sm:text-sm text-gray-600">
-            {activity.startTime}
+          {/* Time Display/Edit Section */}
+          <div className="flex-shrink-0 w-20 sm:w-24">
+            {isEditingTime ? (
+              <div className="flex flex-col gap-1">
+                <input
+                  type="time"
+                  value={editTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                  className="text-xs sm:text-sm border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:border-teal-500"
+                  autoFocus
+                />
+                <div className="flex gap-1">
+                  <button
+                    onClick={handleTimeSave}
+                    className="p-0.5 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition-colors"
+                    title="Save time"
+                  >
+                    <Check size={10} />
+                  </button>
+                  <button
+                    onClick={handleTimeCancel}
+                    className="p-0.5 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 transition-colors"
+                    title="Cancel"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1">
+                <div 
+                  className="text-xs sm:text-sm text-gray-600 font-medium cursor-pointer hover:text-teal-600 transition-colors"
+                  onDoubleClick={handleDoubleClick}
+                  title="Double-click to edit time"
+                >
+                  {activity.startTime}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {activity.endTime}
+                </div>
+                <button
+                  onClick={handleTimeReset}
+                  className="p-0.5 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 transition-colors"
+                  title="Reset to auto-schedule"
+                >
+                  <RotateCcw size={10} />
+                </button>
+              </div>
+            )}
           </div>
           
           <div 
@@ -152,7 +283,14 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
 
 const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: string; weather?: WeatherData }> = ({ activity, location, weather }) => (
   <div className="bg-white rounded-lg shadow-xl border-2 border-teal-500">
-    <SortableActivity activity={activity} onDelete={() => {}} location={location} weather={weather} />
+    <SortableActivity 
+      activity={activity} 
+      onDelete={() => {}} 
+      onTimeEdit={() => {}}
+      onTimeReset={() => {}}
+      location={location} 
+      weather={weather} 
+    />
   </div>
 );
 
@@ -256,7 +394,7 @@ const ItineraryPage: React.FC = () => {
     return days.map(day => {
       const totalDuration = calculateDayDuration(day.activities);
       const destination = destinations.find(d => d.id === day.destinationId);
-      const weatherInfo = destination && weatherData ? weatherData[destination.name] : null;
+      const weatherInfo = destination && weatherData ? weatherData[destination.name] : undefined;
       const hasOutdoorActivitiesInRain = weatherInfo?.isRainy && 
         day.activities.some(activity => !activity.activity.indoor);
 
@@ -343,12 +481,19 @@ const ItineraryPage: React.FC = () => {
     if (sourceDay.id === targetDay.id) {
       const newIndex = targetDay.activities.findIndex(a => a.activityId === over.id);
       sourceDay.activities.splice(newIndex, 0, movedActivity);
+      
+      // Recalculate times for the day after reordering
+      sourceDay.activities = recalculateTimesForDay(sourceDay.activities);
     } else {
       // Add to target day at correct position
       const targetIndex = over.id === targetDay.id 
         ? targetDay.activities.length 
         : targetDay.activities.findIndex(a => a.activityId === over.id);
       targetDay.activities.splice(targetIndex, 0, movedActivity);
+      
+      // Recalculate times for both days
+      sourceDay.activities = recalculateTimesForDay(sourceDay.activities);
+      targetDay.activities = recalculateTimesForDay(targetDay.activities);
     }
 
     // Update the days in the itinerary
@@ -388,6 +533,56 @@ const ItineraryPage: React.FC = () => {
     );
     
     updateItinerary(newItinerary);
+  };
+
+  const handleTimeEdit = (activityId: string, newStartTime: string) => {
+    const newItinerary = dailyItinerary.map(day => {
+      const activityIndex = day.activities.findIndex(a => a.activityId === activityId);
+      if (activityIndex === -1) return day;
+
+      const updatedActivities = [...day.activities];
+      const activity = { ...updatedActivities[activityIndex] };
+      
+      // Update the specific activity's time
+      activity.startTime = newStartTime;
+      activity.endTime = calculateEndTime(newStartTime, activity.activity.duration);
+      updatedActivities[activityIndex] = activity;
+
+      // Recalculate times for all activities after this one
+      for (let i = activityIndex + 1; i < updatedActivities.length; i++) {
+        const prevActivity = updatedActivities[i - 1];
+        const currentActivity = updatedActivities[i];
+        
+        // Start time is end time of previous activity + break
+        const newStartTime = addMinutesToTime(prevActivity.endTime, BREAK_DURATION);
+        currentActivity.startTime = newStartTime;
+        currentActivity.endTime = calculateEndTime(newStartTime, currentActivity.activity.duration);
+      }
+
+      return {
+        ...day,
+        activities: updatedActivities
+      };
+    });
+
+    updateItinerary(updateDayWarnings(newItinerary));
+  };
+
+  const handleTimeReset = (activityId: string) => {
+    const newItinerary = dailyItinerary.map(day => {
+      const activityIndex = day.activities.findIndex(a => a.activityId === activityId);
+      if (activityIndex === -1) return day;
+
+      // Recalculate all times for this day
+      const updatedActivities = recalculateTimesForDay(day.activities);
+
+      return {
+        ...day,
+        activities: updatedActivities
+      };
+    });
+
+    updateItinerary(updateDayWarnings(newItinerary));
   };
 
   // Enhanced PDF Export functionality with image preloading
@@ -549,6 +744,12 @@ const ItineraryPage: React.FC = () => {
                                   key={activity.activityId}
                                   activity={activity}
                                   onDelete={() => handleDeleteActivity(day.date, activity.activityId)}
+                                  onTimeEdit={(activityId, newStartTime) => {
+                                    handleTimeEdit(activityId, newStartTime);
+                                  }}
+                                  onTimeReset={(activityId) => {
+                                    handleTimeReset(activityId);
+                                  }}
                                   isDragging={activity.activityId === activeId}
                                   location={location}
                                   weather={day.weatherData}

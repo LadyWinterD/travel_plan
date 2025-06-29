@@ -588,8 +588,8 @@ const ActivitiesPage: React.FC = () => {
     if (destinations.length === 0) navigate('/destinations'); 
   }, [destinations, navigate]);
 
-  const isActivitySelected = (activityId: string): boolean => { 
-    return activeDestination ? selectedActivities[activeDestination]?.some(a => a.id === activityId) || false : false; 
+  const isActivitySelected = (activityId: string): boolean => {
+    return activeDestination ? selectedActivities[activeDestination]?.some(a => a.id === activityId) || false : false;
   };
   
   const handleInterestToggle = (interest: ActivityCategory) => {
