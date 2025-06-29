@@ -168,9 +168,7 @@ const ActivityPopup: React.FC<{
         {activity.categories.slice(0, 2).map((category) => (
           <span 
             key={category}
-            className={`px-2 py-1 text-xs rounded-full font-medium ${
-              categoryColors[category] || 'bg-gray-100 text-gray-600'
-            }`}
+            className="px-2 py-1 text-xs rounded-full font-medium bg-teal-100 text-teal-800"
           >
             {activityCategoryLabels[category] || category}
           </span>
@@ -195,6 +193,7 @@ const ActivityPopup: React.FC<{
         <button
           onClick={(e) => {
             e.stopPropagation();
+            console.log('Map popup Details button clicked for activity:', activity.name);
             onClick();
           }}
           className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"

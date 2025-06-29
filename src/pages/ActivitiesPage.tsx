@@ -608,9 +608,22 @@ const ActivitiesPage: React.FC = () => {
   };
 
   const handleClick = (activity: Activity) => {
-    console.log('Opening modal for activity:', activity.name);
-    setSelectedActivityForModal(activity);
-    setIsModalOpen(true);
+    console.log('Opening modal for activity:', activity);
+    console.log('Activity data:', {
+      id: activity.id,
+      name: activity.name,
+      description: activity.description,
+      image: activity.image,
+      categories: activity.categories
+    });
+    
+    try {
+      setSelectedActivityForModal(activity);
+      setIsModalOpen(true);
+      console.log('Modal state set successfully');
+    } catch (error) {
+      console.error('Error opening modal:', error);
+    }
   };
 
   const handleCloseModal = () => {
@@ -1009,6 +1022,23 @@ const ActivitiesPage: React.FC = () => {
         </div>
       )}
 
+      {/* Test Modal Button - Temporary for debugging */}
+      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <button
+          onClick={() => {
+            const testActivity = activities[0];
+            if (testActivity) {
+              console.log('Testing modal with activity:', testActivity.name);
+              setSelectedActivityForModal(testActivity);
+              setIsModalOpen(true);
+            }
+          }}
+          className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+        >
+          Test Modal (First Activity)
+        </button>
+      </div>
+
       {/* Navigation Buttons */}
       <div className="flex flex-col sm:flex-row justify-between mt-6 sm:mt-8 pt-6 border-t border-gray-200 gap-4">
         <button
@@ -1027,19 +1057,26 @@ const ActivitiesPage: React.FC = () => {
       </div>
 
       {/* Activity Detail Modal */}
-      {isModalOpen && selectedActivityForModal && (
-        <ActivityDetailModal
-          activity={selectedActivityForModal}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          weather={weatherData || undefined}
-          location={`${currentDestination.name}, ${currentDestination.country}`}
-          isSelected={isActivitySelected(selectedActivityForModal.id)}
-          onToggle={() => {
-            toggleActivity(activeDestination!, selectedActivityForModal);
-          }}
-        />
-      )}
+      {(() => {
+        console.log('Modal rendering check:', {
+          isModalOpen,
+          selectedActivityForModal: !!selectedActivityForModal,
+          activityName: selectedActivityForModal?.name
+        });
+        return isModalOpen && selectedActivityForModal && (
+          <ActivityDetailModal
+            activity={selectedActivityForModal}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            weather={weatherData || undefined}
+            location={`${currentDestination.name}, ${currentDestination.country}`}
+            isSelected={isActivitySelected(selectedActivityForModal.id)}
+            onToggle={() => {
+              toggleActivity(activeDestination!, selectedActivityForModal);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };
