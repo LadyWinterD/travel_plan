@@ -608,6 +608,7 @@ const ActivitiesPage: React.FC = () => {
   };
 
   const handleClick = (activity: Activity) => {
+    console.log('Opening modal for activity:', activity.name);
     setSelectedActivityForModal(activity);
     setIsModalOpen(true);
   };
@@ -1026,7 +1027,7 @@ const ActivitiesPage: React.FC = () => {
       </div>
 
       {/* Activity Detail Modal */}
-      {selectedActivityForModal && (
+      {isModalOpen && selectedActivityForModal && (
         <ActivityDetailModal
           activity={selectedActivityForModal}
           isOpen={isModalOpen}

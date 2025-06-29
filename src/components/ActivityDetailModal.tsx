@@ -25,7 +25,14 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  // Add error handling for missing activity data
+  if (!activity) {
+    console.error('ActivityDetailModal: No activity data provided');
+    return null;
+  }
+
   const formatDuration = (minutes: number): string => {
+    if (!minutes || isNaN(minutes)) return '0m';
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${h > 0 ? `${h}h ` : ''}${m > 0 ? `${m}m` : ''}`.trim() || '0m';
@@ -33,7 +40,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
 
   const formatPrice = () => {
     if (!activity.price || activity.price.amount === 0) return 'Free Entry';
-    return `$${activity.price.amount} ${activity.price.currencyCode}`;
+    return `$${activity.price.amount} ${activity.price.currencyCode || 'USD'}`;
   };
 
   const getWeatherRecommendation = () => {
