@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid3X3 } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -295,7 +295,6 @@ const ActivitiesPage: React.FC = () => {
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
-  const [hideFallbackImages, setHideFallbackImages] = useState<boolean>(true); // Default to true
   
   // Modal state
   const [selectedActivityForModal, setSelectedActivityForModal] = useState<Activity | null>(null);
@@ -413,14 +412,6 @@ const ActivitiesPage: React.FC = () => {
   useEffect(() => {
     let filteredActivities = [...allActivitiesForCity];
 
-    // Apply image filter - exclude activities with fallback images
-    if (hideFallbackImages) {
-      filteredActivities = filteredActivities.filter(activity => {
-        const fallbackUrl = getFallbackImageUrl(activity.categories);
-        return activity.image !== fallbackUrl;
-      });
-    }
-
     // Apply free filter
     if (showFreeOnly) {
       filteredActivities = filteredActivities.filter(activity =>
@@ -437,7 +428,7 @@ const ActivitiesPage: React.FC = () => {
 
     // Apply weather-based filtering if enabled and weather data is available
     if (smartWeatherFiltering && weatherData) {
-      filteredActivities = getWeatherBasedRecommendations(filteredActivities, weatherData, preferences);
+      filteredActivities = getWeatherBasedRecommendations(filteredActivities, weatherData, preferences as ActivityCategory[]);
     } else if (preferences.length > 0) {
       filteredActivities = filteredActivities.filter(activity =>
         (activity.categories || []).some(category => preferences.includes(category))
@@ -445,7 +436,7 @@ const ActivitiesPage: React.FC = () => {
     }
 
     setActivities(filteredActivities);
-  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly, hideFallbackImages]);
+  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -468,7 +459,6 @@ const ActivitiesPage: React.FC = () => {
     setSelectedInterests([]);
     setSmartWeatherFiltering(false);
     setShowFreeOnly(false);
-    setHideFallbackImages(false);
   };
 
   const handleClick = (activity: Activity) => {
@@ -486,12 +476,6 @@ const ActivitiesPage: React.FC = () => {
     !activity.price || activity.price.amount === 0
   ).length;
 
-  // Count activities with real images
-  const realImageActivitiesCount = allActivitiesForCity.filter(activity => {
-    const fallbackUrl = getFallbackImageUrl(activity.categories);
-    return activity.image !== fallbackUrl;
-  }).length;
-
   // Get selected activities for current destination
   const currentSelectedActivities = activeDestination ? selectedActivities[activeDestination] || [] : [];
 
@@ -499,9 +483,6 @@ const ActivitiesPage: React.FC = () => {
   const getEmptyStateMessage = () => {
     if (loadingActivities) return null;
     if (allActivitiesForCity.length === 0) return apiError || 'No attractions found for this city.';
-    if (hideFallbackImages && activities.length === 0) {
-      return 'No activities with real images found. Try showing all activities or adjust your filters.';
-    }
     if (showFreeOnly && activities.length === 0) {
       return 'No free activities found for this destination. Try adjusting your filters or explore paid activities.';
     }
@@ -607,7 +588,7 @@ const ActivitiesPage: React.FC = () => {
                 onClick={() => setViewMode('grid')}
                 className={viewMode === 'grid' ? 'active' : ''}
               >
-                <Grid3X3 size={16} className="mr-1" />
+                <Grid size={16} className="mr-1" />
                 Grid
               </button>
               <button
@@ -663,49 +644,13 @@ const ActivitiesPage: React.FC = () => {
               <Filter size={18} className="text-teal-600" />
               <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
             </div>
-            {(selectedInterests.length > 0 || showFreeOnly || hideFallbackImages) && (
+            {(selectedInterests.length > 0 || showFreeOnly) && (
               <button
                 onClick={clearAllFilters}
                 className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
               >
                 Clear all filters
               </button>
-            )}
-          </div>
-          
-          {/* Real Images Filter */}
-          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-purple-600 bg-purple-100 p-2 rounded-full">
-                  <ImageIcon size={20} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-purple-800 text-lg">📸 Real Images Only</h4>
-                  <p className="text-sm text-purple-700">
-                    <span className="font-semibold">{realImageActivitiesCount}</span> attractions with authentic photos
-                    <span className="ml-2 text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
-                      {Math.round(realImageActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% REAL PHOTOS
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hideFallbackImages}
-                  onChange={(e) => setHideFallbackImages(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 shadow-lg"></div>
-              </label>
-            </div>
-            {hideFallbackImages && (
-              <div className="mt-3 p-2 bg-purple-100 rounded-md">
-                <p className="text-sm text-purple-800 font-medium">
-                  🎯 Showing only attractions with real photos! Get authentic previews of your destinations.
-                </p>
-              </div>
             )}
           </div>
           
@@ -841,22 +786,6 @@ const ActivitiesPage: React.FC = () => {
             {getEmptyStateMessage()}
           </p>
           <div className="space-y-2">
-            {hideFallbackImages && (
-              <button
-                onClick={() => setHideFallbackImages(false)}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
-              >
-                Show all activities (including stock photos)
-              </button>
-            )}
-            {showFreeOnly && (
-              <button
-                onClick={() => setShowFreeOnly(false)}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
-              >
-                Show all activities (including paid)
-              </button>
-            )}
             {selectedInterests.length > 0 && (
               <button
                 onClick={() => setSelectedInterests([])}
@@ -865,7 +794,7 @@ const ActivitiesPage: React.FC = () => {
                 Clear interest filters
               </button>
             )}
-            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly || hideFallbackImages) && (
+            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly) && (
               <button
                 onClick={clearAllFilters}
                 className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"

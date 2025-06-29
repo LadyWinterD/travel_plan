@@ -106,18 +106,12 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
           <img
             src={activity.activity.image}
             alt={activity.activity.name}
-            crossOrigin="anonymous"
-            onLoad={(e) => {
-              console.log(`Image loaded successfully: ${e.currentTarget.src}`);
-            }}
-            onError={(e) => {
-              const img = e.currentTarget;
-              const originalUrl = img.src;
-              console.warn(`Image failed to load, switching to fallback. Original URL: ${originalUrl}`);
-              img.onerror = null; // Prevent infinite loop if fallback also fails
-              img.src = getFallbackImageUrl(activity.activity.categories);
-            }}
             className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = getFallbackImageUrl(activity.activity.categories);
+            }}
           />
           
           <div className="flex-grow min-w-0">

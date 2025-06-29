@@ -5,6 +5,8 @@ import { MapPin, Calendar, List, Sun } from 'lucide-react';
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   
+  console.log('HomePage component rendering...'); // 添加调试日志
+  
   return (
     <div className="min-h-screen">
       {/* Hero Section */}

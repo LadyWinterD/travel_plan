@@ -10,25 +10,29 @@ import ItineraryPage from './pages/ItineraryPage';
 import { AppContextProvider } from './context/AppContext';
 
 function App() {
+  console.log('App component rendering...'); // 添加调试日志
+  
   return (
-    <AppContextProvider>
-      <Router>
-        <div className="flex flex-col min-h-screen bg-gray-50">
-          <Header />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/preferences" element={<PreferencesForm />} />
-              <Route path="/destinations" element={<DestinationsPage />} />
-              <Route path="/activities" element={<ActivitiesPage />} />
-              <Route path="/itinerary" element={<ItineraryPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </AppContextProvider>
+    <div className="min-h-screen bg-gray-50">
+      <AppContextProvider>
+        <Router>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/preferences" element={<PreferencesForm />} />
+                <Route path="/destinations" element={<DestinationsPage />} />
+                <Route path="/activities" element={<ActivitiesPage />} />
+                <Route path="/itinerary" element={<ItineraryPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        </Router>
+      </AppContextProvider>
+    </div>
   );
 }
 
