@@ -304,8 +304,33 @@ const ActivitiesPage: React.FC = () => {
   const availableCategories = useMemo(() => {
     if (allActivitiesForCity.length === 0) return [];
     
+    // Apply the same filters as the main filtering logic, but without selectedInterests
+    let filteredActivities = [...allActivitiesForCity];
+
+    // Filter out activities with fallback images (BACKIMAGE)
+    filteredActivities = filteredActivities.filter(activity => {
+      const fallbackUrl = getFallbackImageUrl(activity.categories);
+      return activity.image !== fallbackUrl;
+    });
+
+    // Apply free filter
+    if (showFreeOnly) {
+      filteredActivities = filteredActivities.filter(activity =>
+        !activity.price || activity.price.amount === 0
+      );
+    }
+
+    // Apply weather-based filtering if enabled and weather data is available
+    if (smartWeatherFiltering && weatherData) {
+      filteredActivities = getWeatherBasedRecommendations(filteredActivities, weatherData, preferences as ActivityCategory[]);
+    } else if (preferences.length > 0) {
+      filteredActivities = filteredActivities.filter(activity =>
+        (activity.categories || []).some(category => preferences.includes(category))
+      );
+    }
+    
     const uniqueCategories = new Set<ActivityCategory>();
-    allActivitiesForCity.forEach(activity => {
+    filteredActivities.forEach(activity => {
       activity.categories.forEach(category => {
         const validatedCategory = validateCategory(category);
         uniqueCategories.add(validatedCategory);
@@ -318,12 +343,26 @@ const ActivitiesPage: React.FC = () => {
       const labelB = activityCategoryLabels[b] || b;
       return labelA.localeCompare(labelB);
     });
-  }, [allActivitiesForCity]);
+  }, [allActivitiesForCity, showFreeOnly, smartWeatherFiltering, weatherData, preferences]);
 
   // Clear selected interests when switching destinations
   useEffect(() => {
     setSelectedInterests([]);
   }, [activeDestination]);
+
+  // Clean up selected interests that are no longer available in current results
+  useEffect(() => {
+    if (selectedInterests.length > 0) {
+      const availableCategorySet = new Set(availableCategories);
+      const validSelectedInterests = selectedInterests.filter(interest => 
+        availableCategorySet.has(interest)
+      );
+      
+      if (validSelectedInterests.length !== selectedInterests.length) {
+        setSelectedInterests(validSelectedInterests);
+      }
+    }
+  }, [availableCategories, selectedInterests]);
   
   // Fetch weather data for travel dates when destination changes
   useEffect(() => {
@@ -412,6 +451,12 @@ const ActivitiesPage: React.FC = () => {
   useEffect(() => {
     let filteredActivities = [...allActivitiesForCity];
 
+    // Filter out activities with fallback images (BACKIMAGE)
+    filteredActivities = filteredActivities.filter(activity => {
+      const fallbackUrl = getFallbackImageUrl(activity.categories);
+      return activity.image !== fallbackUrl;
+    });
+
     // Apply free filter
     if (showFreeOnly) {
       filteredActivities = filteredActivities.filter(activity =>
@@ -483,13 +528,24 @@ const ActivitiesPage: React.FC = () => {
   const getEmptyStateMessage = () => {
     if (loadingActivities) return null;
     if (allActivitiesForCity.length === 0) return apiError || 'No attractions found for this city.';
+    
+    // Count activities with real images vs fallback images
+    const activitiesWithRealImages = allActivitiesForCity.filter(activity => {
+      const fallbackUrl = getFallbackImageUrl(activity.categories);
+      return activity.image !== fallbackUrl;
+    });
+    
+    if (activitiesWithRealImages.length === 0) {
+      return 'No attractions with real photos found for this city. Only attractions with authentic images are shown.';
+    }
+    
     if (showFreeOnly && activities.length === 0) {
-      return 'No free activities found for this destination. Try adjusting your filters or explore paid activities.';
+      return 'No free activities with real photos found for this destination. Try adjusting your filters or explore paid activities.';
     }
     if (selectedInterests.length > 0 && activities.length === 0) {
-      return `No activities found matching your selected interests: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}.`;
+      return `No activities with real photos found matching your selected interests: ${selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}.`;
     }
-    if (activities.length === 0) return 'No activities found for your current filters.';
+    if (activities.length === 0) return 'No activities with real photos found for your current filters.';
     return null;
   };
   
@@ -509,7 +565,7 @@ const ActivitiesPage: React.FC = () => {
       <div className="text-center mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
         <p className="text-gray-600 text-sm sm:text-base px-4">
-          Powered by OpenTripMap - Real attractions with authentic photos!
+          Powered by OpenTripMap - Only attractions with authentic photos are shown!
         </p>
       </div>
       
