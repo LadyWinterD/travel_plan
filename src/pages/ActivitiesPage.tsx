@@ -2,13 +2,33 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
 import type { ActivityCategory } from '../data/activityCategories';
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import ActivityMap from '../components/ActivityMap';
+
+// Category colors for filter buttons (matching map marker colors)
+const categoryColors = {
+  museums_arts: 'bg-purple-500 hover:bg-purple-600 text-white',
+  historical_sites: 'bg-amber-500 hover:bg-amber-600 text-white',
+  religious_sites: 'bg-blue-500 hover:bg-blue-600 text-white',
+  castles_palaces: 'bg-red-500 hover:bg-red-600 text-white',
+  architectural_landmarks: 'bg-gray-500 hover:bg-gray-600 text-white',
+  natural_landscapes: 'bg-emerald-500 hover:bg-emerald-600 text-white',
+  parks_gardens: 'bg-green-500 hover:bg-green-600 text-white',
+  outdoor_sports: 'bg-orange-500 hover:bg-orange-600 text-white',
+  city_centers: 'bg-indigo-500 hover:bg-indigo-600 text-white',
+  viewpoints_towers: 'bg-pink-500 hover:bg-pink-600 text-white',
+  theme_parks_zoos: 'bg-lime-500 hover:bg-lime-600 text-white',
+  nightlife: 'bg-violet-500 hover:bg-violet-600 text-white',
+  shows_cinema: 'bg-red-600 hover:bg-red-700 text-white',
+  shopping: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+  interesting_places: 'bg-teal-500 hover:bg-teal-600 text-white',
+  food_dining: 'bg-amber-600 hover:bg-amber-700 text-white'
+};
 
 // Utility function for category validation
 const validateCategory = (cat: string): ActivityCategory => {
@@ -295,6 +315,7 @@ const ActivitiesPage: React.FC = () => {
   // Filter states
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   
   // Modal state
   const [selectedActivityForModal, setSelectedActivityForModal] = useState<Activity | null>(null);
@@ -317,6 +338,25 @@ const ActivitiesPage: React.FC = () => {
     if (showFreeOnly) {
       filteredActivities = filteredActivities.filter(activity =>
         !activity.price || activity.price.amount === 0
+      );
+    }
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filteredActivities = filteredActivities.filter(activity =>
+        activity.name.toLowerCase().includes(searchLower) ||
+        activity.description.toLowerCase().includes(searchLower) ||
+        activity.categories.some(category => 
+          activityCategoryLabels[category]?.toLowerCase().includes(searchLower)
+        )
+      );
+    }
+
+    // Apply interest category filters
+    if (selectedInterests.length > 0) {
+      filteredActivities = filteredActivities.filter(activity =>
+        activity.categories.some(category => selectedInterests.includes(category))
       );
     }
 
@@ -343,7 +383,7 @@ const ActivitiesPage: React.FC = () => {
       const labelB = activityCategoryLabels[b] || b;
       return labelA.localeCompare(labelB);
     });
-  }, [allActivitiesForCity, showFreeOnly, smartWeatherFiltering, weatherData, preferences]);
+  }, [allActivitiesForCity, showFreeOnly, smartWeatherFiltering, weatherData, preferences, searchTerm]);
 
   // Clear selected interests when switching destinations
   useEffect(() => {
@@ -464,6 +504,18 @@ const ActivitiesPage: React.FC = () => {
       );
     }
 
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filteredActivities = filteredActivities.filter(activity =>
+        activity.name.toLowerCase().includes(searchLower) ||
+        activity.description.toLowerCase().includes(searchLower) ||
+        activity.categories.some(category => 
+          activityCategoryLabels[category]?.toLowerCase().includes(searchLower)
+        )
+      );
+    }
+
     // Apply interest category filters
     if (selectedInterests.length > 0) {
       filteredActivities = filteredActivities.filter(activity =>
@@ -481,7 +533,7 @@ const ActivitiesPage: React.FC = () => {
     }
 
     setActivities(filteredActivities);
-  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly]);
+  }, [allActivitiesForCity, selectedInterests, smartWeatherFiltering, weatherData, preferences, showFreeOnly, searchTerm]);
   
   // Redirect if no destinations
   useEffect(() => { 
@@ -504,6 +556,7 @@ const ActivitiesPage: React.FC = () => {
     setSelectedInterests([]);
     setSmartWeatherFiltering(false);
     setShowFreeOnly(false);
+    setSearchTerm('');
   };
 
   const handleClick = (activity: Activity) => {
@@ -537,6 +590,10 @@ const ActivitiesPage: React.FC = () => {
     
     if (activitiesWithRealImages.length === 0) {
       return 'No attractions with real photos found for this city. Only attractions with authentic images are shown.';
+    }
+    
+    if (searchTerm.trim() && activities.length === 0) {
+      return `No attractions found matching "${searchTerm}". Try different keywords or check your spelling.`;
     }
     
     if (showFreeOnly && activities.length === 0) {
@@ -692,105 +749,131 @@ const ActivitiesPage: React.FC = () => {
         />
       )}
       
-      {/* Enhanced Filter Section - Only show in grid view */}
-      {viewMode === 'grid' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-            <div className="flex items-center gap-2">
-              <Filter size={18} className="text-teal-600" />
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
-            </div>
-            {(selectedInterests.length > 0 || showFreeOnly) && (
+      {/* Enhanced Filter Section - Show in both grid and map views */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-teal-600" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
+          </div>
+          {(selectedInterests.length > 0 || showFreeOnly || searchTerm.trim()) && (
+            <button
+              onClick={clearAllFilters}
+              className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
+        
+        {/* Search Box */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search attractions by name, description, or category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors text-sm sm:text-base"
+            />
+            {searchTerm && (
               <button
-                onClick={clearAllFilters}
-                className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                Clear all filters
+                ✕
               </button>
             )}
           </div>
-          
-          {/* Enhanced Free Activities Filter */}
-          <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-green-600 bg-green-100 p-2 rounded-full">
-                  <DollarSign size={20} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-green-800 text-lg">💰 Free Activities Only</h4>
-                  <p className="text-sm text-green-700">
-                    <span className="font-semibold">{freeActivitiesCount}</span> free activities available in {currentDestination.name}
-                    <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                      {Math.round(freeActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% FREE
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showFreeOnly}
-                  onChange={(e) => setShowFreeOnly(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500 shadow-lg"></div>
-              </label>
+          {searchTerm.trim() && (
+            <div className="mt-2 text-sm text-gray-600">
+              Found {activities.length} result{activities.length !== 1 ? 's' : ''} for "{searchTerm}"
             </div>
-            {showFreeOnly && (
-              <div className="mt-3 p-2 bg-green-100 rounded-md">
-                <p className="text-sm text-green-800 font-medium">
-                  🎉 Showing only FREE activities! Save money while exploring amazing places.
+          )}
+        </div>
+        
+        {/* Enhanced Free Activities Filter */}
+        <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-green-600 bg-green-100 p-2 rounded-full">
+                <DollarSign size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-green-800 text-lg">💰 Free Activities Only</h4>
+                <p className="text-sm text-green-700">
+                  <span className="font-semibold">{freeActivitiesCount}</span> free activities available in {currentDestination.name}
+                  <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                    {Math.round(freeActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% FREE
+                  </span>
                 </p>
               </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFreeOnly}
+                onChange={(e) => setShowFreeOnly(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500 shadow-lg"></div>
+            </label>
+          </div>
+          {showFreeOnly && (
+            <div className="mt-3 p-2 bg-green-100 rounded-md">
+              <p className="text-sm text-green-800 font-medium">
+                🎉 Showing only FREE activities! Save money while exploring amazing places.
+              </p>
+            </div>
+          )}
+        </div>
+        
+        {/* Interest Categories */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900">Filter by Interests</h4>
+            {availableCategories.length > 0 && (
+              <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
             )}
           </div>
           
-          {/* Interest Categories */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900">Filter by Interests</h4>
-              {availableCategories.length > 0 && (
-                <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
+          {/* Loading state for categories */}
+          {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+          
+          {/* Dynamic categories grid */}
+          {!loadingActivities && !isInitialLoad && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {availableCategories.map((interest) => (
+                <label
+                  key={interest}
+                  className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium
+                    ${categoryColors[interest] || 'bg-gray-100 text-gray-700'}
+                    ${selectedInterests.includes(interest)
+                      ? 'ring-2 ring-offset-2 ring-black border-black scale-105'
+                      : 'border-transparent hover:opacity-90'}
+                  `}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedInterests.includes(interest)}
+                    onChange={() => handleInterestToggle(interest)}
+                    className="sr-only"
+                  />
+                  <span className="font-medium text-center">
+                    {activityCategoryLabels[interest] || interest}
+                  </span>
+                </label>
+              ))}
+              {availableCategories.length === 0 && !loadingActivities && (
+                <p className="text-gray-500 col-span-full text-center py-4 text-sm">
+                  No categories available for this city.
+                </p>
               )}
             </div>
-            
-            {/* Loading state for categories */}
-            {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
-            
-            {/* Dynamic categories grid */}
-            {!loadingActivities && !isInitialLoad && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                {availableCategories.map((interest) => (
-                  <label
-                    key={interest}
-                    className={`flex items-center justify-center p-2 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs ${
-                      selectedInterests.includes(interest)
-                        ? 'border-teal-500 bg-teal-50 text-teal-700'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedInterests.includes(interest)}
-                      onChange={() => handleInterestToggle(interest)}
-                      className="sr-only"
-                    />
-                    <span className="font-medium text-center">
-                      {activityCategoryLabels[interest] || interest}
-                    </span>
-                  </label>
-                ))}
-                {availableCategories.length === 0 && !loadingActivities && (
-                  <p className="text-gray-500 col-span-full text-center py-4 text-sm">
-                    No categories available for this city.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
       
       {/* Content Area - Map or Grid */}
       {loadingActivities ? (
@@ -842,6 +925,14 @@ const ActivitiesPage: React.FC = () => {
             {getEmptyStateMessage()}
           </p>
           <div className="space-y-2">
+            {searchTerm.trim() && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
+              >
+                Clear search
+              </button>
+            )}
             {selectedInterests.length > 0 && (
               <button
                 onClick={() => setSelectedInterests([])}
@@ -850,7 +941,7 @@ const ActivitiesPage: React.FC = () => {
                 Clear interest filters
               </button>
             )}
-            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly) && (
+            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly || searchTerm.trim()) && (
               <button
                 onClick={clearAllFilters}
                 className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
