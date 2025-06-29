@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon, LatLngBounds } from 'leaflet';
 import { Activity, WeatherData } from '../types';
@@ -213,8 +213,6 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
   weather,
   location
 }) => {
-  const [mapKey, setMapKey] = useState(0);
-
   // Filter activities with valid coordinates
   const validActivities = useMemo(() => {
     return activities.filter(activity => 
@@ -228,11 +226,6 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
 
   // Default center (fallback to London if no coordinates provided)
   const defaultCenter = centerCoordinates || { lat: 51.505, lng: -0.09 };
-
-  // Force map re-render when activities change significantly
-  useEffect(() => {
-    setMapKey(prev => prev + 1);
-  }, [activities.length]);
 
   if (validActivities.length === 0) {
     return (
@@ -249,7 +242,6 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
   return (
     <div className="h-96 sm:h-[500px] w-full rounded-lg overflow-hidden shadow-lg border border-gray-200 relative">
       <MapContainer
-        key={mapKey}
         center={[defaultCenter.lat, defaultCenter.lng]}
         zoom={12}
         style={{ height: '100%', width: '100%' }}
