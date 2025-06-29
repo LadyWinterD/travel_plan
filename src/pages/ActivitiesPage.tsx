@@ -764,87 +764,14 @@ const ActivitiesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Smart Weather Filtering Toggle - Moved to be with Weather Card */}
-      {weatherData && !isWeatherLoading && (
-        <div className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-teal-50 rounded-xl p-4 sm:p-6 border border-blue-100">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              {weatherData.isRainy ? <CloudRain className="text-blue-500" size={24} /> : 
-               weatherData.temperature > 25 ? <Sun className="text-yellow-500" size={24} /> : 
-               <Cloud className="text-gray-500" size={24} />}
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">
-                  {currentDestination.name}, {currentDestination.country}
-                </h3>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
-                  <div className="flex items-center gap-1">
-                    <Thermometer size={14} className="text-red-500 flex-shrink-0" />
-                    <span className="text-xl sm:text-2xl font-bold text-gray-900">{Math.round(weatherData.temperature)}°C</span>
-                  </div>
-                  <span className="text-gray-600 text-sm sm:text-base">{weatherData.condition}</span>
-                  {weatherData.isRainy && weatherData.precipitation != null && (
-                    <div className="flex items-center gap-1 text-blue-600">
-                      <Umbrella size={14} />
-                      <span className="text-sm">{Math.round(weatherData.precipitation)}mm</span>
-                    </div>
-                  )}
-                </div>
-                {startDate && (
-                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
-                    <Calendar size={14} />
-                    <span>Weather Forecast for {new Date(weatherData.date).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Smart Weather Toggle - Now positioned with weather info */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-800">Smart Weather Filtering</div>
-                <div className="text-xs text-gray-600">Optimize activities for weather</div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={smartWeatherFiltering}
-                  onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
-              </label>
-            </div>
-            
-            <div className="text-left sm:text-right">
-              <div className="text-sm text-gray-500 mb-1">Weather Recommendation</div>
-              <div className="text-sm font-medium text-gray-800">
-                {weatherData.isRainy ? "Great weather for indoor activities" :
-                 weatherData.temperature > 30 ? "Perfect for air-conditioned venues" :
-                 weatherData.temperature < 5 ? "Indoor activities recommended" :
-                 weatherData.temperature > 20 ? "Ideal weather for outdoor adventures" :
-                 "Good weather for both indoor and outdoor activities"}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Weather Loading State */}
-      {isWeatherLoading && (
-        <div className="bg-gray-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-center">
-          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
-          <p className="text-gray-500 text-sm sm:text-base">Loading weather data for your travel dates...</p>
-        </div>
-      )}
-      
-      {/* Enhanced Filter Section - Show in both grid and map views */}
+      {/* Combined Filter Section - Smart Weather, Free Activities, and Search in one row */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
           <div className="flex items-center gap-2">
             <Filter size={18} className="text-teal-600" />
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
           </div>
-          {(selectedInterests.length > 0 || showFreeOnly || searchTerm.trim()) && (
+          {(selectedInterests.length > 0 || showFreeOnly || searchTerm.trim() || smartWeatherFiltering) && (
             <button
               onClick={clearAllFilters}
               className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
@@ -854,118 +781,153 @@ const ActivitiesPage: React.FC = () => {
           )}
         </div>
         
-        {/* Search Box */}
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search attractions by name, description, or category..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors text-sm sm:text-base"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-          {searchTerm.trim() && (
-            <div className="mt-2 text-sm text-gray-600">
-              Found {activities.length} result{activities.length !== 1 ? 's' : ''} for "{searchTerm}"
-            </div>
-          )}
-        </div>
-        
-        {/* Enhanced Free Activities Filter */}
-        <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-green-600 bg-green-100 p-2 rounded-full">
-                <DollarSign size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-green-800 text-lg">💰 Free Activities Only</h4>
-                <p className="text-sm text-green-700">
-                  <span className="font-semibold">{freeActivitiesCount}</span> free activities available in {currentDestination.name}
-                  <span className="ml-2 text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
-                    {Math.round(freeActivitiesCount/Math.max(allActivitiesForCity.length, 1)*100)}% FREE
-                  </span>
-                </p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+        {/* Combined Filters Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          {/* Search Box */}
+          <div className="lg:col-span-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
-                type="checkbox"
-                checked={showFreeOnly}
-                onChange={(e) => setShowFreeOnly(e.target.checked)}
-                className="sr-only peer"
+                type="text"
+                placeholder="Search attractions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors text-sm"
               />
-              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500 shadow-lg"></div>
-            </label>
-          </div>
-          {showFreeOnly && (
-            <div className="mt-3 p-2 bg-green-100 rounded-md">
-              <p className="text-sm text-green-800 font-medium">
-                🎉 Showing only FREE activities! Save money while exploring amazing places.
-              </p>
-            </div>
-          )}
-        </div>
-        
-        {/* Interest Categories */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">Filter by Interests</h4>
-            {availableCategories.length > 0 && (
-              <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
-            )}
-          </div>
-          
-          {/* Loading state for categories */}
-          {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
-          
-          {/* Dynamic categories grid with enhanced styling */}
-          {!loadingActivities && !isInitialLoad && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {availableCategories.map((interest) => {
-                const isSelected = selectedInterests.includes(interest);
-                const styleClasses = categoryStyleClasses[interest] || {
-                  selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
-                  unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
-                };
-                
-                return (
-                  <label
-                    key={interest}
-                    className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium ${
-                      isSelected ? styleClasses.selected : styleClasses.unselected
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleInterestToggle(interest)}
-                      className="sr-only"
-                    />
-                    <span className="text-center leading-tight">
-                      {activityCategoryLabels[interest] || interest}
-                    </span>
-                  </label>
-                );
-              })}
-              {availableCategories.length === 0 && !loadingActivities && (
-                <p className="text-gray-500 col-span-full text-center py-4 text-sm">
-                  No categories available for this city.
-                </p>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
               )}
             </div>
+            {searchTerm.trim() && (
+              <div className="mt-2 text-sm text-gray-600">
+                Found {activities.length} result{activities.length !== 1 ? 's' : ''} for "{searchTerm}"
+              </div>
+            )}
+          </div>
+
+          {/* Free Activities Filter */}
+          <div className="lg:col-span-1">
+            <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg h-full">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="text-green-600 bg-green-100 p-1.5 rounded-full">
+                    <DollarSign size={16} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-green-800 text-sm">Free Activities</h4>
+                    <p className="text-xs text-green-700">
+                      {freeActivitiesCount} available
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showFreeOnly}
+                    onChange={(e) => setShowFreeOnly(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Smart Weather Filtering */}
+          {weatherData && !isWeatherLoading && (
+            <div className="lg:col-span-1">
+              <div className="p-3 bg-gradient-to-r from-blue-50 to-teal-50 border-2 border-blue-200 rounded-lg h-full">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="text-blue-600 bg-blue-100 p-1.5 rounded-full">
+                      {weatherData.isRainy ? <CloudRain size={16} /> : 
+                       weatherData.temperature > 25 ? <Sun size={16} /> : 
+                       <Cloud size={16} />}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-blue-800 text-sm">Weather Filter</h4>
+                      <p className="text-xs text-blue-700">
+                        {Math.round(weatherData.temperature)}°C
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={smartWeatherFiltering}
+                      onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
           )}
         </div>
+      </div>
+      
+      {/* Weather Loading State */}
+      {isWeatherLoading && (
+        <div className="bg-gray-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-center">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
+          <p className="text-gray-500 text-sm sm:text-base">Loading weather data for your travel dates...</p>
+        </div>
+      )}
+      
+      {/* Interest Categories */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-medium text-gray-900">Filter by Interests</h4>
+          {availableCategories.length > 0 && (
+            <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
+          )}
+        </div>
+        
+        {/* Loading state for categories */}
+        {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+        
+        {/* Dynamic categories grid with enhanced styling */}
+        {!loadingActivities && !isInitialLoad && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {availableCategories.map((interest) => {
+              const isSelected = selectedInterests.includes(interest);
+              const styleClasses = categoryStyleClasses[interest] || {
+                selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
+                unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
+              };
+              
+              return (
+                <label
+                  key={interest}
+                  className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium ${
+                    isSelected ? styleClasses.selected : styleClasses.unselected
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => handleInterestToggle(interest)}
+                    className="sr-only"
+                  />
+                  <span className="text-center leading-tight">
+                    {activityCategoryLabels[interest] || interest}
+                  </span>
+                </label>
+              );
+            })}
+            {availableCategories.length === 0 && !loadingActivities && (
+              <p className="text-gray-500 col-span-full text-center py-4 text-sm">
+                No categories available for this city.
+              </p>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Content Area - Map or Grid */}
