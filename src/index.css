@@ -256,59 +256,92 @@
   }
 }
 
-/* 🎨 NEW: Professional Badge Styling */
-.bolt-badge-container {
-  /* Enhanced shadow system for depth */
-  box-shadow: 
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+/* 🎨 NEW: Professional Bolt.new Badge Styling */
+.bolt-badge-fixed {
+  /* Enhanced shadow system for premium feel */
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.15)) 
+          drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1));
 }
 
-.bolt-badge-container:hover {
-  box-shadow: 
-    0 20px 40px -5px rgba(0, 0, 0, 0.15),
-    0 16px 20px -6px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
+.bolt-badge-fixed:hover {
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.2)) 
+          drop-shadow(0 8px 15px rgba(0, 0, 0, 0.15));
 }
 
-/* Enhanced shadow utilities */
-.shadow-3xl {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+/* Professional scale animation */
+@keyframes badge-hover {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.05) rotate(1deg); }
+  100% { transform: scale(1.1) rotate(3deg); }
 }
 
-/* Professional animation for scale */
-@keyframes professional-scale {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.05); }
+.badge-hover-animation {
+  animation: badge-hover 0.3s ease-out forwards;
 }
 
-.animate-professional-scale {
-  animation: professional-scale 0.2s ease-out forwards;
+/* Enhanced drop shadow utilities */
+.drop-shadow-3xl {
+  filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.25));
 }
 
-/* Backdrop blur support */
-@supports (backdrop-filter: blur(10px)) {
-  .backdrop-blur-professional {
-    backdrop-filter: blur(10px) saturate(180%);
+/* Pulse ring animation for badge */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
   }
 }
 
-/* Gradient border effect */
-.gradient-border {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-  border: 1px solid transparent;
-  background-clip: padding-box;
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  background: linear-gradient(135deg, #3b82f6, #9333ea);
-  border-radius: inherit;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  -webkit-mask-composite: xor;
+/* Professional tooltip styling */
+.professional-tooltip {
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.95), rgba(31, 41, 55, 0.95));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth scale animation */
+@keyframes scale-in {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out forwards;
+}
+
+/* Badge positioning optimization */
+.badge-container {
+  /* Ensure badge doesn't interfere with scrollbars */
+  right: max(1.5rem, calc(1.5rem + env(scrollbar-width, 0px)));
+  bottom: max(1.5rem, calc(1.5rem + env(keyboard-inset-height, 0px)));
+}
+
+/* Responsive badge sizing */
+@media (max-width: 640px) {
+  .badge-container {
+    right: 1rem;
+    bottom: 1rem;
+  }
+}
+
+/* High DPI display optimization */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .bolt-badge-fixed {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
 }
