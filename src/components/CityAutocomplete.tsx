@@ -26,6 +26,44 @@ const CityAutocomplete: React.FC<CityAutocompleteProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // 🆕 NEW: Function to find exact city match and auto-set country
+  const findAndSetCountryForCity = (cityInput: string) => {
+    if (!cityInput || cityInput.trim().length === 0) return;
+
+    const trimmedInput = cityInput.trim();
+    
+    // Try to find exact match (case-insensitive)
+    const exactMatch = searchCities(trimmedInput).find(city => 
+      city.name.toLowerCase() === trimmedInput.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      console.log(`🎯 Auto-detected country for "${trimmedInput}": ${exactMatch.country}`);
+      onChange(exactMatch.name, exactMatch.country);
+      return;
+    }
+
+    // Try auto-corrected version
+    const corrected = autoCorrectCityName(trimmedInput);
+    if (corrected !== trimmedInput) {
+      const correctedMatch = searchCities(corrected).find(city => 
+        city.name.toLowerCase() === corrected.toLowerCase()
+      );
+      
+      if (correctedMatch) {
+        console.log(`🎯 Auto-detected country for corrected "${corrected}": ${correctedMatch.country}`);
+        onChange(correctedMatch.name, correctedMatch.country);
+        return;
+      }
+    }
+
+    // If no exact match found, still call onChange to update the city name
+    // but don't pass a country (this will help with proper capitalization)
+    if (trimmedInput !== value) {
+      onChange(trimmedInput);
+    }
+  };
+
   useEffect(() => {
     if (value.length >= 1) {
       // Auto-correct the input
@@ -85,24 +123,25 @@ const CityAutocomplete: React.FC<CityAutocompleteProps> = ({
     onChange(newValue);
   };
 
-  const handleSuggestionClick = (city: {name: string, country: string}) => {
-    onChange(city.name, city.country);
-    setIsOpen(false);
-    setShowCorrection(false);
-    setHighlightedIndex(-1);
+  // 🆕 ENHANCED: Handle input blur to auto-detect country
+  const handleInputBlur = () => {
+    // Small delay to allow for click events on suggestions
+    setTimeout(() => {
+      if (value && value.trim().length > 0) {
+        findAndSetCountryForCity(value);
+      }
+    }, 150);
   };
 
-  const handleCorrectionClick = () => {
-    // Find the country for the corrected city
-    const correctedCity = searchCities(correctedValue)[0];
-    onChange(correctedValue, correctedCity?.country);
-    setIsOpen(false);
-    setShowCorrection(false);
-    setHighlightedIndex(-1);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isOpen) return;
+  // 🆕 ENHANCED: Handle Enter key to auto-detect country
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === 'Enter' && value && value.trim().length > 0) {
+        e.preventDefault();
+        findAndSetCountryForCity(value);
+      }
+      return;
+    }
 
     const totalItems = suggestions.length + (showCorrection ? 1 : 0);
 
@@ -123,6 +162,10 @@ const CityAutocomplete: React.FC<CityAutocompleteProps> = ({
           handleCorrectionClick();
         } else if (highlightedIndex >= (showCorrection ? 1 : 0) && suggestions[highlightedIndex - (showCorrection ? 1 : 0)]) {
           handleSuggestionClick(suggestions[highlightedIndex - (showCorrection ? 1 : 0)]);
+        } else {
+          // No suggestion selected, try to auto-detect country for current input
+          findAndSetCountryForCity(value);
+          setIsOpen(false);
         }
         break;
       case 'Escape':
@@ -131,6 +174,22 @@ const CityAutocomplete: React.FC<CityAutocompleteProps> = ({
         setHighlightedIndex(-1);
         break;
     }
+  };
+
+  const handleSuggestionClick = (city: {name: string, country: string}) => {
+    onChange(city.name, city.country);
+    setIsOpen(false);
+    setShowCorrection(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleCorrectionClick = () => {
+    // Find the country for the corrected city
+    const correctedCity = searchCities(correctedValue)[0];
+    onChange(correctedValue, correctedCity?.country);
+    setIsOpen(false);
+    setShowCorrection(false);
+    setHighlightedIndex(-1);
   };
 
   const handleInputFocus = () => {
@@ -147,8 +206,9 @@ const CityAutocomplete: React.FC<CityAutocompleteProps> = ({
           type="text"
           value={value}
           onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
+          onKeyDown={handleInputKeyDown}
           onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
           placeholder={placeholder}
           className={`w-full px-3 sm:px-4 py-2 pr-8 sm:pr-10 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors text-sm sm:text-base ${
             error 
