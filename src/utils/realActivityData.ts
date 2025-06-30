@@ -3,7 +3,6 @@ import {
   getCoordinatesForCity, 
   getTopAttractions, 
   getPlaceDetails,
-  isLikelyIndoorFromKinds,
   getFallbackImageUrl,
   fetchWikimediaImage,
   fetchOpenTripMapImage,
@@ -241,7 +240,6 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
         }
 
         const categories = extractCategoriesFromKindsEnhanced(attraction.kinds);
-        const isIndoor = isLikelyIndoorFromKinds(attraction.kinds, attraction.name);
         
         // Enhanced image fetching with priority order and proper URL processing
         let imageUrl = getFallbackImageUrl(categories); // Default fallback
@@ -338,7 +336,7 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
           rating: Math.round(processedRating * 10) / 10,
           price: getPriceFromCategories(categories),
           categories,
-          indoor: isIndoor,
+          indoor: false, // Removed indoor classification - all activities are treated equally
           location: {
             lat: attraction.point.lat,
             lng: attraction.point.lon
@@ -375,18 +373,11 @@ export async function getRealActivitiesForCity(cityName: string): Promise<Activi
     const standardCount = validActivities.filter(a => a!.wikipediaExtracts && a!.wikipediaExtracts.text.length <= 100 && a!.wikipediaExtracts.text.length > 50).length;
     const basicCount = validActivities.length - premiumCount - standardCount;
 
-    // 📊 统计户外活动数量
-    const outdoorCount = validActivities.filter(a => !a!.indoor).length;
-    const outdoorCategories = validActivities.filter(a => !a!.indoor).map(a => a!.categories).flat();
-    const uniqueOutdoorCategories = [...new Set(outdoorCategories)];
-
     console.log(`🎉 Successfully processed ${validActivities.length} activities for ${cityName} (from 250 raw attractions within 100km)`);
     console.log(`📊 Content Quality Distribution:`);
     console.log(`   🏆 Premium (detailed Wikipedia): ${premiumCount} (${Math.round(premiumCount/validActivities.length*100)}%)`);
     console.log(`   ⭐ Standard (basic Wikipedia): ${standardCount} (${Math.round(standardCount/validActivities.length*100)}%)`);
     console.log(`   📝 Basic (generated content): ${basicCount} (${Math.round(basicCount/validActivities.length*100)}%)`);
-    console.log(`🌳 Outdoor Activities: ${outdoorCount}/${validActivities.length} (${Math.round(outdoorCount/validActivities.length*100)}%)`);
-    console.log(`🏞️ Outdoor Categories Found: ${uniqueOutdoorCategories.join(', ')}`);
     
     // 📊 统计免费景点数量
     const freeActivitiesCount = validActivities.filter(activity => 
@@ -554,8 +545,14 @@ export function getWeatherBasedRecommendations(
   preferences: ActivityCategory[] = []
 ): Activity[] {
   let weatherAppropriate = activities.filter(activity => {
-    if (weather?.isRainy && !activity.indoor) return false;
-    if (weather?.temperature < 5 && !activity.indoor) return false;
+    // Since we removed indoor classification, we'll use category-based weather filtering
+    const hasIndoorCategories = activity.categories.some(cat => 
+      ['museums_arts', 'shopping', 'shows_cinema', 'food_dining'].includes(cat)
+    );
+    
+    // Filter out outdoor activities in bad weather
+    if (weather?.isRainy && !hasIndoorCategories) return false;
+    if (weather?.temperature < 5 && !hasIndoorCategories) return false;
     return true;
   });
 
@@ -566,13 +563,20 @@ export function getWeatherBasedRecommendations(
   }
 
   return weatherAppropriate.sort((a, b) => {
+    const aHasIndoorCategories = a.categories.some(cat => 
+      ['museums_arts', 'shopping', 'shows_cinema', 'food_dining'].includes(cat)
+    );
+    const bHasIndoorCategories = b.categories.some(cat => 
+      ['museums_arts', 'shopping', 'shows_cinema', 'food_dining'].includes(cat)
+    );
+    
     if (weather?.isRainy || weather?.temperature < 10) {
-      if (a.indoor && !b.indoor) return -1;
-      if (!a.indoor && b.indoor) return 1;
+      if (aHasIndoorCategories && !bHasIndoorCategories) return -1;
+      if (!aHasIndoorCategories && bHasIndoorCategories) return 1;
     }
     if (!weather?.isRainy && weather?.temperature > 20) {
-      if (!a.indoor && b.indoor) return -1;
-      if (a.indoor && !b.indoor) return 1;
+      if (!aHasIndoorCategories && bHasIndoorCategories) return -1;
+      if (aHasIndoorCategories && !bHasIndoorCategories) return 1;
     }
     return b.rating - a.rating;
   });

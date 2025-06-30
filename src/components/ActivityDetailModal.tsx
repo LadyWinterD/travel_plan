@@ -46,7 +46,12 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
   const getWeatherRecommendation = () => {
     if (!weather) return null;
     
-    if (weather.isRainy && !activity.indoor) {
+    // Use category-based weather recommendations since indoor classification is removed
+    const hasIndoorCategories = activity.categories.some(cat => 
+      ['museums_arts', 'shopping', 'shows_cinema', 'food_dining'].includes(cat)
+    );
+    
+    if (weather.isRainy && !hasIndoorCategories) {
       return {
         type: 'warning',
         message: 'This outdoor activity may be affected by rain. Consider rescheduling or bringing rain gear.',
@@ -54,7 +59,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
       };
     }
     
-    if (!weather.isRainy && weather.temperature > 20 && !activity.indoor) {
+    if (!weather.isRainy && weather.temperature > 20 && !hasIndoorCategories) {
       return {
         type: 'good',
         message: 'Perfect weather for this outdoor activity!',
@@ -62,7 +67,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
       };
     }
     
-    if (weather.isRainy && activity.indoor) {
+    if (weather.isRainy && hasIndoorCategories) {
       return {
         type: 'good',
         message: 'Great choice for a rainy day - this indoor activity is perfect!',
@@ -262,23 +267,6 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
                   {activityCategoryLabels[category] || category}
                 </span>
               ))}
-            </div>
-          </div>
-
-          {/* Activity Type */}
-          <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Activity Type</h3>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-2">
-                <span className="text-gray-600">Type</span>
-                <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                  activity.indoor 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {activity.indoor ? '🏢 Indoor Activity' : '🌳 Outdoor Activity'}
-                </span>
-              </div>
             </div>
           </div>
 

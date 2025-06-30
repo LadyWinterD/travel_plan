@@ -273,7 +273,7 @@ const ActivityCard: React.FC<{
         </div>
         
         {/* Category Tags */}
-        <div className="flex flex-wrap gap-1 mb-3">
+        <div className="flex flex-wrap gap-1 mb-4">
           {activity.categories.slice(0, 2).map((category) => (
             <span 
               key={category}
@@ -287,17 +287,6 @@ const ActivityCard: React.FC<{
               +{activity.categories.length - 2}
             </span>
           )}
-        </div>
-        
-        {/* Indoor/Outdoor Badge */}
-        <div className="flex justify-between items-center mb-4">
-          <span className={`text-xs px-2 py-1 rounded-full ${
-            activity.indoor 
-              ? 'bg-blue-100 text-blue-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {activity.indoor ? '🏢 Indoor' : '🌳 Outdoor'}
-          </span>
         </div>
         
         {/* Add to Trip Button */}
