@@ -525,33 +525,188 @@ export async function getTopAttractions(lat: number, lon: number, radiusKm: numb
 }
 
 /**
- * Helper function to determine if attraction is likely indoor
+ * 🎯 ENHANCED: Refined function to determine if attraction is likely indoor
+ * This function now uses a sophisticated scoring system with detailed keyword analysis
  */
 export function isLikelyIndoorFromKinds(kinds: string, name: string): boolean {
   const kindsLower = kinds.toLowerCase();
   const nameLower = name.toLowerCase();
   
-  // Indoor indicators
-  const indoorKeywords = ['museum', 'gallery', 'theater', 'theatre', 'church', 'cathedral', 'temple', 'palace', 'castle', 'library', 'aquarium', 'shopping', 'mall'];
-  const outdoorKeywords = ['park', 'garden', 'bridge', 'monument', 'square', 'tower', 'viewpoint', 'beach', 'mountain', 'trail'];
+  console.log(`🏠 Analyzing indoor/outdoor for "${name}" with kinds: "${kinds}"`);
   
-  // Check kinds
-  if (kindsLower.includes('museums') || kindsLower.includes('religion') || kindsLower.includes('cultural')) {
-    return true;
+  // PHASE 1: Strong Indoor Indicators (High Priority)
+  const strongIndoorKeywords = [
+    // Museums & Cultural
+    'museum', 'museums', 'gallery', 'galleries', 'exhibition', 'cultural_center', 'cultural_centre',
+    'art_gallery', 'local_museum', 'history_museum', 'science_museum', 'art_museum',
+    
+    // Religious Buildings (Indoor spaces)
+    'church', 'churches', 'cathedral', 'cathedrals', 'temple', 'temples', 'mosque', 'mosques',
+    'synagogue', 'synagogues', 'monastery', 'monasteries', 'chapel', 'shrine', 'basilica',
+    
+    // Entertainment & Shopping
+    'theater', 'theatre', 'theaters', 'theatres', 'cinema', 'cinemas', 'movie_theater',
+    'shopping', 'shops', 'shop', 'mall', 'malls', 'shopping_center', 'shopping_centre',
+    'market', 'markets', 'marketplace', 'marketplaces', 'department_store', 'boutique',
+    
+    // Hospitality & Dining
+    'restaurant', 'restaurants', 'cafe', 'cafes', 'coffee', 'bar', 'bars', 'pub', 'pubs',
+    'hotel', 'hotels', 'library', 'libraries',
+    
+    // Indoor Sports & Recreation
+    'aquarium', 'aquariums', 'casino', 'casinos', 'spa', 'wellness', 'gym', 'fitness',
+    'bowling', 'arcade', 'indoor_pool', 'swimming_pool',
+    
+    // Buildings & Architecture (when referring to interior spaces)
+    'palace', 'palaces', 'castle', 'castles', 'mansion', 'manor', 'villa', 'hall',
+    'center', 'centre', 'building', 'complex', 'facility', 'station'
+  ];
+  
+  // PHASE 2: Strong Outdoor Indicators (High Priority)
+  const strongOutdoorKeywords = [
+    // Natural Features
+    'park', 'parks', 'garden', 'gardens', 'botanical_garden', 'botanical_gardens',
+    'nature_reserve', 'nature_reserves', 'national_park', 'national_parks',
+    'beach', 'beaches', 'lake', 'lakes', 'river', 'rivers', 'waterfall', 'waterfalls',
+    'mountain', 'mountains', 'hill', 'hills', 'forest', 'forests', 'woods', 'woodland',
+    'island', 'islands', 'peninsula', 'coast', 'coastal', 'seaside', 'shore',
+    'cliff', 'cliffs', 'canyon', 'canyons', 'valley', 'valleys', 'cave', 'caves',
+    'volcano', 'volcanoes', 'geyser', 'geysers', 'spring', 'springs', 'hot_springs',
+    
+    // Outdoor Structures & Viewpoints
+    'bridge', 'bridges', 'tower', 'towers', 'lighthouse', 'lighthouses',
+    'viewpoint', 'viewpoints', 'view_point', 'view_points', 'lookout', 'lookouts',
+    'observation_deck', 'observation_decks', 'scenic', 'panoramic', 'overlook',
+    
+    // Urban Outdoor Spaces
+    'square', 'squares', 'plaza', 'plazas', 'street', 'streets', 'avenue', 'boulevard',
+    'promenade', 'boardwalk', 'pier', 'wharf', 'harbor', 'harbour', 'port',
+    'city_center', 'city_centre', 'downtown', 'district', 'quarter', 'neighborhood',
+    
+    // Outdoor Sports & Recreation
+    'stadium', 'stadiums', 'arena', 'golf_course', 'golf_courses', 'golf',
+    'ski_resort', 'ski_resorts', 'skiing', 'hiking', 'trail', 'trails', 'path', 'paths',
+    'cycling', 'biking', 'climbing', 'rock_climbing', 'surfing', 'diving',
+    'outdoor_sports', 'recreation', 'playground', 'playgrounds',
+    
+    // Monuments & Memorials (typically outdoor)
+    'monument', 'monuments', 'memorial', 'memorials', 'statue', 'statues',
+    'sculpture', 'sculptures', 'fountain', 'fountains', 'obelisk', 'arch',
+    'war_memorial', 'war_memorials', 'cemetery', 'cemeteries', 'graveyard'
+  ];
+  
+  // PHASE 3: Scoring System
+  let indoorScore = 0;
+  let outdoorScore = 0;
+  
+  // Check kinds (higher weight - more reliable)
+  const kindsArray = kindsLower.split(',').map(k => k.trim());
+  
+  for (const kind of kindsArray) {
+    // Strong indoor matches in kinds (weight: 3)
+    if (strongIndoorKeywords.some(keyword => kind.includes(keyword))) {
+      indoorScore += 3;
+      console.log(`🏠 Strong indoor match in kinds: "${kind}" (+3 indoor)`);
+    }
+    
+    // Strong outdoor matches in kinds (weight: 3)
+    if (strongOutdoorKeywords.some(keyword => kind.includes(keyword))) {
+      outdoorScore += 3;
+      console.log(`🌳 Strong outdoor match in kinds: "${kind}" (+3 outdoor)`);
+    }
   }
   
-  if (kindsLower.includes('natural') || kindsLower.includes('outdoor') || kindsLower.includes('gardens_and_parks')) {
+  // Check name (lower weight - less reliable)
+  // Strong indoor matches in name (weight: 2)
+  for (const keyword of strongIndoorKeywords) {
+    if (nameLower.includes(keyword)) {
+      indoorScore += 2;
+      console.log(`🏠 Indoor match in name: "${keyword}" (+2 indoor)`);
+      break; // Only count one match per category to avoid over-weighting
+    }
+  }
+  
+  // Strong outdoor matches in name (weight: 2)
+  for (const keyword of strongOutdoorKeywords) {
+    if (nameLower.includes(keyword)) {
+      outdoorScore += 2;
+      console.log(`🌳 Outdoor match in name: "${keyword}" (+2 outdoor)`);
+      break; // Only count one match per category to avoid over-weighting
+    }
+  }
+  
+  // PHASE 4: Special Cases and Context-Aware Adjustments
+  
+  // Religious sites: Most are indoor worship spaces
+  if (kindsLower.includes('religion') || kindsLower.includes('religious')) {
+    indoorScore += 2;
+    console.log(`⛪ Religious site bonus (+2 indoor)`);
+  }
+  
+  // Natural landscapes: Almost always outdoor
+  if (kindsLower.includes('natural') || kindsLower.includes('geological')) {
+    outdoorScore += 3;
+    console.log(`🏞️ Natural landscape bonus (+3 outdoor)`);
+  }
+  
+  // Gardens and parks: Always outdoor
+  if (kindsLower.includes('gardens_and_parks') || kindsLower.includes('parks')) {
+    outdoorScore += 3;
+    console.log(`🌳 Parks/gardens bonus (+3 outdoor)`);
+  }
+  
+  // Urban environment: Usually outdoor public spaces
+  if (kindsLower.includes('urban_environment')) {
+    outdoorScore += 2;
+    console.log(`🏙️ Urban environment bonus (+2 outdoor)`);
+  }
+  
+  // Museums: Almost always indoor
+  if (kindsLower.includes('museums')) {
+    indoorScore += 3;
+    console.log(`🏛️ Museum bonus (+3 indoor)`);
+  }
+  
+  // Sports: Context-dependent
+  if (kindsLower.includes('sport')) {
+    // Check for specific outdoor sports
+    if (nameLower.includes('golf') || nameLower.includes('ski') || nameLower.includes('stadium')) {
+      outdoorScore += 2;
+      console.log(`⚽ Outdoor sport bonus (+2 outdoor)`);
+    } else {
+      // Default sports facilities are often indoor
+      indoorScore += 1;
+      console.log(`🏃 General sport facility (+1 indoor)`);
+    }
+  }
+  
+  // PHASE 5: Decision Logic
+  console.log(`📊 Final scores for "${name}": Indoor=${indoorScore}, Outdoor=${outdoorScore}`);
+  
+  // Clear winner
+  if (indoorScore > outdoorScore) {
+    console.log(`✅ Classification: INDOOR (score: ${indoorScore} vs ${outdoorScore})`);
+    return true;
+  } else if (outdoorScore > indoorScore) {
+    console.log(`✅ Classification: OUTDOOR (score: ${outdoorScore} vs ${indoorScore})`);
     return false;
   }
   
-  // Check name
-  const hasIndoorKeyword = indoorKeywords.some(keyword => nameLower.includes(keyword));
-  const hasOutdoorKeyword = outdoorKeywords.some(keyword => nameLower.includes(keyword));
+  // Tie or no matches - use contextual defaults
+  if (indoorScore === 0 && outdoorScore === 0) {
+    // No strong indicators - use conservative default based on common patterns
+    if (nameLower.includes('center') || nameLower.includes('centre') || 
+        nameLower.includes('building') || nameLower.includes('house')) {
+      console.log(`🏢 Default: INDOOR (building-related name)`);
+      return true;
+    } else {
+      console.log(`🌳 Default: OUTDOOR (no clear indoor indicators)`);
+      return false;
+    }
+  }
   
-  if (hasIndoorKeyword && !hasOutdoorKeyword) return true;
-  if (hasOutdoorKeyword && !hasIndoorKeyword) return false;
-  
-  // Default to indoor for safety (weather protection)
+  // Tie - default to indoor for safety (weather protection)
+  console.log(`⚖️ Tie score - Default: INDOOR (weather safety)`);
   return true;
 }
 
