@@ -45,8 +45,22 @@ const Footer: React.FC = () => {
           </div>
         </div>
         
-        <div className="border-t border-gray-700 mt-6 sm:mt-8 pt-4 sm:pt-6 text-center">
-          <p className="text-gray-400 text-sm sm:text-base">© {currentYear} TravelPlanner. All rights reserved.</p>
+        <div className="border-t border-gray-700 mt-6 sm:mt-8 pt-4 sm:pt-6">
+          <div className="flex flex-col items-center gap-4">
+            {/* Bolt.new Badge */}
+            <div className="flex justify-center">
+              <img 
+                src="/logotext_poweredby_360w.png" 
+                alt="Powered by Bolt.new" 
+                className="h-8 sm:h-10 opacity-80 hover:opacity-100 transition-opacity duration-300"
+              />
+            </div>
+            
+            {/* Copyright */}
+            <p className="text-gray-400 text-sm sm:text-base text-center">
+              © {currentYear} TravelPlanner. All rights reserved.
+            </p>
+          </div>
         </div>
       </div>
     </footer>
