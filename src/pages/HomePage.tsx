@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, MapPin, Sun, Calendar, CheckCircle, Play } from 'lucide-react';
+import { ArrowRight, MapPin, Sun, Calendar, CheckCircle, HelpCircle } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,14 +42,14 @@ const HomePage: React.FC = () => {
               </span>
             </button>
             
-            {/* 🆕 NEW: Tutorial Button - Changed to English */}
+            {/* 🆕 UPDATED: Changed to "How Does It Work" for better marketing appeal */}
             <button 
               onClick={() => navigate('/watch-how-it-works')}
               className="group bg-white text-teal-600 border-2 border-teal-500 px-12 py-5 rounded-full text-xl font-medium hover:bg-teal-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               <span className="flex items-center justify-center gap-3">
-                <Play size={24} className="group-hover:scale-110 transition-transform" />
-                Watch Tutorial
+                <HelpCircle size={24} className="group-hover:scale-110 transition-transform" />
+                How Does It Work?
               </span>
             </button>
           </div>
@@ -230,8 +230,8 @@ const HomePage: React.FC = () => {
               onClick={() => navigate('/watch-how-it-works')}
               className="bg-white/20 text-white border-2 border-white/30 px-12 py-5 rounded-full text-lg font-medium hover:bg-white/30 transition-all duration-300 backdrop-blur-sm transform hover:scale-105 flex items-center justify-center gap-3"
             >
-              <Play size={20} />
-              Watch Tutorial
+              <HelpCircle size={20} />
+              How Does It Work?
             </button>
           </div>
           
