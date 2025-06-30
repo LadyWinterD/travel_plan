@@ -5,6 +5,7 @@ import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
 import WatchHowItWorksPage from './pages/WatchHowItWorksPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 import PreferencesForm from './components/PreferencesForm';
 import DestinationsPage from './pages/DestinationsPage';
 import ActivitiesPage from './pages/ActivitiesPage';
@@ -25,6 +26,7 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/watch-how-it-works" element={<WatchHowItWorksPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="/terms-of-service" element={<TermsOfServicePage />} />
                 <Route path="/preferences" element={<PreferencesForm />} />
                 <Route path="/destinations" element={<DestinationsPage />} />
                 <Route path="/activities" element={<ActivitiesPage />} />
