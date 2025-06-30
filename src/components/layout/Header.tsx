@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { MapPin, Sun, Calendar, Menu, X } from 'lucide-react';
+import { MapPin, Sun, Calendar, Menu, X, Info } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 
 const Header: React.FC = () => {
@@ -46,7 +46,21 @@ const Header: React.FC = () => {
           </div>
           
           {/* Desktop navigation */}
-          <nav className="hidden md:flex space-x-4 lg:space-x-8">
+          <nav className="hidden md:flex items-center space-x-4 lg:space-x-8">
+            {/* About Link */}
+            <Link
+              to="/about"
+              className={`flex items-center space-x-1 px-3 py-2 rounded-md transition-colors text-sm lg:text-base ${
+                location.pathname === '/about'
+                  ? 'text-white bg-teal-600'
+                  : 'text-gray-600 hover:text-teal-600'
+              }`}
+            >
+              <Info size={18} />
+              <span>About</span>
+            </Link>
+            
+            {/* Planning Steps */}
             {navigationItems.map((item) => (
               <Link
                 key={item.path}
@@ -72,6 +86,21 @@ const Header: React.FC = () => {
         {/* Mobile navigation */}
         {isMenuOpen && (
           <nav className="md:hidden mt-4 pb-4 space-y-2 border-t border-gray-100 pt-4">
+            {/* About Link */}
+            <Link
+              to="/about"
+              className={`flex items-center space-x-3 px-4 py-3 rounded-md transition-colors ${
+                location.pathname === '/about'
+                  ? 'text-white bg-teal-600'
+                  : 'text-gray-600 hover:text-teal-600 hover:bg-gray-50'
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Info size={18} />
+              <span className="text-base">About</span>
+            </Link>
+            
+            {/* Planning Steps */}
             {navigationItems.map((item) => (
               <Link
                 key={item.path}
