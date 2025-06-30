@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import HomePage from './pages/HomePage';
+import WatchHowItWorksPage from './pages/WatchHowItWorksPage';
 import PreferencesForm from './components/PreferencesForm';
 import DestinationsPage from './pages/DestinationsPage';
 import ActivitiesPage from './pages/ActivitiesPage';
@@ -21,6 +22,7 @@ function App() {
             <main className="flex-grow">
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/watch-how-it-works" element={<WatchHowItWorksPage />} />
                 <Route path="/preferences" element={<PreferencesForm />} />
                 <Route path="/destinations" element={<DestinationsPage />} />
                 <Route path="/activities" element={<ActivitiesPage />} />

@@ -54,7 +54,10 @@ const HomePage: React.FC = () => {
               </span>
             </button>
             
-            <button className="text-blue-600 hover:text-blue-700 font-medium text-lg transition-colors">
+            <button 
+              onClick={() => navigate('/watch-how-it-works')}
+              className="text-blue-600 hover:text-blue-700 font-medium text-lg transition-colors"
+            >
               Watch how it works
             </button>
           </div>
