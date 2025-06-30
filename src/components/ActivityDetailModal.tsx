@@ -1,6 +1,6 @@
 import React from 'react';
 import { Activity, WeatherData } from '../types';
-import { X, Clock, Star, DollarSign, MapPin, Calendar, Thermometer, Umbrella, ExternalLink, Globe, Navigation, Heart, Share2, Bookmark } from 'lucide-react';
+import { X, Clock, Star, MapPin, Thermometer, Umbrella, ExternalLink, Globe, Navigation, Heart, Share2, Bookmark } from 'lucide-react';
 import { activityCategoryLabels } from '../data/activityCategories';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 
