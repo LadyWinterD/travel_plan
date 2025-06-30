@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search, ChevronDown, ChevronUp, ArrowRight, Users } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -13,68 +13,68 @@ import ActivityMap from '../components/ActivityMap';
 // Enhanced category style classes for beautiful filter buttons
 const categoryStyleClasses = {
   museums_arts: {
-    selected: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-300 scale-105 shadow-lg border-purple-500',
-    unselected: 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 hover:from-purple-100 hover:to-purple-200 hover:border-purple-300 shadow-sm hover:shadow-md'
+    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 scale-105 shadow-md border-purple-500',
+    unselected: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300 shadow-sm'
   },
   historical_sites: {
-    selected: 'bg-gradient-to-r from-amber-500 to-amber-600 text-white ring-2 ring-amber-300 scale-105 shadow-lg border-amber-500',
-    unselected: 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 hover:from-amber-100 hover:to-amber-200 hover:border-amber-300 shadow-sm hover:shadow-md'
+    selected: 'bg-amber-500 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-500',
+    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
   },
   religious_sites: {
-    selected: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-2 ring-blue-300 scale-105 shadow-lg border-blue-500',
-    unselected: 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 shadow-sm hover:shadow-md'
+    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 scale-105 shadow-md border-blue-500',
+    unselected: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm'
   },
   castles_palaces: {
-    selected: 'bg-gradient-to-r from-red-500 to-red-600 text-white ring-2 ring-red-300 scale-105 shadow-lg border-red-500',
-    unselected: 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border-red-200 hover:from-red-100 hover:to-red-200 hover:border-red-300 shadow-sm hover:shadow-md'
+    selected: 'bg-red-500 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-500',
+    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
   },
   architectural_landmarks: {
-    selected: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white ring-2 ring-gray-300 scale-105 shadow-lg border-gray-500',
-    unselected: 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border-gray-200 hover:from-gray-100 hover:to-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
+    selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
+    unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
   },
   natural_landscapes: {
-    selected: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-lg border-emerald-500',
-    unselected: 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200 hover:from-emerald-100 hover:to-emerald-200 hover:border-emerald-300 shadow-sm hover:shadow-md'
+    selected: 'bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-500',
+    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
   },
   parks_gardens: {
-    selected: 'bg-gradient-to-r from-green-500 to-green-600 text-white ring-2 ring-green-300 scale-105 shadow-lg border-green-500',
-    unselected: 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 hover:border-green-300 shadow-sm hover:shadow-md'
+    selected: 'bg-green-500 text-white ring-2 ring-green-300 scale-105 shadow-md border-green-500',
+    unselected: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300 shadow-sm'
   },
   outdoor_sports: {
-    selected: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white ring-2 ring-orange-300 scale-105 shadow-lg border-orange-500',
-    unselected: 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 hover:from-orange-100 hover:to-orange-200 hover:border-orange-300 shadow-sm hover:shadow-md'
+    selected: 'bg-orange-500 text-white ring-2 ring-orange-300 scale-105 shadow-md border-orange-500',
+    unselected: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300 shadow-sm'
   },
   city_centers: {
-    selected: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white ring-2 ring-indigo-300 scale-105 shadow-lg border-indigo-500',
-    unselected: 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 border-indigo-200 hover:from-indigo-100 hover:to-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-md'
+    selected: 'bg-indigo-500 text-white ring-2 ring-indigo-300 scale-105 shadow-md border-indigo-500',
+    unselected: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 shadow-sm'
   },
   viewpoints_towers: {
-    selected: 'bg-gradient-to-r from-pink-500 to-pink-600 text-white ring-2 ring-pink-300 scale-105 shadow-lg border-pink-500',
-    unselected: 'bg-gradient-to-r from-pink-50 to-pink-100 text-pink-700 border-pink-200 hover:from-pink-100 hover:to-pink-200 hover:border-pink-300 shadow-sm hover:shadow-md'
+    selected: 'bg-pink-500 text-white ring-2 ring-pink-300 scale-105 shadow-md border-pink-500',
+    unselected: 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100 hover:border-pink-300 shadow-sm'
   },
   theme_parks_zoos: {
-    selected: 'bg-gradient-to-r from-lime-500 to-lime-600 text-white ring-2 ring-lime-300 scale-105 shadow-lg border-lime-500',
-    unselected: 'bg-gradient-to-r from-lime-50 to-lime-100 text-lime-700 border-lime-200 hover:from-lime-100 hover:to-lime-200 hover:border-lime-300 shadow-sm hover:shadow-md'
+    selected: 'bg-lime-500 text-white ring-2 ring-lime-300 scale-105 shadow-md border-lime-500',
+    unselected: 'bg-lime-50 text-lime-700 border-lime-200 hover:bg-lime-100 hover:border-lime-300 shadow-sm'
   },
   nightlife: {
-    selected: 'bg-gradient-to-r from-violet-500 to-violet-600 text-white ring-2 ring-violet-300 scale-105 shadow-lg border-violet-500',
-    unselected: 'bg-gradient-to-r from-violet-50 to-violet-100 text-violet-700 border-violet-200 hover:from-violet-100 hover:to-violet-200 hover:border-violet-300 shadow-sm hover:shadow-md'
+    selected: 'bg-violet-500 text-white ring-2 ring-violet-300 scale-105 shadow-md border-violet-500',
+    unselected: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300 shadow-sm'
   },
   shows_cinema: {
-    selected: 'bg-gradient-to-r from-red-600 to-red-700 text-white ring-2 ring-red-300 scale-105 shadow-lg border-red-600',
-    unselected: 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border-red-200 hover:from-red-100 hover:to-red-200 hover:border-red-300 shadow-sm hover:shadow-md'
+    selected: 'bg-red-600 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-600',
+    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
   },
   shopping: {
-    selected: 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white ring-2 ring-emerald-300 scale-105 shadow-lg border-emerald-600',
-    unselected: 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200 hover:from-emerald-100 hover:to-emerald-200 hover:border-emerald-300 shadow-sm hover:shadow-md'
+    selected: 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-600',
+    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
   },
   interesting_places: {
-    selected: 'bg-gradient-to-r from-teal-500 to-teal-600 text-white ring-2 ring-teal-300 scale-105 shadow-lg border-teal-500',
-    unselected: 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 border-teal-200 hover:from-teal-100 hover:to-teal-200 hover:border-teal-300 shadow-sm hover:shadow-md'
+    selected: 'bg-teal-500 text-white ring-2 ring-teal-300 scale-105 shadow-md border-teal-500',
+    unselected: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 shadow-sm'
   },
   food_dining: {
-    selected: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white ring-2 ring-amber-300 scale-105 shadow-lg border-amber-600',
-    unselected: 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 hover:from-amber-100 hover:to-amber-200 hover:border-amber-300 shadow-sm hover:shadow-md'
+    selected: 'bg-amber-600 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-600',
+    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
   }
 };
 
@@ -87,11 +87,11 @@ const validateCategory = (cat: string): ActivityCategory => {
 
 // Loading skeleton component for categories
 const CategorySkeleton: React.FC = () => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-    {Array.from({ length: 10 }).map((_, index) => (
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+    {Array.from({ length: 8 }).map((_, index) => (
       <div
         key={index}
-        className="h-12 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl animate-pulse"
+        className="h-10 bg-gray-200 rounded-lg animate-pulse"
       />
     ))}
   </div>
@@ -180,7 +180,6 @@ const ActivityCard: React.FC<{
   const getWeatherBadge = () => {
     if (!weather) return null;
     
-    // Use category-based weather recommendations since indoor classification is removed
     const hasIndoorCategories = activity.categories.some(cat => 
       ['museums_arts', 'shopping', 'shows_cinema', 'food_dining'].includes(cat)
     );
@@ -278,7 +277,7 @@ const ActivityCard: React.FC<{
         </div>
         
         {/* Category Tags */}
-        <div className="flex flex-wrap gap-1 mb-4">
+        <div className="flex flex-wrap gap-1 mb-3">
           {activity.categories.slice(0, 2).map((category) => (
             <span 
               key={category}
@@ -326,92 +325,6 @@ const ActivityCard: React.FC<{
   );
 };
 
-// NEW: Floating Action Button Component for better UX
-const FloatingItineraryButton: React.FC<{ 
-  selectedCount: number; 
-  onViewItinerary: () => void;
-  disabled: boolean;
-}> = ({ selectedCount, onViewItinerary, disabled }) => {
-  if (disabled || selectedCount === 0) return null;
-
-  return (
-    <div className="fixed bottom-6 right-6 z-40">
-      <button
-        onClick={onViewItinerary}
-        className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 flex items-center gap-3 font-semibold text-lg group"
-      >
-        <div className="flex items-center gap-2">
-          <Users size={20} />
-          <span className="hidden sm:inline">View Itinerary</span>
-          <span className="sm:hidden">Itinerary</span>
-        </div>
-        
-        {selectedCount > 0 && (
-          <div className="bg-white/20 text-white px-2 py-1 rounded-full text-sm font-bold min-w-[24px] text-center">
-            {selectedCount}
-          </div>
-        )}
-        
-        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
-      </button>
-    </div>
-  );
-};
-
-// NEW: Trip Summary Card Component
-const TripSummaryCard: React.FC<{
-  selectedCount: number;
-  totalActivities: number;
-  onViewItinerary: () => void;
-  disabled: boolean;
-}> = ({ selectedCount, totalActivities, onViewItinerary, disabled }) => {
-  if (totalActivities === 0) return null;
-
-  return (
-    <div className="bg-gradient-to-r from-teal-50 to-blue-50 border-2 border-teal-200 rounded-xl p-6 mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-teal-100 p-3 rounded-full">
-            <Users size={24} className="text-teal-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Your Trip Selection</h3>
-            <p className="text-gray-600">
-              {selectedCount} of {totalActivities} activities selected
-            </p>
-            {selectedCount > 0 && (
-              <div className="mt-1">
-                <div className="w-48 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((selectedCount / Math.max(totalActivities * 0.3, 1)) * 100, 100)}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {selectedCount >= totalActivities * 0.3 ? 'Great selection!' : 'Add more activities for a fuller itinerary'}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <button
-          onClick={onViewItinerary}
-          disabled={disabled}
-          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
-            disabled
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-          }`}
-        >
-          <span>View Itinerary</span>
-          <ArrowRight size={18} />
-        </button>
-      </div>
-    </div>
-  );
-};
-
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
   const { 
@@ -436,7 +349,7 @@ const ActivitiesPage: React.FC = () => {
   const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
   
-  // View state - map or grid (CHANGED: Default to 'map' instead of 'grid')
+  // View state - map or grid (default to map as requested)
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('map');
   const [cityCoordinates, setCityCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
@@ -444,7 +357,6 @@ const ActivitiesPage: React.FC = () => {
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [showAllCategories, setShowAllCategories] = useState<boolean>(false);
   
   // Modal state
   const [selectedActivityForModal, setSelectedActivityForModal] = useState<Activity | null>(null);
@@ -699,10 +611,6 @@ const ActivitiesPage: React.FC = () => {
     setSelectedActivityForModal(null);
   };
 
-  const handleViewItinerary = () => {
-    navigate('/itinerary');
-  };
-
   // Count free activities
   const freeActivitiesCount = allActivitiesForCity.filter(activity => 
     !activity.price || activity.price.amount === 0
@@ -710,7 +618,6 @@ const ActivitiesPage: React.FC = () => {
 
   // Get selected activities for current destination
   const currentSelectedActivities = activeDestination ? selectedActivities[activeDestination] || [] : [];
-  const totalSelectedActivities = Object.values(selectedActivities).reduce((sum, acts) => sum + acts.length, 0);
 
   // Determine empty state message
   const getEmptyStateMessage = () => {
@@ -752,464 +659,419 @@ const ActivitiesPage: React.FC = () => {
   }
   
   return (
-    <div className="container mx-auto px-4 py-6 sm:py-8 max-w-7xl">
-      {/* Page Title */}
-      <div className="text-center mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Discover Real Attractions</h1>
-        <p className="text-gray-600 text-sm sm:text-base px-4">
-          Powered by OpenTripMap - Only attractions with authentic photos are shown!
-        </p>
-      </div>
-      
-      {/* API Error Message */}
-      {apiError && (
-        <div className="mb-4 sm:mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm sm:text-base">
-          <div className="flex items-center gap-2">
-            <span>⚠️</span>
-            <span>{apiError}</span>
-          </div>
-        </div>
-      )}
-      
-      {/* Travel Dates Warning */}
-      {!startDate && (
-        <div className="mb-4 sm:mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
-          <div className="flex items-center gap-2">
-            <Calendar size={16} />
-            <span className="text-sm sm:text-base">Set your travel dates to see weather forecasts for your trip!</span>
-          </div>
-        </div>
-      )}
-      
-      {/* Destination Tabs */}
-      <div className="mb-4 sm:mb-6">
-        <div className="flex overflow-x-auto pb-2 space-x-2 sm:space-x-3 scrollbar-hide">
-          {destinations.map((destination, index) => (
-            <button
-              key={destination.id}
-              onClick={() => setActiveDestination(destination.id)}
-              className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap text-sm sm:text-base ${
-                activeDestination === destination.id
-                  ? 'bg-teal-500 text-white shadow-lg transform scale-105'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
-              }`}
+    <div className="min-h-screen bg-gray-50">
+      {/* 🎨 NEW: Sticky Header with Progress Bar */}
+      <div className="sticky top-16 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+            <button 
+              onClick={() => navigate('/destinations')}
+              className="hover:text-teal-600 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  activeDestination === destination.id ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-600'
-                }`}>
-                  {String.fromCharCode(65 + index)}
-                </span>
-                <span>{destination.name}</span>
-              </div>
+              Destinations
             </button>
-          ))}
+            <span>→</span>
+            <span className="text-gray-900 font-medium">Select Activities</span>
+            <span>→</span>
+            <span className="text-gray-400">Create Itinerary</span>
+          </div>
+
+          {/* Destination Header with Progress */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <MapPin className="text-teal-600" size={24} />
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {currentDestination.name}, {currentDestination.country}
+                  </h1>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span>{currentDestination.days} day{currentDestination.days > 1 ? 's' : ''}</span>
+                    <span>•</span>
+                    <span>{currentSelectedActivities.length} selected</span>
+                    <span>•</span>
+                    <span>{activities.length} available</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* View Toggle */}
+              <div className="view-toggle">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={viewMode === 'grid' ? 'active' : ''}
+                >
+                  <Grid size={16} className="mr-1" />
+                  Grid
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={viewMode === 'map' ? 'active' : ''}
+                >
+                  <Map size={16} className="mr-1" />
+                  Map
+                </button>
+              </div>
+
+              {/* Continue Button */}
+              <button
+                onClick={() => navigate('/itinerary')}
+                disabled={currentSelectedActivities.length === 0}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                  currentSelectedActivities.length > 0
+                    ? 'bg-teal-500 text-white hover:bg-teal-600 shadow-md'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <span>Continue</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+              <span>Trip Planning Progress</span>
+              <span>{currentSelectedActivities.length} activities selected</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${Math.min(100, (currentSelectedActivities.length / Math.max(currentDestination.days * 3, 1)) * 100)}%` 
+                }}
+              ></div>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Recommended: {currentDestination.days * 3} activities for {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''}
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Destination Information with View Toggle */}
-      <div className="mb-4 sm:mb-6 bg-teal-50 border border-teal-200 rounded-xl p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <MapPin className="text-teal-600 flex-shrink-0" size={20} />
-            <div className="min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg font-semibold text-teal-800 truncate">
-                {currentDestination.name}, {currentDestination.country}
-              </h2>
-              <p className="text-teal-700 text-xs sm:text-sm">
-                Duration: {currentDestination.days} day{currentDestination.days > 1 ? 's' : ''} • 
-                Selected: {selectedActivities[currentDestination.id]?.length || 0} • 
-                Available: {activities.length}
-                {selectedInterests.length > 0 && (
-                  <span className="block sm:inline sm:ml-2">
-                    Filtered by: {selectedInterests.map(cat => activityCategoryLabels[cat]).join(', ')}
-                  </span>
-                )}
-              </p>
+
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* API Error Message */}
+        {apiError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{apiError}</span>
             </div>
+          </div>
+        )}
+        
+        {/* Travel Dates Warning */}
+        {!startDate && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+            <div className="flex items-center gap-2">
+              <Calendar size={16} />
+              <span>Set your travel dates to see weather forecasts for your trip!</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Destination Tabs - Only show if multiple destinations */}
+        {destinations.length > 1 && (
+          <div className="mb-6">
+            <div className="flex overflow-x-auto pb-2 space-x-3 scrollbar-hide">
+              {destinations.map((destination, index) => (
+                <button
+                  key={destination.id}
+                  onClick={() => setActiveDestination(destination.id)}
+                  className={`flex-shrink-0 px-6 py-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${
+                    activeDestination === destination.id
+                      ? 'bg-teal-500 text-white shadow-lg transform scale-105'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      activeDestination === destination.id ? 'bg-white/20 text-white' : 'bg-teal-100 text-teal-600'
+                    }`}>
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <span>{destination.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Weather Information */}
+        {isWeatherLoading ? (
+          <div className="bg-gray-50 rounded-xl p-6 mb-6 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
+            <p className="text-gray-500">Loading weather data for your travel dates...</p>
+          </div>
+        ) : weatherData && (
+          <WeatherForecastCard 
+            weather={weatherData} 
+            location={`${currentDestination.name}, ${currentDestination.country}`}
+            isForTravelDate={!!startDate}
+          />
+        )}
+
+        {/* 🎨 NEW: Compact Filter Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          {/* Filter Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Filter size={18} className="text-teal-600" />
+              <h3 className="font-semibold text-gray-900">Filters</h3>
+              {(selectedInterests.length > 0 || showFreeOnly || searchTerm.trim() || smartWeatherFiltering) && (
+                <span className="text-sm text-gray-500">
+                  ({[
+                    selectedInterests.length > 0 && `${selectedInterests.length} interests`,
+                    showFreeOnly && 'free only',
+                    searchTerm.trim() && 'search',
+                    smartWeatherFiltering && 'weather'
+                  ].filter(Boolean).join(', ')})
+                </span>
+              )}
+            </div>
+            {(selectedInterests.length > 0 || showFreeOnly || searchTerm.trim() || smartWeatherFiltering) && (
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
+              >
+                Clear all
+              </button>
+            )}
           </div>
           
-          {/* View Toggle */}
-          <div className="flex items-center gap-4">
-            <div className="view-toggle">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'active' : ''}
-              >
-                <Grid size={16} className="mr-1" />
-                Grid
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={viewMode === 'map' ? 'active' : ''}
-              >
-                <Map size={16} className="mr-1" />
-                Map
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Trip Summary Card - Only show in grid view */}
-      {viewMode === 'grid' && (
-        <TripSummaryCard
-          selectedCount={totalSelectedActivities}
-          totalActivities={activities.length}
-          onViewItinerary={handleViewItinerary}
-          disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
-        />
-      )}
-
-      {/* Weather Information */}
-      {weatherData && !isWeatherLoading && (
-        <WeatherForecastCard 
-          weather={weatherData} 
-          location={`${currentDestination.name}, ${currentDestination.country}`}
-          isForTravelDate={!!startDate}
-        />
-      )}
-
-      {/* Combined Filter Section - Smart Weather, Free Activities, and Search in one row */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-          <div className="flex items-center gap-2">
-            <Filter size={18} className="text-teal-600" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Filter Activities</h3>
-          </div>
-          {(selectedInterests.length > 0 || showFreeOnly || searchTerm.trim() || smartWeatherFiltering) && (
-            <button
-              onClick={clearAllFilters}
-              className="text-sm text-teal-600 hover:text-teal-800 underline font-medium"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
-        
-        {/* Combined Filters Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-          {/* Search Box */}
-          <div className="lg:col-span-1">
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
                 placeholder="Search attractions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors text-sm"
               />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              )}
             </div>
-            {searchTerm.trim() && (
-              <div className="mt-2 text-sm text-gray-600">
-                Found {activities.length} result{activities.length !== 1 ? 's' : ''} for "{searchTerm}"
-              </div>
-            )}
-          </div>
 
-          {/* Free Activities Filter */}
-          <div className="lg:col-span-1">
-            <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg h-full">
-              <div className="flex items-center justify-between">
+            {/* Free Activities Toggle */}
+            <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <DollarSign size={16} className="text-green-600" />
+                <span className="text-sm font-medium text-green-800">Free Only</span>
+                <span className="text-xs text-green-600">({freeActivitiesCount})</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showFreeOnly}
+                  onChange={(e) => setShowFreeOnly(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+              </label>
+            </div>
+
+            {/* Weather Filter */}
+            {weatherData && (
+              <div className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <div className="text-green-600 bg-green-100 p-1.5 rounded-full">
-                    <DollarSign size={16} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-green-800 text-sm">Free Activities</h4>
-                    <p className="text-xs text-green-700">
-                      {freeActivitiesCount} available
-                    </p>
-                  </div>
+                  {weatherData.isRainy ? <CloudRain size={16} className="text-blue-600" /> : 
+                   weatherData.temperature > 25 ? <Sun size={16} className="text-blue-600" /> : 
+                   <Cloud size={16} className="text-blue-600" />}
+                  <span className="text-sm font-medium text-blue-800">Weather</span>
+                  <span className="text-xs text-blue-600">({Math.round(weatherData.temperature)}°C)</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={showFreeOnly}
-                    onChange={(e) => setShowFreeOnly(e.target.checked)}
+                    checked={smartWeatherFiltering}
+                    onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
                 </label>
               </div>
+            )}
+
+            {/* Categories Count */}
+            <div className="flex items-center justify-center p-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <span className="text-sm text-gray-600">
+                {availableCategories.length} categories available
+              </span>
             </div>
           </div>
 
-          {/* Smart Weather Filtering */}
-          {weatherData && !isWeatherLoading && (
-            <div className="lg:col-span-1">
-              <div className="p-3 bg-gradient-to-r from-blue-50 to-teal-50 border-2 border-blue-200 rounded-lg h-full">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="text-blue-600 bg-blue-100 p-1.5 rounded-full">
-                      {weatherData.isRainy ? <CloudRain size={16} /> : 
-                       weatherData.temperature > 25 ? <Sun size={16} /> : 
-                       <Cloud size={16} />}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-blue-800 text-sm">Weather Filter</h4>
-                      <p className="text-xs text-blue-700">
-                        {Math.round(weatherData.temperature)}°C
-                      </p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={smartWeatherFiltering}
-                      onChange={(e) => setSmartWeatherFiltering(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
-                  </label>
-                </div>
+          {/* Interest Categories */}
+          {!loadingActivities && !isInitialLoad && availableCategories.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Filter by Interests</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                {availableCategories.map((interest) => {
+                  const isSelected = selectedInterests.includes(interest);
+                  const selectedColor = categoryStyleClasses[interest].selected;
+                  const unselectedColor = categoryStyleClasses[interest].unselected;
+                  
+                  return (
+                    <label
+                      key={interest}
+                      className={`flex items-center justify-center p-2 rounded-lg border cursor-pointer transition-all duration-200 text-xs font-medium ${
+                        isSelected 
+                          ? selectedColor 
+                          : unselectedColor
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleInterestToggle(interest)}
+                        className="sr-only"
+                      />
+                      <span className="text-center leading-tight">
+                        {activityCategoryLabels[interest] || interest}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
-
-        {/* Enhanced Interest Categories Section */}
-        <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-teal-100 p-2 rounded-lg">
-                <Filter size={20} className="text-teal-600" />
-              </div>
-              <div>
-                <h4 className="text-lg font-bold text-gray-900">Activity Categories</h4>
-                <p className="text-sm text-gray-600">
-                  {availableCategories.length > 0 
-                    ? `${availableCategories.length} categories available` 
-                    : 'Loading categories...'
-                  }
-                </p>
-              </div>
-            </div>
-            
-            {availableCategories.length > 8 && (
-              <button
-                onClick={() => setShowAllCategories(!showAllCategories)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-              >
-                {showAllCategories ? (
-                  <>
-                    <ChevronUp size={16} />
-                    Show Less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown size={16} />
-                    Show All ({availableCategories.length})
-                  </>
-                )}
-              </button>
-            )}
+        
+        {/* Content Area - Map or Grid */}
+        {loadingActivities ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading real attractions from OpenTripMap...</p>
           </div>
-          
-          {/* Loading state for categories */}
-          {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
-          
-          {/* Enhanced categories grid with beautiful styling */}
-          {!loadingActivities && !isInitialLoad && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {(showAllCategories ? availableCategories : availableCategories.slice(0, 8)).map((interest) => {
-                const isSelected = selectedInterests.includes(interest);
-                const selectedColor = categoryStyleClasses[interest].selected;
-                const unselectedColor = categoryStyleClasses[interest].unselected;
-                
-                return (
-                  <label
-                    key={interest}
-                    className={`group relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-sm font-semibold transform hover:scale-105 ${
-                      isSelected 
-                        ? selectedColor 
-                        : unselectedColor
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleInterestToggle(interest)}
-                      className="sr-only"
-                    />
-                    <span className="text-center leading-tight relative z-10">
-                      {activityCategoryLabels[interest] || interest}
-                    </span>
-                    
-                    {/* Selection indicator */}
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                        <Check size={12} className="text-white" />
-                      </div>
-                    )}
-                    
-                    {/* Hover effect overlay */}
-                    <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </label>
-                );
-              })}
-              
-              {availableCategories.length === 0 && !loadingActivities && (
-                <div className="col-span-full text-center py-8">
-                  <div className="text-gray-400 mb-2">
-                    <Filter size={32} className="mx-auto" />
-                  </div>
-                  <p className="text-gray-500 text-sm">
-                    No categories available for this city.
-                  </p>
-                </div>
-              )}
+        ) : (
+          <>
+            {viewMode === 'map' ? (
+              /* Map View */
+              <div className="mb-6">
+                <ActivityMap
+                  activities={activities}
+                  selectedActivities={currentSelectedActivities}
+                  onActivityToggle={(activity) => toggleActivity(activeDestination!, activity)}
+                  onActivityClick={handleClick}
+                  centerCoordinates={cityCoordinates || undefined}
+                  weather={weatherData || undefined}
+                  location={`${currentDestination.name}, ${currentDestination.country}`}
+                />
+              </div>
+            ) : (
+              /* Grid View */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activities.map((activity) => (
+                  <ActivityCard
+                    key={activity.id}
+                    activity={activity}
+                    isSelected={isActivitySelected(activity.id)}
+                    onToggle={() => toggleActivity(activeDestination!, activity)}
+                    onClick={() => handleClick(activity)}
+                    weather={weatherData || undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Enhanced No Activities Message */}
+        {getEmptyStateMessage() && (
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="text-gray-400 mb-4">
+              <Sun size={48} className="mx-auto" />
             </div>
-          )}
-          
-          {/* Selected categories summary */}
-          {selectedInterests.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    Selected: {selectedInterests.length} categor{selectedInterests.length === 1 ? 'y' : 'ies'}
-                  </span>
-                </div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
+            <p className="text-gray-500 mb-4 max-w-md mx-auto">
+              {getEmptyStateMessage()}
+            </p>
+            <div className="space-y-2">
+              {searchTerm.trim() && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+                >
+                  Clear search
+                </button>
+              )}
+              {selectedInterests.length > 0 && (
                 <button
                   onClick={() => setSelectedInterests([])}
-                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                  className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
                 >
-                  Clear Selection
+                  Clear interest filters
                 </button>
+              )}
+              {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly || searchTerm.trim()) && (
+                <button
+                  onClick={clearAllFilters}
+                  className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 🎨 NEW: Bottom Navigation */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => navigate('/destinations')}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <ArrowLeft size={16} />
+              <span>Back to Destinations</span>
+            </button>
+
+            <div className="text-center">
+              <div className="text-sm text-gray-500 mb-1">
+                {currentSelectedActivities.length} activities selected
+              </div>
+              <div className="text-xs text-gray-400">
+                Ready to create your itinerary?
               </div>
             </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Weather Loading State */}
-      {isWeatherLoading && (
-        <div className="bg-gray-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 text-center">
-          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-teal-500 mx-auto mb-2"></div>
-          <p className="text-gray-500 text-sm sm:text-base">Loading weather data for your travel dates...</p>
-        </div>
-      )}
-      
-      {/* Content Area - Map or Grid */}
-      {loadingActivities ? (
-        <div className="text-center py-8 sm:py-12">
-          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-teal-500 mx-auto mb-4"></div>
-          <p className="text-gray-500 text-sm sm:text-base">Loading real attractions from OpenTripMap...</p>
-        </div>
-      ) : (
-        <>
-          {viewMode === 'map' ? (
-            /* Map View */
-            <div className="mb-6">
-              <ActivityMap
-                activities={activities}
-                selectedActivities={currentSelectedActivities}
-                onActivityToggle={(activity) => toggleActivity(activeDestination!, activity)}
-                onActivityClick={handleClick}
-                centerCoordinates={cityCoordinates || undefined}
-                weather={weatherData || undefined}
-                location={`${currentDestination.name}, ${currentDestination.country}`}
-              />
-            </div>
-          ) : (
-            /* Grid View */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {activities.map((activity) => (
-                <ActivityCard
-                  key={activity.id}
-                  activity={activity}
-                  isSelected={isActivitySelected(activity.id)}
-                  onToggle={() => toggleActivity(activeDestination!, activity)}
-                  onClick={() => handleClick(activity)}
-                  weather={weatherData || undefined}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
 
-      {/* Enhanced No Activities Message */}
-      {getEmptyStateMessage() && (
-        <div className="text-center py-8 sm:py-12 bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="text-gray-400 mb-4">
-            <Sun size={32} className="mx-auto" />
-          </div>
-          <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-2">No attractions found</h3>
-          <p className="text-gray-500 mb-4 max-w-md mx-auto text-sm sm:text-base px-4">
-            {getEmptyStateMessage()}
-          </p>
-          <div className="space-y-2">
-            {searchTerm.trim() && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
-              >
-                Clear search
-              </button>
-            )}
-            {selectedInterests.length > 0 && (
-              <button
-                onClick={() => setSelectedInterests([])}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
-              >
-                Clear interest filters
-              </button>
-            )}
-            {(selectedInterests.length > 0 || smartWeatherFiltering || showFreeOnly || searchTerm.trim()) && (
-              <button
-                onClick={clearAllFilters}
-                className="text-teal-600 hover:text-teal-800 underline font-medium block mx-auto text-sm sm:text-base"
-              >
-                Clear all filters
-              </button>
-            )}
+            <div className="w-32"></div> {/* Spacer for balance */}
           </div>
         </div>
-      )}
 
-      {/* Floating Action Button - Only show in map view */}
-      {viewMode === 'map' && (
-        <FloatingItineraryButton
-          selectedCount={totalSelectedActivities}
-          onViewItinerary={handleViewItinerary}
-          disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
-        />
-      )}
-
-      {/* Navigation Buttons - Only show back button, itinerary button moved to better positions */}
-      <div className="flex justify-start mt-6 sm:mt-8 pt-6 border-t border-gray-200">
-        <button
-          onClick={() => navigate('/destinations')}
-          className="px-4 sm:px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm sm:text-base"
-        >
-          ← Back to Destinations
-        </button>
+        {/* Activity Detail Modal */}
+        {isModalOpen && selectedActivityForModal && (
+          <ActivityDetailModal
+            activity={selectedActivityForModal}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            weather={weatherData || undefined}
+            location={`${currentDestination.name}, ${currentDestination.country}`}
+            isSelected={isActivitySelected(selectedActivityForModal.id)}
+            onToggle={() => {
+              toggleActivity(activeDestination!, selectedActivityForModal);
+            }}
+          />
+        )}
       </div>
 
-      {/* Activity Detail Modal */}
-      {isModalOpen && selectedActivityForModal && (
-        <ActivityDetailModal
-          activity={selectedActivityForModal}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          weather={weatherData || undefined}
-          location={`${currentDestination.name}, ${currentDestination.country}`}
-          isSelected={isActivitySelected(selectedActivityForModal.id)}
-          onToggle={() => {
-            toggleActivity(activeDestination!, selectedActivityForModal);
-          }}
-        />
+      {/* 🎨 NEW: Floating Action Button for Map View */}
+      {viewMode === 'map' && currentSelectedActivities.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button
+            onClick={() => navigate('/itinerary')}
+            className="bg-gradient-to-r from-teal-500 to-blue-500 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 font-medium"
+          >
+            <CheckCircle size={20} />
+            <span>View Itinerary ({currentSelectedActivities.length})</span>
+          </button>
+        </div>
       )}
     </div>
   );
