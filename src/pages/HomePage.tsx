@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, MapPin, Sun, Calendar, CheckCircle, HelpCircle } from 'lucide-react';
+import { ArrowRight, MapPin, Sun, Calendar, CheckCircle } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,9 +29,8 @@ const HomePage: React.FC = () => {
             Weather optimizes your schedule automatically.
           </p>
           
-          {/* 🍎 APPLE STYLE: Action Buttons - Primary and Secondary */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
-            {/* Primary Action Button */}
+          {/* 🍎 APPLE STYLE: Single Primary Action Button */}
+          <div className="flex justify-center">
             <button 
               onClick={() => navigate('/destinations')}
               className="group bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-12 py-5 rounded-full text-xl font-medium hover:from-teal-600 hover:to-emerald-600 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105"
@@ -39,17 +38,6 @@ const HomePage: React.FC = () => {
               <span className="flex items-center justify-center gap-3">
                 Start Planning Your Trip
                 <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
-              </span>
-            </button>
-            
-            {/* 🆕 UPDATED: Changed to "How Does It Work" for better marketing appeal */}
-            <button 
-              onClick={() => navigate('/watch-how-it-works')}
-              className="group bg-white text-teal-600 border-2 border-teal-500 px-12 py-5 rounded-full text-xl font-medium hover:bg-teal-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <span className="flex items-center justify-center gap-3">
-                <HelpCircle size={24} className="group-hover:scale-110 transition-transform" />
-                How Does It Work?
               </span>
             </button>
           </div>
@@ -218,22 +206,12 @@ const HomePage: React.FC = () => {
             Start planning your perfect trip in seconds.
           </p>
           
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
-            <button 
-              onClick={() => navigate('/destinations')}
-              className="bg-white text-teal-600 px-12 py-5 rounded-full text-lg font-medium hover:bg-gray-100 transition-all duration-300 shadow-2xl transform hover:scale-105"
-            >
-              Get started
-            </button>
-            
-            <button 
-              onClick={() => navigate('/watch-how-it-works')}
-              className="bg-white/20 text-white border-2 border-white/30 px-12 py-5 rounded-full text-lg font-medium hover:bg-white/30 transition-all duration-300 backdrop-blur-sm transform hover:scale-105 flex items-center justify-center gap-3"
-            >
-              <HelpCircle size={20} />
-              How Does It Work?
-            </button>
-          </div>
+          <button 
+            onClick={() => navigate('/destinations')}
+            className="bg-white text-teal-600 px-12 py-5 rounded-full text-lg font-medium hover:bg-gray-100 transition-all duration-300 shadow-2xl transform hover:scale-105"
+          >
+            Get started
+          </button>
           
           <div className="mt-16 text-sm text-teal-200 font-light">
             Free forever. No sign-up required.
