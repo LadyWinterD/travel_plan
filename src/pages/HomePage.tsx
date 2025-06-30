@@ -73,8 +73,8 @@ const HomePage: React.FC = () => {
         </div>
       </section>
       
-      {/* CTA Section */}
-      <section className="py-12 sm:py-16 bg-gray-100 relative">
+      {/* CTA Section - Removed badge from here since it's now in Footer */}
+      <section className="py-12 sm:py-16 bg-gray-100">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Ready to start your adventure?</h2>
           <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
@@ -86,41 +86,6 @@ const HomePage: React.FC = () => {
           >
             Plan Your Trip
           </button>
-        </div>
-
-        {/* 🎨 PROFESSIONAL: Static Bolt.new Badge - Bottom Right */}
-        <div className="absolute bottom-8 right-8">
-          <a 
-            href="https://bolt.new/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block group"
-          >
-            <div className="relative transform transition-all duration-300 hover:scale-110 hover:rotate-3">
-              {/* Badge Image */}
-              <img 
-                src="/black_circle_360x360.png" 
-                alt="Powered by Bolt.new" 
-                className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-2xl transition-all duration-300 group-hover:drop-shadow-3xl"
-              />
-              
-              {/* Subtle Glow Effect on Hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 scale-150"></div>
-              
-              {/* Pulse Animation Ring */}
-              <div className="absolute inset-0 rounded-full border-2 border-white/20 opacity-0 group-hover:opacity-100 group-hover:animate-ping"></div>
-            </div>
-            
-            {/* Professional Tooltip */}
-            <div className="absolute bottom-full right-0 mb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 pointer-events-none">
-              <div className="bg-gray-900/95 backdrop-blur-sm text-white text-sm px-4 py-3 rounded-xl whitespace-nowrap shadow-2xl border border-white/10">
-                <div className="font-semibold">Built with Bolt.new</div>
-                <div className="text-xs text-gray-300 mt-1">AI-Powered Development</div>
-                {/* Tooltip Arrow */}
-                <div className="absolute top-full right-6 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900/95"></div>
-              </div>
-            </div>
-          </a>
         </div>
       </section>
     </div>
