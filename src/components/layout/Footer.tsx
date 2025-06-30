@@ -81,7 +81,7 @@ const Footer: React.FC = () => {
             </div>
           </div>
           
-          {/* Right Section: Bolt.new Badge with Enhanced Design */}
+          {/* Right Section: Bolt.new Badge with Simple Design */}
           <div className="flex flex-col items-center lg:items-end lg:flex-1 lg:max-w-xs">
             <div className="text-center lg:text-right mb-4">
               <h4 className="text-lg font-bold text-white mb-2">Powered By</h4>
@@ -95,37 +95,25 @@ const Footer: React.FC = () => {
               className="block group relative"
               title="Built with Bolt.new - AI-Powered Development Platform"
             >
-              {/* Enhanced Badge Container */}
-              <div className="relative transform transition-all duration-500 hover:scale-110 hover:rotate-6 group-hover:drop-shadow-2xl">
-                
-                {/* Animated Background Ring */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/30 to-purple-400/30 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 scale-150 animate-pulse-ring"></div>
-                
-                {/* Main Badge */}
-                <div className="relative bg-gradient-to-br from-gray-700 to-gray-900 p-2 rounded-full shadow-2xl border-2 border-gray-600 group-hover:border-teal-400 transition-all duration-300">
+              {/* 🎨 SIMPLIFIED: Simple Badge with Border Effect Only */}
+              <div className="relative">
+                {/* Main Badge with Simple Border Effect */}
+                <div className="bg-gradient-to-br from-gray-700 to-gray-900 p-2 rounded-full shadow-lg border-2 border-gray-600 group-hover:border-teal-400 transition-all duration-300 group-hover:border-4">
                   <img 
                     src="/black_circle_360x360.png" 
                     alt="Powered by Bolt.new" 
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full transition-all duration-300 group-hover:brightness-110"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full transition-all duration-300"
                   />
-                </div>
-                
-                {/* Floating Particles Effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute top-2 right-2 w-1 h-1 bg-teal-400 rounded-full animate-ping"></div>
-                  <div className="absolute bottom-3 left-3 w-1 h-1 bg-blue-400 rounded-full animate-ping" style={{animationDelay: '0.5s'}}></div>
-                  <div className="absolute top-1/2 right-1 w-1 h-1 bg-purple-400 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
                 </div>
               </div>
               
-              {/* Professional Tooltip */}
-              <div className="absolute bottom-full right-0 mb-6 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 pointer-events-none z-10">
-                <div className="bg-gradient-to-r from-gray-900 to-black text-white text-sm px-6 py-4 rounded-2xl shadow-2xl border border-gray-700 backdrop-blur-sm">
-                  <div className="font-bold text-teal-400 mb-1">Built with Bolt.new</div>
-                  <div className="text-xs text-gray-300">AI-Powered Development Platform</div>
-                  <div className="text-xs text-gray-400 mt-1">Click to learn more</div>
-                  {/* Enhanced Tooltip Arrow */}
-                  <div className="absolute top-full right-8 w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-gray-900"></div>
+              {/* Simple Tooltip */}
+              <div className="absolute bottom-full right-0 mb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-10">
+                <div className="bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg border border-gray-700">
+                  <div className="font-medium text-teal-400">Built with Bolt.new</div>
+                  <div className="text-xs text-gray-300">AI-Powered Development</div>
+                  {/* Simple Tooltip Arrow */}
+                  <div className="absolute top-full right-6 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>
               </div>
             </a>
