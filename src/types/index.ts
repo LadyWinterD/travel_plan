@@ -8,7 +8,7 @@ export interface Activity {
   categories: ActivityCategory[]; 
   duration: number;
   rating: number;
-  indoor: boolean;
+  // 🚫 REMOVED: indoor property - no longer needed
   price?: {
     amount: number;
     currencyCode: string;

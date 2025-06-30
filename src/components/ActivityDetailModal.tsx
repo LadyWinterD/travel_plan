@@ -84,7 +84,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[95vh] overflow-hidden shadow-2xl animate-scale-in">
         
-        {/* 🎨 NEW: Hero Section with Improved Layout */}
+        {/* Hero Section with Improved Layout */}
         <div className="relative">
           {/* Hero Image */}
           <div className="relative h-72 sm:h-96">
@@ -167,7 +167,7 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
           </div>
         </div>
 
-        {/* 🎨 NEW: Content Section with Better Organization */}
+        {/* Content Section with Better Organization */}
         <div className="max-h-[calc(95vh-24rem)] overflow-y-auto">
           <div className="p-6 sm:p-8">
             
