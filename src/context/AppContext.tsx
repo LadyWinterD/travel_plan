@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Destination, Activity, TripDay, WeatherData, ScheduledActivity, UserPreferences } from '../types';
+import { Destination, Activity, TripDay, WeatherData, ScheduledActivity } from '../types';
 import { getStoredTrip, storeTrip } from '../utils/storage';
 
 interface AppContextType {

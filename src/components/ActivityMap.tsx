@@ -60,11 +60,9 @@ const categoryIcons = {
 interface ActivityMapProps {
   activities: Activity[];
   selectedActivities: Activity[];
-  onActivityToggle: (activity: Activity) => void;
   onActivityClick: (activity: Activity) => void;
   centerCoordinates?: { lat: number; lng: number };
   weather?: WeatherData;
-  location?: string;
 }
 
 // Component to fit map bounds to markers
@@ -194,11 +192,9 @@ const ActivityTooltip: React.FC<{
 const ActivityMap: React.FC<ActivityMapProps> = ({
   activities,
   selectedActivities,
-  onActivityToggle,
   onActivityClick,
   centerCoordinates,
-  weather,
-  location
+  weather
 }) => {
   const [tooltipState, setTooltipState] = useState<{
     isVisible: boolean;
@@ -277,7 +273,6 @@ const ActivityMap: React.FC<ActivityMapProps> = ({
         <FitBounds activities={validActivities} />
         
         {validActivities.map((activity) => {
-          const isSelected = selectedActivities.some(selected => selected.id === activity.id);
           const primaryCategory = activity.categories[0] || 'interesting_places';
           const icon = categoryIcons[primaryCategory] || defaultIcon;
           
