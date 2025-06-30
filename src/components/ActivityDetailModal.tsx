@@ -1,6 +1,6 @@
 import React from 'react';
 import { Activity, WeatherData } from '../types';
-import { X, Clock, Star, DollarSign, MapPin, Calendar, Thermometer, Umbrella, ExternalLink, Info, Globe } from 'lucide-react';
+import { X, Clock, Star, DollarSign, MapPin, Calendar, Thermometer, Umbrella, ExternalLink, Info, Globe, Navigation } from 'lucide-react';
 import { activityCategoryLabels } from '../data/activityCategories';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 
@@ -79,6 +79,10 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
   };
 
   const weatherRec = getWeatherRecommendation();
+
+  // 🎨 NEW: Smart button configuration - avoid duplicate Google Maps buttons
+  const hasLocationData = activity.location && activity.location.lat && activity.location.lng;
+  const hasWikipediaData = activity.wikipediaUrl;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -213,43 +217,57 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             )}
           </div>
 
-          {/* Address Information */}
-          {activity.address && (
+          {/* 🎨 NEW: Enhanced Location Section with Smart Button Layout */}
+          {(activity.address || hasLocationData) && (
             <div className="mb-6">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                 <MapPin size={18} className="mr-2 text-gray-600" />
-                Location
+                Location & Navigation
               </h3>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="space-y-1 text-sm">
-                  {activity.address.road && activity.address.houseNumber && (
-                    <div className="text-gray-900 font-medium">
-                      {activity.address.houseNumber} {activity.address.road}
-                    </div>
-                  )}
-                  {activity.address.city && (
-                    <div className="text-gray-700 font-medium">{activity.address.city}</div>
-                  )}
-                  {activity.address.country && (
-                    <div className="text-gray-600">{activity.address.country}</div>
-                  )}
-                  {!activity.address.road && !activity.address.houseNumber && activity.address.city && (
-                    <div className="text-gray-500 text-xs mt-2">
-                      📍 Location shown is approximate
-                    </div>
-                  )}
-                </div>
-                {activity.location && (
+                {/* Address Information */}
+                {activity.address && (
+                  <div className="space-y-1 text-sm mb-4">
+                    {activity.address.road && activity.address.houseNumber && (
+                      <div className="text-gray-900 font-medium">
+                        {activity.address.houseNumber} {activity.address.road}
+                      </div>
+                    )}
+                    {activity.address.city && (
+                      <div className="text-gray-700 font-medium">{activity.address.city}</div>
+                    )}
+                    {activity.address.country && (
+                      <div className="text-gray-600">{activity.address.country}</div>
+                    )}
+                    {!activity.address.road && !activity.address.houseNumber && activity.address.city && (
+                      <div className="text-gray-500 text-xs mt-2">
+                        📍 Location shown is approximate
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 🎨 NEW: Single, Prominent Google Maps Button */}
+                {hasLocationData && (
                   <button
                     onClick={() => {
                       const url = `https://www.google.com/maps?q=${activity.location!.lat},${activity.location!.lng}`;
                       window.open(url, '_blank');
                     }}
-                    className="mt-3 w-full py-2 px-3 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-3 font-medium shadow-md hover:shadow-lg"
                   >
-                    <ExternalLink size={14} />
-                    View on Google Maps
+                    <Navigation size={20} />
+                    <span>Open in Google Maps</span>
+                    <ExternalLink size={16} />
                   </button>
+                )}
+
+                {/* Fallback message if no location data */}
+                {!hasLocationData && (
+                  <div className="text-center py-3 text-gray-500 text-sm">
+                    <MapPin size={16} className="mx-auto mb-1 opacity-50" />
+                    <span>Precise location coordinates not available</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -270,11 +288,12 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-100">
+          {/* 🎨 NEW: Enhanced Action Buttons Section */}
+          <div className="space-y-3 pt-4 border-t border-gray-100">
+            {/* Primary Action: Add to Trip */}
             <button
               onClick={onToggle}
-              className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-200 ${
+              className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 text-lg ${
                 isSelected
                   ? 'bg-teal-500 text-white hover:bg-teal-600 shadow-lg'
                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300'
@@ -283,30 +302,26 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
               {isSelected ? '✓ Added to Trip' : 'Add to Trip'}
             </button>
             
-            {activity.location && (
-              <button
-                onClick={() => {
-                  const url = `https://www.google.com/maps?q=${activity.location!.lat},${activity.location!.lng}`;
-                  window.open(url, '_blank');
-                }}
-                className="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
-              >
-                <ExternalLink size={18} />
-                <span className="hidden sm:inline">View on Map</span>
-              </button>
+            {/* Secondary Actions */}
+            {hasWikipediaData && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    window.open(activity.wikipediaUrl, '_blank');
+                  }}
+                  className="flex-1 py-2 px-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  <Globe size={18} />
+                  <span>Learn More on Wikipedia</span>
+                </button>
+              </div>
             )}
-            
-            {activity.wikipediaUrl && (
-              <button
-                onClick={() => {
-                  window.open(activity.wikipediaUrl, '_blank');
-                }}
-                className="px-4 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
-              >
-                <Globe size={18} />
-                <span className="hidden sm:inline">Wikipedia</span>
-              </button>
-            )}
+
+            {/* Info Note */}
+            <div className="text-center text-xs text-gray-500 mt-3 flex items-center justify-center gap-1">
+              <Info size={12} />
+              <span>Tap outside to close • Data from OpenTripMap</span>
+            </div>
           </div>
         </div>
       </div>
