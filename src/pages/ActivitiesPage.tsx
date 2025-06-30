@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -13,68 +13,68 @@ import ActivityMap from '../components/ActivityMap';
 // Enhanced category style classes for beautiful filter buttons
 const categoryStyleClasses = {
   museums_arts: {
-    selected: 'bg-purple-500 text-white ring-2 ring-purple-300 scale-105 shadow-md border-purple-500',
-    unselected: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 hover:border-purple-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white ring-2 ring-purple-300 scale-105 shadow-lg border-purple-500',
+    unselected: 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-purple-200 hover:from-purple-100 hover:to-purple-200 hover:border-purple-300 shadow-sm hover:shadow-md'
   },
   historical_sites: {
-    selected: 'bg-amber-500 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-500',
-    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-amber-500 to-amber-600 text-white ring-2 ring-amber-300 scale-105 shadow-lg border-amber-500',
+    unselected: 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 hover:from-amber-100 hover:to-amber-200 hover:border-amber-300 shadow-sm hover:shadow-md'
   },
   religious_sites: {
-    selected: 'bg-blue-500 text-white ring-2 ring-blue-300 scale-105 shadow-md border-blue-500',
-    unselected: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-2 ring-blue-300 scale-105 shadow-lg border-blue-500',
+    unselected: 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:border-blue-300 shadow-sm hover:shadow-md'
   },
   castles_palaces: {
-    selected: 'bg-red-500 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-500',
-    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-red-500 to-red-600 text-white ring-2 ring-red-300 scale-105 shadow-lg border-red-500',
+    unselected: 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border-red-200 hover:from-red-100 hover:to-red-200 hover:border-red-300 shadow-sm hover:shadow-md'
   },
   architectural_landmarks: {
-    selected: 'bg-gray-500 text-white ring-2 ring-gray-300 scale-105 shadow-md border-gray-500',
-    unselected: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white ring-2 ring-gray-300 scale-105 shadow-lg border-gray-500',
+    unselected: 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border-gray-200 hover:from-gray-100 hover:to-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
   },
   natural_landscapes: {
-    selected: 'bg-emerald-500 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-500',
-    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-lg border-emerald-500',
+    unselected: 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200 hover:from-emerald-100 hover:to-emerald-200 hover:border-emerald-300 shadow-sm hover:shadow-md'
   },
   parks_gardens: {
-    selected: 'bg-green-500 text-white ring-2 ring-green-300 scale-105 shadow-md border-green-500',
-    unselected: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-green-500 to-green-600 text-white ring-2 ring-green-300 scale-105 shadow-lg border-green-500',
+    unselected: 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-green-200 hover:from-green-100 hover:to-green-200 hover:border-green-300 shadow-sm hover:shadow-md'
   },
   outdoor_sports: {
-    selected: 'bg-orange-500 text-white ring-2 ring-orange-300 scale-105 shadow-md border-orange-500',
-    unselected: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 hover:border-orange-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white ring-2 ring-orange-300 scale-105 shadow-lg border-orange-500',
+    unselected: 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 hover:from-orange-100 hover:to-orange-200 hover:border-orange-300 shadow-sm hover:shadow-md'
   },
   city_centers: {
-    selected: 'bg-indigo-500 text-white ring-2 ring-indigo-300 scale-105 shadow-md border-indigo-500',
-    unselected: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white ring-2 ring-indigo-300 scale-105 shadow-lg border-indigo-500',
+    unselected: 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 border-indigo-200 hover:from-indigo-100 hover:to-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-md'
   },
   viewpoints_towers: {
-    selected: 'bg-pink-500 text-white ring-2 ring-pink-300 scale-105 shadow-md border-pink-500',
-    unselected: 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100 hover:border-pink-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-pink-500 to-pink-600 text-white ring-2 ring-pink-300 scale-105 shadow-lg border-pink-500',
+    unselected: 'bg-gradient-to-r from-pink-50 to-pink-100 text-pink-700 border-pink-200 hover:from-pink-100 hover:to-pink-200 hover:border-pink-300 shadow-sm hover:shadow-md'
   },
   theme_parks_zoos: {
-    selected: 'bg-lime-500 text-white ring-2 ring-lime-300 scale-105 shadow-md border-lime-500',
-    unselected: 'bg-lime-50 text-lime-700 border-lime-200 hover:bg-lime-100 hover:border-lime-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-lime-500 to-lime-600 text-white ring-2 ring-lime-300 scale-105 shadow-lg border-lime-500',
+    unselected: 'bg-gradient-to-r from-lime-50 to-lime-100 text-lime-700 border-lime-200 hover:from-lime-100 hover:to-lime-200 hover:border-lime-300 shadow-sm hover:shadow-md'
   },
   nightlife: {
-    selected: 'bg-violet-500 text-white ring-2 ring-violet-300 scale-105 shadow-md border-violet-500',
-    unselected: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 hover:border-violet-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-violet-500 to-violet-600 text-white ring-2 ring-violet-300 scale-105 shadow-lg border-violet-500',
+    unselected: 'bg-gradient-to-r from-violet-50 to-violet-100 text-violet-700 border-violet-200 hover:from-violet-100 hover:to-violet-200 hover:border-violet-300 shadow-sm hover:shadow-md'
   },
   shows_cinema: {
-    selected: 'bg-red-600 text-white ring-2 ring-red-300 scale-105 shadow-md border-red-600',
-    unselected: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-red-600 to-red-700 text-white ring-2 ring-red-300 scale-105 shadow-lg border-red-600',
+    unselected: 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border-red-200 hover:from-red-100 hover:to-red-200 hover:border-red-300 shadow-sm hover:shadow-md'
   },
   shopping: {
-    selected: 'bg-emerald-600 text-white ring-2 ring-emerald-300 scale-105 shadow-md border-emerald-600',
-    unselected: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white ring-2 ring-emerald-300 scale-105 shadow-lg border-emerald-600',
+    unselected: 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200 hover:from-emerald-100 hover:to-emerald-200 hover:border-emerald-300 shadow-sm hover:shadow-md'
   },
   interesting_places: {
-    selected: 'bg-teal-500 text-white ring-2 ring-teal-300 scale-105 shadow-md border-teal-500',
-    unselected: 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-teal-500 to-teal-600 text-white ring-2 ring-teal-300 scale-105 shadow-lg border-teal-500',
+    unselected: 'bg-gradient-to-r from-teal-50 to-teal-100 text-teal-700 border-teal-200 hover:from-teal-100 hover:to-teal-200 hover:border-teal-300 shadow-sm hover:shadow-md'
   },
   food_dining: {
-    selected: 'bg-amber-600 text-white ring-2 ring-amber-300 scale-105 shadow-md border-amber-600',
-    unselected: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-300 shadow-sm'
+    selected: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white ring-2 ring-amber-300 scale-105 shadow-lg border-amber-600',
+    unselected: 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 hover:from-amber-100 hover:to-amber-200 hover:border-amber-300 shadow-sm hover:shadow-md'
   }
 };
 
@@ -87,11 +87,11 @@ const validateCategory = (cat: string): ActivityCategory => {
 
 // Loading skeleton component for categories
 const CategorySkeleton: React.FC = () => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-    {Array.from({ length: 8 }).map((_, index) => (
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+    {Array.from({ length: 10 }).map((_, index) => (
       <div
         key={index}
-        className="h-10 bg-gray-200 rounded-lg animate-pulse"
+        className="h-12 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl animate-pulse"
       />
     ))}
   </div>
@@ -364,6 +364,7 @@ const ActivitiesPage: React.FC = () => {
   const [selectedInterests, setSelectedInterests] = useState<ActivityCategory[]>([]);
   const [showFreeOnly, setShowFreeOnly] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showAllCategories, setShowAllCategories] = useState<boolean>(false);
   
   // Modal state
   const [selectedActivityForModal, setSelectedActivityForModal] = useState<Activity | null>(null);
@@ -783,7 +784,7 @@ const ActivitiesPage: React.FC = () => {
         </div>
         
         {/* Combined Filters Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
           {/* Search Box */}
           <div className="lg:col-span-1">
             <div className="relative">
@@ -871,6 +872,120 @@ const ActivitiesPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Enhanced Interest Categories Section */}
+        <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-teal-100 p-2 rounded-lg">
+                <Filter size={20} className="text-teal-600" />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-gray-900">Activity Categories</h4>
+                <p className="text-sm text-gray-600">
+                  {availableCategories.length > 0 
+                    ? `${availableCategories.length} categories available` 
+                    : 'Loading categories...'
+                  }
+                </p>
+              </div>
+            </div>
+            
+            {availableCategories.length > 8 && (
+              <button
+                onClick={() => setShowAllCategories(!showAllCategories)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              >
+                {showAllCategories ? (
+                  <>
+                    <ChevronUp size={16} />
+                    Show Less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={16} />
+                    Show All ({availableCategories.length})
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          
+          {/* Loading state for categories */}
+          {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
+          
+          {/* Enhanced categories grid with beautiful styling */}
+          {!loadingActivities && !isInitialLoad && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {(showAllCategories ? availableCategories : availableCategories.slice(0, 8)).map((interest) => {
+                const isSelected = selectedInterests.includes(interest);
+                const selectedColor = categoryStyleClasses[interest].selected;
+                const unselectedColor = categoryStyleClasses[interest].unselected;
+                
+                return (
+                  <label
+                    key={interest}
+                    className={`group relative flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 text-sm font-semibold transform hover:scale-105 ${
+                      isSelected 
+                        ? selectedColor 
+                        : unselectedColor
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleInterestToggle(interest)}
+                      className="sr-only"
+                    />
+                    <span className="text-center leading-tight relative z-10">
+                      {activityCategoryLabels[interest] || interest}
+                    </span>
+                    
+                    {/* Selection indicator */}
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                        <Check size={12} className="text-white" />
+                      </div>
+                    )}
+                    
+                    {/* Hover effect overlay */}
+                    <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </label>
+                );
+              })}
+              
+              {availableCategories.length === 0 && !loadingActivities && (
+                <div className="col-span-full text-center py-8">
+                  <div className="text-gray-400 mb-2">
+                    <Filter size={32} className="mx-auto" />
+                  </div>
+                  <p className="text-gray-500 text-sm">
+                    No categories available for this city.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Selected categories summary */}
+          {selectedInterests.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Selected: {selectedInterests.length} categor{selectedInterests.length === 1 ? 'y' : 'ies'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedInterests([])}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Weather Loading State */}
@@ -880,56 +995,6 @@ const ActivitiesPage: React.FC = () => {
           <p className="text-gray-500 text-sm sm:text-base">Loading weather data for your travel dates...</p>
         </div>
       )}
-      
-      {/* Interest Categories */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="font-medium text-gray-900">Filter by Interests</h4>
-          {availableCategories.length > 0 && (
-            <span className="text-sm text-gray-500">({availableCategories.length} available)</span>
-          )}
-        </div>
-        
-        {/* Loading state for categories */}
-        {(loadingActivities || isInitialLoad) && <CategorySkeleton />}
-        
-        {/* Dynamic categories grid with enhanced styling */}
-        {!loadingActivities && !isInitialLoad && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {availableCategories.map((interest) => {
-              const isSelected = selectedInterests.includes(interest);
-              const selectedColor = categoryStyleClasses[interest].selected;
-              const unselectedColor = categoryStyleClasses[interest].unselected;
-              
-              return (
-                <label
-                  key={interest}
-                  className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-xs font-medium ${
-                    isSelected 
-                      ? selectedColor 
-                      : unselectedColor
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => handleInterestToggle(interest)}
-                    className="sr-only"
-                  />
-                  <span className="text-center leading-tight">
-                    {activityCategoryLabels[interest] || interest}
-                  </span>
-                </label>
-              );
-            })}
-            {availableCategories.length === 0 && !loadingActivities && (
-              <p className="text-gray-500 col-span-full text-center py-4 text-sm">
-                No categories available for this city.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
       
       {/* Content Area - Map or Grid */}
       {loadingActivities ? (
