@@ -1,5 +1,6 @@
 import React from 'react';
 import { Github } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -28,38 +29,38 @@ const Footer: React.FC = () => {
               </h4>
               <ul className="space-y-3">
                 <li>
-                  <a href="/" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
+                  <Link to="/" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
                     Home
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/destinations" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
+                  <Link to="/destinations" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
                     Plan Trip
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/activities" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
+                  <Link to="/activities" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
                     Activities
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/itinerary" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
+                  <Link to="/itinerary" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
                     Itinerary
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
             
-            {/* Connect */}
+            {/* Legal & Connect */}
             <div className="text-center sm:text-left">
               <h4 className="text-lg sm:text-xl font-bold mb-4 text-white border-b-2 border-teal-400 pb-2 inline-block">
-                Connect
+                Legal & Connect
               </h4>
               <ul className="space-y-3">
                 <li>
-                  <a href="#" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
+                  <Link to="/privacy-policy" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
                     Privacy Policy
-                  </a>
+                  </Link>
                 </li>
                 <li>
                   <a href="#" className="text-gray-300 hover:text-teal-400 transition-colors text-base sm:text-lg hover:underline">
@@ -129,7 +130,7 @@ const Footer: React.FC = () => {
             <div className="flex items-center gap-4 text-gray-500 text-sm">
               <span>Made with ❤️ for travelers</span>
               <span>•</span>
-              <span>Version 2.0</span>
+              <span>Hackathon Demo v2.0</span>
             </div>
           </div>
         </div>
