@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, CheckCircle, Star, Users, Globe, Sparkles, Zap, Shield } from 'lucide-react';
+import { ArrowRight, CheckCircle, Star, Users, Globe, Sparkles, Zap, Shield, Search, MapPin, Compass } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,19 +21,19 @@ const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 z-10 text-center max-w-5xl">
           {/* Main headline - Apple-style typography with teal gradient */}
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light text-gray-900 mb-8 leading-[0.9] tracking-tight">
-            Stop letting
+            Stop endless
             <br />
             <span className="font-semibold bg-gradient-to-r from-teal-600 via-blue-600 to-teal-600 bg-clip-text text-transparent">
-              bad weather
+              Google searches
             </span>
             <br />
-            ruin your travels
+            for travel planning
           </h1>
           
-          {/* Subtitle */}
-          <p className="text-xl sm:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
-            The intelligent trip planner that adapts your itinerary to the forecast, 
-            so you always get the perfect day.
+          {/* Subtitle - Enhanced to highlight both pain points */}
+          <p className="text-xl sm:text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed font-light">
+            The intelligent trip planner that discovers amazing activities for you AND adapts your itinerary to the weather, 
+            so you never waste time searching or get caught in the rain.
           </p>
           
           {/* CTA Button - Updated with teal theme */}
@@ -64,7 +64,7 @@ const HomePage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <Star size={16} className="text-yellow-500" />
-              <span>Real-time weather data</span>
+              <span>Real attractions with photos</span>
             </div>
             <div className="flex items-center gap-2">
               <Globe size={16} className="text-teal-500" />
@@ -84,8 +84,8 @@ const HomePage: React.FC = () => {
               <br />
               <span className="font-semibold">3 simple steps</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto font-light">
-              We handle all the complex planning with AI, so you can focus on exploring and enjoying.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto font-light">
+              We handle the complex research and weather planning with AI, so you can focus on exploring and enjoying.
             </p>
           </div>
           
@@ -95,7 +95,7 @@ const HomePage: React.FC = () => {
             <div className="text-center group">
               <div className="relative mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg group-hover:shadow-xl transition-all duration-500 group-hover:scale-110">
-                  <span className="text-2xl font-light">1</span>
+                  <MapPin size={28} />
                 </div>
               </div>
               <h3 className="text-2xl font-semibold text-gray-900 mb-4">Add destinations</h3>
@@ -104,16 +104,16 @@ const HomePage: React.FC = () => {
               </p>
             </div>
             
-            {/* Step 2 */}
+            {/* Step 2 - ENHANCED: Focus on discovery */}
             <div className="text-center group">
               <div className="relative mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg group-hover:shadow-xl transition-all duration-500 group-hover:scale-110">
-                  <span className="text-2xl font-light">2</span>
+                  <Compass size={28} />
                 </div>
               </div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Pick adventures</h3>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">Discover amazing activities</h3>
               <p className="text-gray-600 text-lg leading-relaxed font-light">
-                Browse real, highly-rated activities for each city. See photos, descriptions, and weather-based recommendations.
+                No more endless Google searches! We instantly show you the best attractions with real photos, ratings, and weather-based recommendations.
               </p>
             </div>
             
@@ -121,7 +121,7 @@ const HomePage: React.FC = () => {
             <div className="text-center group">
               <div className="relative mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg group-hover:shadow-xl transition-all duration-500 group-hover:scale-110">
-                  <span className="text-2xl font-light">3</span>
+                  <Sparkles size={28} />
                 </div>
               </div>
               <h3 className="text-2xl font-semibold text-gray-900 mb-4">Get smart itinerary</h3>
@@ -145,14 +145,14 @@ const HomePage: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 - Updated with teal theme */}
+            {/* Feature 1 - ENHANCED: Activity Discovery */}
             <div className="group p-8 bg-gradient-to-br from-teal-50 to-teal-100/50 rounded-3xl border border-teal-100/50 hover:shadow-lg transition-all duration-500">
               <div className="w-12 h-12 bg-teal-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Zap size={24} className="text-white" />
+                <Search size={24} className="text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">AI-powered planning</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Smart activity discovery</h3>
               <p className="text-gray-600 leading-relaxed">
-                Advanced algorithms analyze weather patterns, activity ratings, and your preferences to create the perfect itinerary.
+                Stop wasting hours on Google! We instantly find top-rated attractions with authentic photos and detailed descriptions from trusted sources.
               </p>
             </div>
             
@@ -167,21 +167,21 @@ const HomePage: React.FC = () => {
               </p>
             </div>
             
-            {/* Feature 3 - Updated with teal theme */}
+            {/* Feature 3 - ENHANCED: Global Coverage */}
             <div className="group p-8 bg-gradient-to-br from-teal-50 to-teal-100/50 rounded-3xl border border-teal-100/50 hover:shadow-lg transition-all duration-500">
               <div className="w-12 h-12 bg-teal-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Globe size={24} className="text-white" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Global coverage</h3>
               <p className="text-gray-600 leading-relaxed">
-                From bustling cities to hidden gems, we cover destinations worldwide with authentic, highly-rated activities.
+                From bustling cities to hidden gems, discover top attractions worldwide without endless research. Real photos and ratings included.
               </p>
             </div>
           </div>
         </div>
       </section>
       
-      {/* Philosophy Section - Simplified without hackathon reference */}
+      {/* Philosophy Section - ENHANCED: Address both pain points */}
       <section className="py-32 bg-gray-50/50">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center">
@@ -194,19 +194,39 @@ const HomePage: React.FC = () => {
             <div className="space-y-8 text-xl text-gray-600 leading-relaxed font-light">
               <p>
                 We believe planning a trip should be as joyful and exciting as the journey itself. 
-                For too long, travelers have been frustrated by a simple, age-old problem: <strong className="font-semibold text-gray-900">"What if it rains?"</strong>
+                For too long, travelers have been frustrated by two simple, age-old problems:
               </p>
               
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-12">
+                <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                  <div className="text-3xl mb-4">🌧️</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">"What if it rains?"</h3>
+                  <p className="text-gray-600">
+                    An unexpected downpour can cancel that perfect beach day, and a sudden heatwave 
+                    can make exploring a historic city unbearable.
+                  </p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                  <div className="text-3xl mb-4">🔍</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">"What's actually worth seeing here?"</h3>
+                  <p className="text-gray-600">
+                    Hours spent scrolling through endless Google results, travel blogs, and reviews 
+                    just to find what's actually worth your time.
+                  </p>
+                </div>
+              </div>
+              
               <p>
-                An unexpected downpour can cancel that perfect beach day, and a sudden heatwave 
-                can make exploring a historic city unbearable.
+                <strong className="font-semibold text-gray-900">TravelPlanner solves both problems in one intelligent platform.</strong> 
+                We discover amazing activities for you AND make sure the weather won't ruin your plans.
               </p>
             </div>
             
             {/* Stats - minimal and elegant with teal accents */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 mt-16">
               <div className="text-center">
-                <div className="text-4xl font-light text-teal-600 mb-2">100+</div>
+                <div className="text-4xl font-light text-teal-600 mb-2">1000+</div>
                 <div className="text-gray-600">Cities worldwide</div>
               </div>
               <div className="text-center">
@@ -215,7 +235,7 @@ const HomePage: React.FC = () => {
               </div>
               <div className="text-center">
                 <div className="text-4xl font-light text-teal-600 mb-2">AI</div>
-                <div className="text-gray-600">Powered recommendations</div>
+                <div className="text-gray-600">Powered discovery</div>
               </div>
             </div>
           </div>
@@ -226,15 +246,15 @@ const HomePage: React.FC = () => {
       <section className="py-32 bg-gradient-to-br from-gray-900 via-gray-800 to-teal-900 text-white">
         <div className="container mx-auto px-4 text-center max-w-4xl">
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-light mb-8 leading-tight tracking-tight">
-            Ready to build your
+            Ready to stop the endless
             <br />
             <span className="font-semibold bg-gradient-to-r from-teal-400 via-blue-400 to-teal-400 bg-clip-text text-transparent">
-              weather-proof vacation?
+              Google searches?
             </span>
           </h2>
           
           <p className="text-xl text-gray-300 mb-12 leading-relaxed font-light">
-            Join thousands of smart travelers who never worry about the weather ruining their plans again.
+            Join thousands of smart travelers who discover amazing activities instantly and never worry about weather ruining their plans.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
@@ -243,7 +263,7 @@ const HomePage: React.FC = () => {
               className="group bg-gradient-to-r from-teal-500 to-teal-600 text-white px-8 py-4 rounded-full text-lg font-medium transition-all duration-300 hover:from-teal-400 hover:to-teal-500 hover:scale-105 shadow-lg hover:shadow-xl"
             >
               <span className="flex items-center gap-3">
-                Create Your First Itinerary Now
+                Discover Your Perfect Trip Now
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </span>
             </button>
