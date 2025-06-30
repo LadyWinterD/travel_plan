@@ -184,7 +184,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
       
-      {/* Philosophy Section - Apple-style storytelling */}
+      {/* Philosophy Section - Simplified without hackathon reference */}
       <section className="py-32 bg-gray-50/50">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center">
@@ -204,17 +204,6 @@ const HomePage: React.FC = () => {
                 An unexpected downpour can cancel that perfect beach day, and a sudden heatwave 
                 can make exploring a historic city unbearable.
               </p>
-              
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 my-12">
-                <p className="text-blue-600 font-semibold text-xl mb-4">
-                  TravelPlanner was born during the Bolt.new World's Largest Hackathon.
-                </p>
-                <p className="text-gray-700">
-                  Our mission is to eliminate the stress of "what-if" by building the smartest, 
-                  most intuitive travel planning tool on the planet. We use real-time data, 
-                  intelligent recommendations, and beautiful design to ensure your only travel surprise is a pleasant one.
-                </p>
-              </div>
             </div>
             
             {/* Stats - minimal and elegant */}
