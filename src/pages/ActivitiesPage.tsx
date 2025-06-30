@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search, ChevronDown, ChevronUp, ArrowRight, Users } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -326,6 +326,92 @@ const ActivityCard: React.FC<{
   );
 };
 
+// NEW: Floating Action Button Component for better UX
+const FloatingItineraryButton: React.FC<{ 
+  selectedCount: number; 
+  onViewItinerary: () => void;
+  disabled: boolean;
+}> = ({ selectedCount, onViewItinerary, disabled }) => {
+  if (disabled || selectedCount === 0) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-40">
+      <button
+        onClick={onViewItinerary}
+        className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white px-6 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 flex items-center gap-3 font-semibold text-lg group"
+      >
+        <div className="flex items-center gap-2">
+          <Users size={20} />
+          <span className="hidden sm:inline">View Itinerary</span>
+          <span className="sm:hidden">Itinerary</span>
+        </div>
+        
+        {selectedCount > 0 && (
+          <div className="bg-white/20 text-white px-2 py-1 rounded-full text-sm font-bold min-w-[24px] text-center">
+            {selectedCount}
+          </div>
+        )}
+        
+        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
+      </button>
+    </div>
+  );
+};
+
+// NEW: Trip Summary Card Component
+const TripSummaryCard: React.FC<{
+  selectedCount: number;
+  totalActivities: number;
+  onViewItinerary: () => void;
+  disabled: boolean;
+}> = ({ selectedCount, totalActivities, onViewItinerary, disabled }) => {
+  if (totalActivities === 0) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-teal-50 to-blue-50 border-2 border-teal-200 rounded-xl p-6 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="bg-teal-100 p-3 rounded-full">
+            <Users size={24} className="text-teal-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Your Trip Selection</h3>
+            <p className="text-gray-600">
+              {selectedCount} of {totalActivities} activities selected
+            </p>
+            {selectedCount > 0 && (
+              <div className="mt-1">
+                <div className="w-48 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min((selectedCount / Math.max(totalActivities * 0.3, 1)) * 100, 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {selectedCount >= totalActivities * 0.3 ? 'Great selection!' : 'Add more activities for a fuller itinerary'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <button
+          onClick={onViewItinerary}
+          disabled={disabled}
+          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
+            disabled
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+          }`}
+        >
+          <span>View Itinerary</span>
+          <ArrowRight size={18} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ActivitiesPage: React.FC = () => {
   const navigate = useNavigate();
   const { 
@@ -613,6 +699,10 @@ const ActivitiesPage: React.FC = () => {
     setSelectedActivityForModal(null);
   };
 
+  const handleViewItinerary = () => {
+    navigate('/itinerary');
+  };
+
   // Count free activities
   const freeActivitiesCount = allActivitiesForCity.filter(activity => 
     !activity.price || activity.price.amount === 0
@@ -620,6 +710,7 @@ const ActivitiesPage: React.FC = () => {
 
   // Get selected activities for current destination
   const currentSelectedActivities = activeDestination ? selectedActivities[activeDestination] || [] : [];
+  const totalSelectedActivities = Object.values(selectedActivities).reduce((sum, acts) => sum + acts.length, 0);
 
   // Determine empty state message
   const getEmptyStateMessage = () => {
@@ -759,6 +850,25 @@ const ActivitiesPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Trip Summary Card - Only show in grid view */}
+      {viewMode === 'grid' && (
+        <TripSummaryCard
+          selectedCount={totalSelectedActivities}
+          totalActivities={activities.length}
+          onViewItinerary={handleViewItinerary}
+          disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
+        />
+      )}
+
+      {/* Weather Information */}
+      {weatherData && !isWeatherLoading && (
+        <WeatherForecastCard 
+          weather={weatherData} 
+          location={`${currentDestination.name}, ${currentDestination.country}`}
+          isForTravelDate={!!startDate}
+        />
+      )}
 
       {/* Combined Filter Section - Smart Weather, Free Activities, and Search in one row */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
@@ -1068,20 +1178,22 @@ const ActivitiesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation Buttons */}
-      <div className="flex flex-col sm:flex-row justify-between mt-6 sm:mt-8 pt-6 border-t border-gray-200 gap-4">
+      {/* Floating Action Button - Only show in map view */}
+      {viewMode === 'map' && (
+        <FloatingItineraryButton
+          selectedCount={totalSelectedActivities}
+          onViewItinerary={handleViewItinerary}
+          disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
+        />
+      )}
+
+      {/* Navigation Buttons - Only show back button, itinerary button moved to better positions */}
+      <div className="flex justify-start mt-6 sm:mt-8 pt-6 border-t border-gray-200">
         <button
           onClick={() => navigate('/destinations')}
           className="px-4 sm:px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm sm:text-base"
         >
           ← Back to Destinations
-        </button>
-        <button
-          onClick={() => navigate('/itinerary')}
-          className="px-4 sm:px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-medium shadow-lg text-sm sm:text-base"
-          disabled={Object.values(selectedActivities).every(acts => acts.length === 0)}
-        >
-          View Itinerary →
         </button>
       </div>
 
