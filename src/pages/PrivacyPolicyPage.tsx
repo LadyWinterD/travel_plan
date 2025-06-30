@@ -113,7 +113,10 @@ const PrivacyPolicyPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <img src="https://opentripmap.io/favicon.ico" alt="OpenTripMap" className="w-5 h-5" />
+                      {/* 🔧 FIXED: Use a simple colored icon instead of external favicon */}
+                      <div className="w-5 h-5 bg-green-500 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">O</span>
+                      </div>
                       <h4 className="font-semibold text-gray-900">OpenTripMap API</h4>
                     </div>
                     <p className="text-sm text-gray-600 mb-3">
@@ -274,14 +277,19 @@ const PrivacyPolicyPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <Mail size={16} className="text-gray-600" />
                       <span className="text-gray-700">For legal concerns or takedown requests: </span>
-                      <a href="mailto:legal@travelplanner-demo.com" className="text-blue-600 hover:text-blue-800 font-medium">
-                        legal@travelplanner-demo.com
+                      <a href="mailto:ladywinterd@gmail.com" className="text-blue-600 hover:text-blue-800 font-medium">
+                        ladywinterd@gmail.com
                       </a>
                     </div>
                     <div className="flex items-center gap-2">
                       <Globe size={16} className="text-gray-600" />
                       <span className="text-gray-700">Project Repository: </span>
-                      <a href="https://github.com/hackathon/travelplanner" className="text-blue-600 hover:text-blue-800 font-medium">
+                      <a 
+                        href="https://github.com/LadyWinterD/travel_plan" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
                         GitHub Repository
                       </a>
                     </div>
@@ -326,7 +334,7 @@ const PrivacyPolicyPage: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="mailto:legal@travelplanner-demo.com"
+                href="mailto:ladywinterd@gmail.com"
                 className="bg-white text-teal-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors"
               >
                 Contact Us

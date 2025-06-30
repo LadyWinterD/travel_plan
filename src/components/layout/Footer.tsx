@@ -69,7 +69,7 @@ const Footer: React.FC = () => {
                 </li>
                 <li>
                   <a 
-                    href="https://github.com" 
+                    href="https://github.com/LadyWinterD/travel_plan" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-gray-300 hover:text-teal-400 transition-colors flex items-center gap-2 text-base sm:text-lg hover:underline justify-center sm:justify-start"
