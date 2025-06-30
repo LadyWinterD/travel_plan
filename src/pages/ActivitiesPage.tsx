@@ -180,7 +180,12 @@ const ActivityCard: React.FC<{
   const getWeatherBadge = () => {
     if (!weather) return null;
     
-    if (!activity.indoor && !weather.isRainy && weather.temperature > 15) {
+    // Use category-based weather recommendations since indoor classification is removed
+    const hasIndoorCategories = activity.categories.some(cat => 
+      ['museums_arts', 'shopping', 'shows_cinema', 'food_dining'].includes(cat)
+    );
+    
+    if (!hasIndoorCategories && !weather.isRainy && weather.temperature > 15) {
       return (
         <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
           ☀️ <span className="hidden sm:inline">Perfect Weather Activity</span>
@@ -188,7 +193,7 @@ const ActivityCard: React.FC<{
       );
     }
     
-    if (activity.indoor && weather.isRainy) {
+    if (hasIndoorCategories && weather.isRainy) {
       return (
         <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
           ☂️ <span className="hidden sm:inline">Rainy Day Recommended</span>
@@ -345,8 +350,8 @@ const ActivitiesPage: React.FC = () => {
   const [isWeatherLoading, setIsWeatherLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
   
-  // View state - map or grid
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  // View state - map or grid (CHANGED: Default to 'map' instead of 'grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('map');
   const [cityCoordinates, setCityCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
   // Filter states
