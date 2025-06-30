@@ -42,14 +42,14 @@ const HomePage: React.FC = () => {
               </span>
             </button>
             
-            {/* 🆕 NEW: Tutorial Button */}
+            {/* 🆕 NEW: Tutorial Button - Changed to English */}
             <button 
               onClick={() => navigate('/watch-how-it-works')}
               className="group bg-white text-teal-600 border-2 border-teal-500 px-12 py-5 rounded-full text-xl font-medium hover:bg-teal-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               <span className="flex items-center justify-center gap-3">
                 <Play size={24} className="group-hover:scale-110 transition-transform" />
-                看教程
+                Watch Tutorial
               </span>
             </button>
           </div>
@@ -231,7 +231,7 @@ const HomePage: React.FC = () => {
               className="bg-white/20 text-white border-2 border-white/30 px-12 py-5 rounded-full text-lg font-medium hover:bg-white/30 transition-all duration-300 backdrop-blur-sm transform hover:scale-105 flex items-center justify-center gap-3"
             >
               <Play size={20} />
-              看教程
+              Watch Tutorial
             </button>
           </div>
           
