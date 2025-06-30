@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Clock, Calendar, Sun, Cloud, CloudRain, Info, AlertTriangle, GripVertical, X, MapPin, Umbrella, Download, Edit2, Check, RotateCcw } from 'lucide-react';
+import { Clock, Calendar, Sun, Cloud, CloudRain, AlertTriangle, GripVertical, X, MapPin, Umbrella, Download, RotateCcw, Check } from 'lucide-react';
 import { TripDay, ScheduledActivity, WeatherData, Activity } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { createEvent } from 'ics';
 import { getFallbackImageUrl } from '../services/openTripMapApi';
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import {
@@ -18,14 +17,11 @@ import {
   useSensors,
   DragEndEvent,
   DragOverlay,
-  defaultDropAnimation,
-  UniqueIdentifier,
   DragStartEvent,
   DragOverEvent,
   MeasuringStrategy,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -37,18 +33,7 @@ import { activityCategoryLabels } from '../data/activityCategories';
 
 // Time management utilities
 const DEFAULT_START_TIME = '09:00';
-const DEFAULT_END_TIME = '18:00';
 const BREAK_DURATION = 30; // minutes between activities
-
-// Time grid options - 30-minute intervals from 6:00 to 22:00
-const TIME_GRID_OPTIONS = [
-  '06:00', '06:30', '07:00', '07:30', '08:00', '08:30',
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-  '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-  '18:00', '18:30', '19:00', '19:30', '20:00', '20:30',
-  '21:00', '21:30', '22:00'
-];
 
 const timeToMinutes = (time: string): number => {
   const [hours, minutes] = time.split(':').map(Number);
@@ -92,17 +77,6 @@ const recalculateTimesForDay = (activities: ScheduledActivity[], startTime: stri
   return updatedActivities;
 };
 
-interface SortableActivityProps {
-  activity: ScheduledActivity;
-  onDelete: () => void;
-  onTimeEdit: (activityId: string, newStartTime: string) => void;
-  onTimeReset: (activityId: string) => void;
-  onShowDetails: (activity: Activity) => void;
-  isDragging?: boolean;
-  location?: string;
-  weather?: WeatherData;
-}
-
 const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
   const getWeatherIcon = () => {
     if (weather.isRainy) return <CloudRain className="text-blue-500" size={16} />;
@@ -124,7 +98,7 @@ const WeatherDisplay: React.FC<{ weather: WeatherData }> = ({ weather }) => {
   );
 };
 
-const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete, onTimeEdit, onTimeReset, onShowDetails, isDragging, location, weather }) => {
+const SortableActivity: React.FC<{ activity: ScheduledActivity; onDelete: () => void; onTimeEdit: (activityId: string, newStartTime: string) => void; onTimeReset: (activityId: string) => void; onShowDetails: (activity: Activity) => void; isDragging?: boolean; weather?: WeatherData }> = ({ activity, onDelete, onTimeEdit, onTimeReset, onShowDetails, isDragging, weather }) => {
   const {
     attributes,
     listeners,
@@ -305,7 +279,7 @@ const SortableActivity: React.FC<SortableActivityProps> = ({ activity, onDelete,
   );
 };
 
-const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: string; weather?: WeatherData }> = ({ activity, location, weather }) => (
+const DragOverlayContent: React.FC<{ activity: ScheduledActivity; weather?: WeatherData }> = ({ activity, weather }) => (
   <div className="bg-white rounded-lg shadow-xl border-2 border-teal-500">
     <SortableActivity 
       activity={activity} 
@@ -313,8 +287,8 @@ const DragOverlayContent: React.FC<{ activity: ScheduledActivity; location?: str
       onTimeEdit={() => {}}
       onTimeReset={() => {}}
       onShowDetails={() => {}}
-      location={location} 
-      weather={weather} 
+      isDragging={true}
+      weather={weather}
     />
   </div>
 );
@@ -393,11 +367,9 @@ const ItineraryPage: React.FC = () => {
   const [selectedActivityWeather, setSelectedActivityWeather] = useState<WeatherData | undefined>(undefined);
   
   // Drag and drop state
-  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedActivity, setDraggedActivity] = useState<ScheduledActivity | null>(null);
-  const [draggedLocation, setDraggedLocation] = useState<string>('');
   const [activeDroppableId, setActiveDroppableId] = useState<string | null>(null);
-  const [draggedDestination, setDraggedDestination] = useState<string | null>(null);
   
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -449,14 +421,11 @@ const ItineraryPage: React.FC = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    setActiveId(active.id);
+    setActiveId(String(active.id));
     
     // Check if dragging a destination (city) or an activity
     if (active.id.toString().startsWith('destination-')) {
       // Dragging a destination
-      const destinationId = active.id.toString().replace('destination-', '');
-      setDraggedDestination(destinationId);
-      setDraggedLocation(getLocationForDay(destinationId) || '');
     } else {
       // Dragging an activity
       const draggedDay = dailyItinerary.find(day => 
@@ -467,7 +436,6 @@ const ItineraryPage: React.FC = () => {
         const activity = draggedDay.activities.find(a => a.activityId === active.id);
         if (activity) {
           setDraggedActivity(activity);
-          setDraggedLocation(getLocationForDay(draggedDay.destinationId) || '');
         }
       }
     }
@@ -487,8 +455,6 @@ const ItineraryPage: React.FC = () => {
     if (!over) {
       setActiveId(null);
       setDraggedActivity(null);
-      setDraggedDestination(null);
-      setDraggedLocation('');
       setActiveDroppableId(null);
       return;
     }
@@ -521,8 +487,6 @@ const ItineraryPage: React.FC = () => {
       if (!draggedActivity) {
         setActiveId(null);
         setDraggedActivity(null);
-        setDraggedDestination(null);
-        setDraggedLocation('');
         setActiveDroppableId(null);
         return;
       }
@@ -541,8 +505,6 @@ const ItineraryPage: React.FC = () => {
       if (!sourceDay || !targetDay || sourceDay.destinationId !== targetDay.destinationId) {
         setActiveId(null);
         setDraggedActivity(null);
-        setDraggedDestination(null);
-        setDraggedLocation('');
         setActiveDroppableId(null);
         return;
       }
@@ -591,8 +553,6 @@ const ItineraryPage: React.FC = () => {
     
     setActiveId(null);
     setDraggedActivity(null);
-    setDraggedDestination(null);
-    setDraggedLocation('');
     setActiveDroppableId(null);
   };
 
@@ -957,11 +917,11 @@ const ItineraryPage: React.FC = () => {
       const events: any[] = [];
       
       // Process each day and create calendar events
-      dailyItinerary.forEach((day, dayIndex) => {
+      dailyItinerary.forEach((day) => {
         const location = getLocationForDay(day.destinationId);
         
         // Create events for each activity
-        day.activities.forEach((activity, activityIndex) => {
+        day.activities.forEach((activity) => {
           // Parse start time
           const [startHour, startMinute] = activity.startTime.split(':').map(Number);
           const [endHour, endMinute] = activity.endTime.split(':').map(Number);
@@ -1013,7 +973,7 @@ const ItineraryPage: React.FC = () => {
       // Generate ICS file - create events one by one
       let icsContent = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Travel Planner//EN\r\n';
       
-      events.forEach((event, index) => {
+      events.forEach((event) => {
         const startDate = `${event.start[0]}${event.start[1].toString().padStart(2, '0')}${event.start[2].toString().padStart(2, '0')}T${event.start[3].toString().padStart(2, '0')}${event.start[4].toString().padStart(2, '0')}00`;
         const endDate = `${event.end[0]}${event.end[1].toString().padStart(2, '0')}${event.end[2].toString().padStart(2, '0')}T${event.end[3].toString().padStart(2, '0')}${event.end[4].toString().padStart(2, '0')}00`;
         
@@ -1193,7 +1153,7 @@ const ItineraryPage: React.FC = () => {
                         isDragging={activeId === `destination-${destinationId}`}
                       >
                         <div className="divide-y divide-gray-100">
-                          {days.map((day, index) => (
+                          {days.map((day, dayIndex) => (
                             <div 
                               key={day.id}
                               className={`p-4 sm:p-6 pdf-day ${activeDroppableId === day.id ? 'bg-gray-50' : ''}`}
@@ -1201,7 +1161,7 @@ const ItineraryPage: React.FC = () => {
                               <div className="mb-4 sm:mb-6">
                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                   <div>
-                                    <h3 className="text-base sm:text-lg font-semibold">Day {index + 1}</h3>
+                                    <h3 className="text-base sm:text-lg font-semibold">Day {dayIndex + 1}</h3>
                                     <div className="text-sm text-gray-600">{formatDate(day.date)}</div>
                                   </div>
                                   {day.weatherData && (
@@ -1241,7 +1201,6 @@ const ItineraryPage: React.FC = () => {
                                         setSelectedActivityWeather(day.weatherData);
                                       }}
                                       isDragging={activity.activityId === activeId}
-                                      location={location}
                                       weather={day.weatherData}
                                     />
                                   ))}
@@ -1264,7 +1223,6 @@ const ItineraryPage: React.FC = () => {
               {draggedActivity ? (
                 <DragOverlayContent 
                   activity={draggedActivity} 
-                  location={draggedLocation}
                   weather={dailyItinerary.find(day => 
                     day.activities.some(a => a.activityId === draggedActivity.activityId)
                   )?.weatherData}

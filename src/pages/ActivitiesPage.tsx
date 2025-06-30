@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { Activity, WeatherData } from '../types';
-import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, ImageIcon, Map, Grid, Search, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { Clock, Star, DollarSign, Check, MapPin, Cloud, Sun, CloudRain, Umbrella, Thermometer, Filter, Calendar, Map, Grid, Search, ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
 import { getRealActivitiesForCity, getWeatherBasedRecommendations } from '../utils/realActivityData';
 import { getFallbackImageUrl, getCoordinatesForCity } from '../services/openTripMapApi';
 import { activityCategories, activityCategoryLabels } from '../data/activityCategories';
@@ -84,18 +84,6 @@ const validateCategory = (cat: string): ActivityCategory => {
     ? cat as ActivityCategory 
     : 'interesting_places';
 };
-
-// Loading skeleton component for categories
-const CategorySkeleton: React.FC = () => (
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-    {Array.from({ length: 8 }).map((_, index) => (
-      <div
-        key={index}
-        className="h-10 bg-gray-200 rounded-lg animate-pulse"
-      />
-    ))}
-  </div>
-);
 
 const WeatherForecastCard: React.FC<{ weather: WeatherData; location: string; isForTravelDate?: boolean }> = ({ weather, location, isForTravelDate = false }) => {
   const getWeatherIcon = () => {
@@ -333,7 +321,6 @@ const ActivitiesPage: React.FC = () => {
     toggleActivity, 
     preferences,
     startDate,
-    endDate,
     fetchWeatherForDate
   } = useAppContext();
   
@@ -956,12 +943,9 @@ const ActivitiesPage: React.FC = () => {
               <div className="mb-6">
                 <ActivityMap
                   activities={activities}
-                  selectedActivities={currentSelectedActivities}
-                  onActivityToggle={(activity) => toggleActivity(activeDestination!, activity)}
                   onActivityClick={handleClick}
                   centerCoordinates={cityCoordinates || undefined}
                   weather={weatherData || undefined}
-                  location={`${currentDestination.name}, ${currentDestination.country}`}
                 />
               </div>
             ) : (

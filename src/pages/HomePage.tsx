@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, MapPin, Sun, Calendar, CheckCircle } from 'lucide-react';
+import { ArrowRight, MapPin, Sun, CheckCircle } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();

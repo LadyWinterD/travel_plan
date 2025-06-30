@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Destination, Activity, TripDay, WeatherData, ScheduledActivity } from '../types';
+import { Destination, Activity, TripDay, WeatherData, ScheduledActivity, ActivityCategory } from '../types';
 import { getStoredTrip, storeTrip } from '../utils/storage';
 
 interface AppContextType {
@@ -10,7 +10,7 @@ interface AppContextType {
   dailyItinerary: TripDay[];
   weatherData: Record<string, WeatherData>;
   forecasts: Record<string, WeatherData[]>;
-  preferences: string[];
+  preferences: ActivityCategory[];
   
   // Actions
   addDestination: (destination: Destination) => void;
@@ -20,7 +20,7 @@ interface AppContextType {
   toggleActivity: (destinationId: string, activity: Activity) => void;
   updateItinerary: (newItinerary: TripDay[]) => void;
   resetTrip: () => void;
-  updatePreferences: (newPreferences: string[]) => void;
+  updatePreferences: (newPreferences: ActivityCategory[]) => void;
   fetchWeatherForCity: (cityName: string) => Promise<WeatherData | null>;
   fetchForecastForCity: (cityName: string, days: number) => Promise<WeatherData[] | null>;
   fetchWeatherForDate: (cityName: string, date: Date) => Promise<WeatherData | null>;
@@ -54,7 +54,6 @@ const AppContext = createContext<AppContextType>(defaultContext);
 export const useAppContext = () => useContext(AppContext);
 
 const generateTimeSlots = (activities: Activity[], daysAvailable: number): ScheduledActivity[] => {
-  const MINUTES_PER_DAY = 720; // 12 hours per day (8 AM - 8 PM)
   let currentTime = 480; // Start at 8 AM (in minutes from midnight)
   let currentDay = 0;
   
@@ -79,42 +78,6 @@ const generateTimeSlots = (activities: Activity[], daysAvailable: number): Sched
   });
 };
 
-const getWeatherBasedRecommendations = (
-  activities: Activity[], 
-  weather: WeatherData,
-  preferences: string[] = []
-): Activity[] => {
-  // Filter activities based on weather
-  let weatherAppropriate = activities.filter(activity => {
-    if (weather.isRainy && !activity.indoor) {
-      return false; // Avoid outdoor activities when raining
-    }
-    if (weather.temperature < 5 && !activity.indoor) {
-      return false; // Avoid outdoor activities when very cold
-    }
-    return true;
-  });
-
-  // Apply preference filtering if preferences exist
-  if (preferences.length > 0) {
-    weatherAppropriate = weatherAppropriate.filter(activity =>
-      activity.categories.some(category => preferences.includes(category))
-    );
-  }
-
-  // Sort by rating and weather appropriateness
-  return weatherAppropriate.sort((a, b) => {
-    // Prioritize indoor activities during bad weather
-    if (weather.isRainy || weather.temperature < 10) {
-      if (a.indoor && !b.indoor) return -1;
-      if (!a.indoor && b.indoor) return 1;
-    }
-    
-    // Then sort by rating
-    return b.rating - a.rating;
-  });
-};
-
 export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const initialData = getStoredTrip();
   
@@ -125,7 +88,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
   const [dailyItinerary, setDailyItinerary] = useState<TripDay[]>(initialData?.dailyItinerary || []);
   const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>(initialData?.weatherData || {});
   const [forecasts, setForecasts] = useState<Record<string, WeatherData[]>>({});
-  const [preferences, setPreferences] = useState<string[]>(initialData?.preferences || []);
+  const [preferences, setPreferences] = useState<ActivityCategory[]>(initialData?.preferences || []);
 
   // Track which cities we've already fetched weather for to prevent loops
   const [fetchedWeatherCities, setFetchedWeatherCities] = useState<Set<string>>(new Set());
@@ -495,7 +458,7 @@ export const AppContextProvider: React.FC<{children: React.ReactNode}> = ({ chil
     setDailyItinerary(newItinerary);
   };
 
-  const updatePreferences = (newPreferences: string[]) => {
+  const updatePreferences = (newPreferences: ActivityCategory[]) => {
     setPreferences(newPreferences);
   };
 

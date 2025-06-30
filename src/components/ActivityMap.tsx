@@ -59,7 +59,6 @@ const categoryIcons = {
 
 interface ActivityMapProps {
   activities: Activity[];
-  selectedActivities: Activity[];
   onActivityClick: (activity: Activity) => void;
   centerCoordinates?: { lat: number; lng: number };
   weather?: WeatherData;
@@ -191,7 +190,6 @@ const ActivityTooltip: React.FC<{
 
 const ActivityMap: React.FC<ActivityMapProps> = ({
   activities,
-  selectedActivities,
   onActivityClick,
   centerCoordinates,
   weather

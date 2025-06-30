@@ -1,6 +1,7 @@
 // OpenTripMap API Service for real attraction data
 // API Documentation: https://opentripmap.io/docs
-import { activityCategories, ActivityCategory } from '../data/activityCategories';
+
+import { ActivityCategory } from '../data/activityCategories';
 
 const API_KEY = import.meta.env.VITE_OPENTRIPMAP_KEY || '5ae2e3f221c38a28845f05b613c6bd060fbfa46746435156427f8f3d';
 const BASE_URL = 'https://api.opentripmap.com/0.1/en/places';

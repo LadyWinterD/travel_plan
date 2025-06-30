@@ -1,13 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { activityCategories } from '../data/activityCategories';
+import { activityCategories, ActivityCategory } from '../data/activityCategories';
 import { useAppContext } from '../context/AppContext';
 
 const PreferencesForm: React.FC = () => {
   const navigate = useNavigate();
   const { preferences, updatePreferences } = useAppContext();
 
-  const handleToggleCategory = (category: string) => {
+  const handleToggleCategory = (category: ActivityCategory) => {
     const newPreferences = preferences.includes(category)
       ? preferences.filter(p => p !== category)
       : [...preferences, category];
