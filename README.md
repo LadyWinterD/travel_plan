@@ -1,4 +1,4 @@
-# 🌍 TravelPlanner - AI-Powered Travel Planning Revolution
+# 🌍 TravelPlanner - Smart-Powered Travel Planning Revolution
 
 <div align="center">
 
